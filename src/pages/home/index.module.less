@@ -1,13 +1,47 @@
 .page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--bg-page);
   padding-bottom: 60px;
+}
+
+/* ========== 搜索栏 ========== */
+.searchRow {
+  padding: 8px 16px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cityTag {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  padding: 6px 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.searchWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchBar {
+  --border-radius: 20px;
 }
 
 /* ========== 顶部礼包区域 ========== */
 .header {
-  background: linear-gradient(180deg, #ff6b35 0%, #ff8c42 50%, #ffa726 100%);
-  padding: 40px 20px 60px;
+  background: var(--primary-gradient);
+  padding: 20px 20px 60px;
   position: relative;
   overflow: hidden;
 }
@@ -17,11 +51,12 @@
   align-items: center;
   font-size: 14px;
   color: #fff;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .brand {
   font-weight: 600;
+  font-size: 15px;
 }
 
 .divider {
@@ -31,6 +66,7 @@
 
 .subBrand {
   opacity: 0.9;
+  font-size: 13px;
 }
 
 .headerIcons {
@@ -40,8 +76,9 @@
 }
 
 .iconBtn {
-  font-size: 16px;
+  font-size: 18px;
   padding: 4px 8px;
+  cursor: pointer;
 }
 
 .giftSection {
@@ -50,26 +87,24 @@
 }
 
 .giftTitle {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #fff;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .giftIllustration {
-  position: relative;
-  height: 180px;
+  height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* 礼包盒子 */
 .giftBox {
   position: relative;
-  width: 160px;
-  height: 120px;
+  width: 140px;
+  height: 110px;
   background: linear-gradient(135deg, #d32f2f 0%, #f44336 50%, #ff5722 100%);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -81,17 +116,17 @@
 .giftBox::before {
   content: '';
   position: absolute;
-  top: -8px;
+  top: -6px;
   left: 50%;
   transform: translateX(-50%);
-  width: 40px;
-  height: 16px;
+  width: 36px;
+  height: 14px;
   background: linear-gradient(90deg, #ffd54f 0%, #ffca28 100%);
   border-radius: 4px;
 }
 
 .giftDollar {
-  font-size: 48px;
+  font-size: 44px;
   font-weight: 700;
   color: #ffd54f;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -101,19 +136,19 @@
 .giftRibbonRight {
   position: absolute;
   top: 50%;
-  width: 30px;
-  height: 40px;
+  width: 28px;
+  height: 36px;
   background: linear-gradient(180deg, #ffd54f 0%, #ffb300 100%);
 }
 
 .giftRibbonLeft {
-  left: -20px;
+  left: -18px;
   transform: translateY(-50%) rotate(-15deg);
   border-radius: 4px 0 0 4px;
 }
 
 .giftRibbonRight {
-  right: -20px;
+  right: -18px;
   transform: translateY(-50%) rotate(15deg);
   border-radius: 0 4px 4px 0;
 }
@@ -121,78 +156,23 @@
 .giftCoin,
 .giftCoin2 {
   position: absolute;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   background: linear-gradient(135deg, #ffd54f 0%, #ffb300 100%);
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .giftCoin {
-  top: -12px;
-  right: 20px;
+  top: -10px;
+  right: 18px;
 }
 
 .giftCoin2 {
-  bottom: -10px;
+  bottom: -8px;
   left: 16px;
-  width: 20px;
-  height: 20px;
-}
-
-/* 卡通形象 */
-.mascot {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-}
-
-.mascotBody {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #8d6e63 0%, #a1887f 100%);
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.mascotEye,
-.mascotEyeRight {
-  position: absolute;
-  top: 20px;
-  width: 10px;
-  height: 10px;
-  background: #333;
-  border-radius: 50%;
-}
-
-.mascotEye {
-  left: 14px;
-}
-
-.mascotEyeRight {
-  right: 14px;
-}
-
-.mascotSmile {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 12px;
-  border-bottom: 3px solid #333;
-  border-radius: 0 0 24px 24px;
-}
-
-.mascotEar {
-  position: absolute;
-  top: -6px;
-  left: 10px;
   width: 18px;
   height: 18px;
-  background: #a1887f;
-  border-radius: 50%;
 }
 
 /* ========== 功能入口卡片 ========== */
@@ -206,7 +186,7 @@
 
 .benefitCard {
   flex: 1;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
@@ -246,24 +226,22 @@
 .benefitTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 2px;
   white-space: nowrap;
-  word-break: keep-all;
 }
 
 .benefitSubtitle {
   font-size: 10px;
-  color: #999;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: keep-all;
 }
 
 .benefitButton {
   font-size: 11px;
-  color: #ff6b35;
+  color: var(--primary-color);
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
@@ -271,18 +249,18 @@
 
 /* ========== 立即使用红包下单 ========== */
 .actionSection {
-  padding: 20px 16px 12px;
+  padding: 16px 16px 8px;
 }
 
 .actionButton {
-  height: 48px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%) !important;
+  height: 44px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%) !important;
   border: none !important;
-  border-radius: 24px !important;
-  font-size: 16px !important;
+  border-radius: 22px !important;
+  font-size: 15px !important;
   font-weight: 600 !important;
   color: #fff !important;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+  box-shadow: 0 4px 16px rgba(255, 90, 0, 0.4);
 }
 
 /* ========== 影片区块 ========== */
@@ -300,12 +278,12 @@
 .sectionTitle {
   font-size: 18px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .sectionMore {
   font-size: 14px;
-  color: #999;
+  color: var(--text-muted);
   cursor: pointer;
 }
 
@@ -328,7 +306,7 @@
 .filmCard {
   flex-shrink: 0;
   width: 140px;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
@@ -344,35 +322,34 @@
   position: relative;
   width: 100%;
   height: 170px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
-.posterEmoji {
-  font-size: 48px;
+.poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .tag {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.6);
+  top: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .filmInfo {
-  padding: 10px 12px 8px;
+  padding: 10px 12px 6px;
 }
 
 .filmName {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -381,36 +358,36 @@
 
 .rating {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: center;
+  gap: 3px;
   margin-bottom: 4px;
 }
 
-.ratingLabel {
-  font-size: 11px;
-  color: #ff6b35;
+.starIcon {
+  font-size: 12px;
+  color: #FFB800;
 }
 
 .ratingValue {
   font-size: 16px;
   font-weight: 700;
-  color: #ff6b35;
+  color: #FFB800;
 }
 
 .wantCount {
   font-size: 11px;
-  color: #999;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
 
 .releaseDate {
   font-size: 11px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .buyButton {
-  margin: 8px 12px 12px !important;
-  border-radius: 16px !important;
+  margin: 4px 12px 10px !important;
+  border-radius: 14px !important;
   height: 28px !important;
   font-size: 12px !important;
 }
@@ -427,11 +404,11 @@
   align-items: center;
   gap: 8px;
   padding: 10px 24px;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 24px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: transform 0.2s;
 

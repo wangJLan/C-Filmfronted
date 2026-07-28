@@ -1,15 +1,16 @@
 .page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-page);
   padding-bottom: 40px;
 }
 
+/* ========== Header ========== */
 .header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 16px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 16px 24px;
+  background: var(--primary-gradient);
   color: #fff;
   text-align: center;
 }
@@ -23,6 +24,128 @@
 
 .desc {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
   margin: 0;
+}
+
+/* ========== VIP 卡片 ========== */
+.vipCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -12px 16px 0;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 100%);
+  border-radius: 12px;
+  color: #fff;
+  position: relative;
+  z-index: 5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.vipLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vipCrown {
+  font-size: 28px;
+}
+
+.vipTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFD54F;
+}
+
+.vipSubtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
+.vipBtn {
+  font-size: 12px;
+  color: #FFD54F;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ========== 卡片 ========== */
+.card {
+  background: #fff;
+  margin: 10px 16px 0;
+  border-radius: 12px;
+  padding: 0 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cardMore {
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* ========== 订单网格 ========== */
+.orderGrid {
+  display: flex;
+  padding: 12px 0;
+}
+
+.orderItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.orderIcon {
+  color: var(--text-secondary);
+}
+
+.orderLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ========== 功能列表 ========== */
+.funcItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  cursor: pointer;
+
+  & + & {
+    border-top: 1px solid #f5f5f5;
+  }
+}
+
+.funcIcon {
+  color: var(--text-secondary);
+}
+
+.funcLabel {
+  flex: 1;
+  font-size: 15px;
+  color: var(--text-primary);
 }

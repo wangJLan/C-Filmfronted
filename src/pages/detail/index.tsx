@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'umi';
-import { Button, NavBar, Skeleton } from 'antd-mobile';
-import { LeftOutline } from 'antd-mobile-icons';
+import { Button, NavBar, Skeleton, Toast } from 'antd-mobile';
+import { LeftOutline, StarFill, StarOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilmDetail } from '@/services/api/film';
 import styles from './index.module.less';
@@ -9,6 +9,8 @@ import styles from './index.module.less';
 const DetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(false);
+  const [liked, setLiked] = useState(false);
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
@@ -16,46 +18,108 @@ const DetailPage: React.FC = () => {
     enabled: !!id,
   });
 
-  return (
-    <div className={styles.page}>
-      <NavBar
-        onBack={() => navigate(-1)}
-        back={<LeftOutline />}
-        className={styles.navbar}
-      >
-        影片详情
-      </NavBar>
-
-      {isLoading ? (
+  if (isLoading) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
         <div className={styles.skeleton}>
           <Skeleton.Title animated />
-          <Skeleton.Paragraph lineCount={5} animated />
+          <Skeleton.Paragraph lineCount={8} animated />
         </div>
-      ) : (
-        <div className={styles.body}>
-          <div className={styles.posterWrap}>
-            <img
-              src={detail?.poster}
-              alt={detail?.title}
-              className={styles.poster}
-            />
-          </div>
-          <h2 className={styles.filmTitle}>{detail?.title}</h2>
-          <p className={styles.info}>
-            {detail?.year} · {detail?.genre} · {detail?.duration}分钟
-          </p>
-          <p className={styles.desc}>{detail?.description}</p>
+      </div>
+    );
+  }
 
-          <Button
-            block
-            color="primary"
-            size="large"
-            style={{ marginTop: 32 }}
-          >
-            立即购票
-          </Button>
+  if (!detail) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+        <div className={styles.empty}>影片不存在</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      {/* 顶部海报 */}
+      <div className={styles.hero}>
+        <img src={detail.poster} alt={detail.title} className={styles.heroImg} />
+        <div className={styles.heroOverlay} />
+        <div className={styles.heroBack} onClick={() => navigate(-1)}>
+          <LeftOutline fontSize={20} color="#fff" />
+        </div>
+        <div className={styles.heroInfo}>
+          <h1 className={styles.heroTitle}>{detail.title}</h1>
+          <div className={styles.heroRating}>
+            <StarFill className={styles.heroStar} />
+            <span className={styles.heroScore}>{detail.rating?.toFixed(1)}</span>
+          </div>
+          <div className={styles.heroMeta}>
+            {detail.year} · {detail.genre} · {detail.duration}分钟
+          </div>
+          <div className={styles.heroWant}>{detail.wantCount}</div>
+        </div>
+      </div>
+
+      {/* 操作栏 */}
+      <div className={styles.actions}>
+        <div className={styles.likeBtn} onClick={() => { setLiked(!liked); Toast.show({ content: liked ? '已取消想看' : '已标记想看' }); }}>
+          {liked ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
+          <span>{liked ? '已想看' : '想看'}</span>
+        </div>
+        <Button color="primary" className={styles.buyBtn} onClick={() => Toast.show({ content: '选座购票功能开发中' })}>
+          选座购票
+        </Button>
+      </div>
+
+      {/* 简介 */}
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>剧情简介</h3>
+        <p className={`${styles.desc} ${!expanded ? styles.descClamp : ''}`}>
+          {detail.description}
+        </p>
+        {detail.description && detail.description.length > 80 && (
+          <span className={styles.expandBtn} onClick={() => setExpanded(!expanded)}>
+            {expanded ? '收起' : '展开'}
+          </span>
+        )}
+      </div>
+
+      {/* 演职员 */}
+      {detail.director && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>演职员</h3>
+          <div className={styles.castRow}>
+            <div className={styles.castItem}>
+              <div className={styles.castAvatar}>🎬</div>
+              <span className={styles.castName}>{detail.director}</span>
+              <span className={styles.castRole}>导演</span>
+            </div>
+            {detail.actors?.map((actor: string, idx: number) => (
+              <div key={idx} className={styles.castItem}>
+                <div className={styles.castAvatar}>👤</div>
+                <span className={styles.castName}>{actor}</span>
+                <span className={styles.castRole}>演员</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* 标签 */}
+      {detail.tags && detail.tags.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>影厅</h3>
+          <div className={styles.tags}>
+            {detail.tags.map((tag: string, idx: number) => (
+              <span key={idx} className={styles.tag}>{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 底部占位 */}
+      <div className={styles.bottomSpace} />
     </div>
   );
 };

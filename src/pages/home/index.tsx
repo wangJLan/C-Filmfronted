@@ -1,6 +1,8 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'umi';
-import { Button } from 'antd-mobile';
+import { Button, Toast, SearchBar } from 'antd-mobile';
+import { StarFill, EnvironmentOutline } from 'antd-mobile-icons';
+import { useLocationStore } from '@/stores/useLocationStore';
 import {
   MOCK_HOT_FILMS,
   MOCK_UPCOMING_FILMS,
@@ -11,20 +13,40 @@ import {
 } from '@/mock/home';
 import styles from './index.module.less';
 
+const FILM_COLORS = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+  'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+  'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+  'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
+  'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+];
+
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const city = useLocationStore((s) => s.city);
   const hotScrollRef = useRef<HTMLDivElement>(null);
   const upcomingScrollRef = useRef<HTMLDivElement>(null);
 
-  const scroll = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
-    if (ref.current) {
-      const scrollAmount = direction === 'left' ? -200 : 200;
-      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
   return (
     <div className={styles.page}>
+      {/* 搜索栏 + 城市定位 */}
+      <div className={styles.searchRow}>
+        <div className={styles.cityTag}>
+          <EnvironmentOutline fontSize={14} color="#FF5A00" />
+          <span>{city}</span>
+        </div>
+        <div className={styles.searchWrap}>
+          <SearchBar
+            placeholder="搜电影、搜影院"
+            onSearch={() => Toast.show({ content: '搜索功能开发中' })}
+            className={styles.searchBar}
+          />
+        </div>
+      </div>
+
       {/* 顶部礼包区域 */}
       <div className={styles.header}>
         <div className={styles.headerTop}>
@@ -32,28 +54,19 @@ const HomePage: React.FC = () => {
           <span className={styles.divider}>|</span>
           <span className={styles.subBrand}>妙语购票</span>
           <div className={styles.headerIcons}>
-            <span className={styles.iconBtn}>···</span>
-            <span className={styles.iconBtn}>○</span>
+            <span className={styles.iconBtn} onClick={() => navigate('/discover')}>📢</span>
+            <span className={styles.iconBtn} onClick={() => navigate('/user')}>👤</span>
           </div>
         </div>
-
         <div className={styles.giftSection}>
           <h2 className={styles.giftTitle}>专属电影礼包</h2>
           <div className={styles.giftIllustration}>
             <div className={styles.giftBox}>
-              <div className={styles.giftRibbonLeft}></div>
-              <div className={styles.giftRibbonRight}></div>
+              <div className={styles.giftRibbonLeft} />
+              <div className={styles.giftRibbonRight} />
               <div className={styles.giftDollar}>¥</div>
-              <div className={styles.giftCoin}></div>
-              <div className={styles.giftCoin2}></div>
-            </div>
-            <div className={styles.mascot}>
-              <div className={styles.mascotBody}>
-                <div className={styles.mascotEye}></div>
-                <div className={styles.mascotEyeRight}></div>
-                <div className={styles.mascotSmile}></div>
-              </div>
-              <div className={styles.mascotEar}></div>
+              <div className={styles.giftCoin} />
+              <div className={styles.giftCoin2} />
             </div>
           </div>
         </div>
@@ -62,12 +75,12 @@ const HomePage: React.FC = () => {
       {/* 功能入口卡片 */}
       <div className={styles.benefits}>
         {MOCK_BENEFITS.map((item: BenefitItem) => (
-          <div key={item.id} className={styles.benefitCard}>
+          <div key={item.id} className={styles.benefitCard} onClick={() => Toast.show({ content: `${item.title} — 功能开发中` })}>
             <div className={styles.benefitIcon}>
               {item.icon === 'party' ? (
-                <div className={styles.iconParty}>🎉</div>
+                <span className={styles.iconParty}>🎉</span>
               ) : (
-                <div className={styles.iconCoupon}>🎟️</div>
+                <span className={styles.iconCoupon}>🎟️</span>
               )}
             </div>
             <div className={styles.benefitInfo}>
@@ -84,7 +97,7 @@ const HomePage: React.FC = () => {
         <Button
           block
           className={styles.actionButton}
-          onClick={() => navigate('/detail/1')}
+          onClick={() => navigate('/detail/3')}
         >
           🧧 立即使用红包下单 🧧
         </Button>
@@ -93,29 +106,28 @@ const HomePage: React.FC = () => {
       {/* 热映影片 */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionTitle}>热映影片</span>
-          <span className={styles.sectionMore}>全部 ›</span>
+          <span className={styles.sectionTitle}>正在热映（{MOCK_HOT_FILMS.length}部）</span>
+          <span className={styles.sectionMore} onClick={() => navigate('/film')}>全部 ›</span>
         </div>
-
         <div className={styles.hotScrollContainer}>
           <div ref={hotScrollRef} className={styles.hotScroll}>
-            {MOCK_HOT_FILMS.map((film: HotFilm) => (
+            {MOCK_HOT_FILMS.map((film: HotFilm, idx: number) => (
               <div
                 key={film.id}
                 className={styles.filmCard}
                 onClick={() => navigate(`/detail/${film.id}`)}
               >
-                <div className={styles.posterPlaceholder}>
-                  <span className={styles.posterEmoji}>🎬</span>
-                  {film.tags.map((tag, idx) => (
-                    <span key={idx} className={styles.tag}>{tag}</span>
+                <div className={styles.posterPlaceholder} style={{ background: FILM_COLORS[idx % FILM_COLORS.length] }}>
+                  <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
+                  {film.tags.length > 0 && film.tags.map((tag, ti) => (
+                    <span key={ti} className={styles.tag}>{tag}</span>
                   ))}
                 </div>
                 <div className={styles.filmInfo}>
                   <div className={styles.filmName}>{film.title}</div>
                   {film.rating > 0 && (
                     <div className={styles.rating}>
-                      <span className={styles.ratingLabel}>评分</span>
+                      <StarFill className={styles.starIcon} />
                       <span className={styles.ratingValue}>{film.rating.toFixed(1)}</span>
                     </div>
                   )}
@@ -142,38 +154,29 @@ const HomePage: React.FC = () => {
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>即将上映</span>
-          <span className={styles.sectionMore}>全部 ›</span>
+          <span className={styles.sectionMore} onClick={() => navigate('/film')}>全部 ›</span>
         </div>
-
         <div className={styles.hotScrollContainer}>
           <div ref={upcomingScrollRef} className={styles.hotScroll}>
-            {MOCK_UPCOMING_FILMS.map((film: UpcomingFilm) => (
+            {MOCK_UPCOMING_FILMS.map((film: UpcomingFilm, idx: number) => (
               <div
                 key={film.id}
                 className={styles.filmCard}
                 onClick={() => navigate(`/detail/${film.id}`)}
               >
-                <div className={styles.posterPlaceholder}>
-                  <span className={styles.posterEmoji}>🎬</span>
-                  {film.tags.map((tag, idx) => (
-                    <span key={idx} className={styles.tag}>{tag}</span>
+                <div className={styles.posterPlaceholder} style={{ background: FILM_COLORS[(idx + 2) % FILM_COLORS.length] }}>
+                  <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
+                  {film.tags.length > 0 && film.tags.map((tag, ti) => (
+                    <span key={ti} className={styles.tag}>{tag}</span>
                   ))}
                 </div>
                 <div className={styles.filmInfo}>
                   <div className={styles.filmName}>{film.title}</div>
-                  {film.rating && film.rating > 0 && (
-                    <div className={styles.rating}>
-                      <span className={styles.ratingLabel}>评分</span>
-                      <span className={styles.ratingValue}>{film.rating.toFixed(1)}</span>
-                    </div>
-                  )}
-                  <div className={styles.wantCount}>
-                    {film.wantCount || film.releaseDate}
-                  </div>
+                  <div className={styles.wantCount}>{film.wantCount}</div>
                   <div className={styles.releaseDate}>{film.releaseDate}</div>
                 </div>
                 <Button
-                  color={film.isReleased ? 'primary' : 'default'}
+                  color="default"
                   size="mini"
                   className={styles.buyButton}
                   onClick={(e) => {
@@ -181,7 +184,7 @@ const HomePage: React.FC = () => {
                     navigate(`/detail/${film.id}`);
                   }}
                 >
-                  {film.isReleased ? '购票' : '想看'}
+                  想看
                 </Button>
               </div>
             ))}
@@ -189,11 +192,11 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 底部去首页按钮 */}
+      {/* 底部 */}
       <div className={styles.bottomAction}>
-        <div className={styles.homeButton} onClick={() => navigate('/')}>
-          <span>🏠</span>
-          <span>去首页</span>
+        <div className={styles.homeButton} onClick={() => navigate('/film')}>
+          <span>🎬</span>
+          <span>全部影片</span>
         </div>
       </div>
     </div>

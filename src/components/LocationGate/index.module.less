@@ -1,0 +1,169 @@
+/* ========== 全屏遮罩 ========== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(180deg, #fff5f0 0%, #fff 40%, #f8f8f8 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+/* ========== 卡片 ========== */
+.card {
+  width: 100%;
+  max-width: 340px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 24px 28px;
+  box-shadow: 0 16px 48px rgba(255, 90, 0, 0.12);
+  text-align: center;
+}
+
+/* ========== 定位图标动画 ========== */
+.iconWrap {
+  position: relative;
+  width: 80px;
+  height: 100px;
+  margin: 0 auto 24px;
+}
+
+.pin {
+  position: relative;
+  z-index: 3;
+}
+
+.pinHead {
+  width: 28px;
+  height: 28px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(255, 90, 0, 0.4);
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+.pinBody {
+  width: 4px;
+  height: 24px;
+  background: var(--primary-color);
+  margin: 0 auto;
+  border-radius: 0 0 2px 2px;
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+.pinShadow {
+  width: 36px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  margin: 8px auto 0;
+  animation: shadowPulse 1.5s ease-in-out infinite;
+}
+
+.ripple,
+.ripple2 {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  border: 2px solid rgba(255, 90, 0, 0.3);
+  border-radius: 50%;
+  animation: rippleOut 2s ease-out infinite;
+}
+
+.ripple2 {
+  animation-delay: 1s;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shadowPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.7); opacity: 0.5; }
+}
+
+@keyframes rippleOut {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* ========== 文案 ========== */
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+
+.desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 20px;
+}
+
+.bullets {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+  padding: 0 4px;
+}
+
+.bullet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+/* ========== 按钮 ========== */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agreeBtn {
+  height: 48px !important;
+  border-radius: 24px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(255, 90, 0, 0.35);
+}
+
+.denyBtn {
+  font-size: 14px !important;
+  color: var(--text-muted) !important;
+}
+
+/* ========== 品牌 ========== */
+.brand {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #ccc;
+  letter-spacing: 2px;
+}
