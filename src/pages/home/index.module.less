@@ -1,0 +1,441 @@
+.page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding-bottom: 60px;
+}
+
+/* ========== 顶部礼包区域 ========== */
+.header {
+  background: linear-gradient(180deg, #ff6b35 0%, #ff8c42 50%, #ffa726 100%);
+  padding: 40px 20px 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.divider {
+  margin: 0 8px;
+  opacity: 0.7;
+}
+
+.subBrand {
+  opacity: 0.9;
+}
+
+.headerIcons {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+}
+
+.iconBtn {
+  font-size: 16px;
+  padding: 4px 8px;
+}
+
+.giftSection {
+  position: relative;
+  z-index: 2;
+}
+
+.giftTitle {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.giftIllustration {
+  position: relative;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 礼包盒子 */
+.giftBox {
+  position: relative;
+  width: 160px;
+  height: 120px;
+  background: linear-gradient(135deg, #d32f2f 0%, #f44336 50%, #ff5722 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.giftBox::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 16px;
+  background: linear-gradient(90deg, #ffd54f 0%, #ffca28 100%);
+  border-radius: 4px;
+}
+
+.giftDollar {
+  font-size: 48px;
+  font-weight: 700;
+  color: #ffd54f;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.giftRibbonLeft,
+.giftRibbonRight {
+  position: absolute;
+  top: 50%;
+  width: 30px;
+  height: 40px;
+  background: linear-gradient(180deg, #ffd54f 0%, #ffb300 100%);
+}
+
+.giftRibbonLeft {
+  left: -20px;
+  transform: translateY(-50%) rotate(-15deg);
+  border-radius: 4px 0 0 4px;
+}
+
+.giftRibbonRight {
+  right: -20px;
+  transform: translateY(-50%) rotate(15deg);
+  border-radius: 0 4px 4px 0;
+}
+
+.giftCoin,
+.giftCoin2 {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #ffd54f 0%, #ffb300 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.giftCoin {
+  top: -12px;
+  right: 20px;
+}
+
+.giftCoin2 {
+  bottom: -10px;
+  left: 16px;
+  width: 20px;
+  height: 20px;
+}
+
+/* 卡通形象 */
+.mascot {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+}
+
+.mascotBody {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #8d6e63 0%, #a1887f 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.mascotEye,
+.mascotEyeRight {
+  position: absolute;
+  top: 20px;
+  width: 10px;
+  height: 10px;
+  background: #333;
+  border-radius: 50%;
+}
+
+.mascotEye {
+  left: 14px;
+}
+
+.mascotEyeRight {
+  right: 14px;
+}
+
+.mascotSmile {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 12px;
+  border-bottom: 3px solid #333;
+  border-radius: 0 0 24px 24px;
+}
+
+.mascotEar {
+  position: absolute;
+  top: -6px;
+  left: 10px;
+  width: 18px;
+  height: 18px;
+  background: #a1887f;
+  border-radius: 50%;
+}
+
+/* ========== 功能入口卡片 ========== */
+.benefits {
+  display: flex;
+  gap: 12px;
+  margin: -30px 16px 0;
+  position: relative;
+  z-index: 10;
+}
+
+.benefitCard {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s;
+  min-width: 0;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.benefitIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.iconParty,
+.iconCoupon {
+  font-size: 28px;
+}
+
+.benefitInfo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.benefitTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.benefitSubtitle {
+  font-size: 10px;
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+}
+
+.benefitButton {
+  font-size: 11px;
+  color: #ff6b35;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ========== 立即使用红包下单 ========== */
+.actionSection {
+  padding: 20px 16px 12px;
+}
+
+.actionButton {
+  height: 48px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%) !important;
+  border: none !important;
+  border-radius: 24px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+}
+
+/* ========== 影片区块 ========== */
+.section {
+  margin-top: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 12px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+}
+
+.sectionMore {
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+}
+
+.hotScrollContainer {
+  overflow: hidden;
+}
+
+.hotScroll {
+  display: flex;
+  gap: 12px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.filmCard {
+  flex-shrink: 0;
+  width: 140px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform 0.2s;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.posterPlaceholder {
+  position: relative;
+  width: 100%;
+  height: 170px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.posterEmoji {
+  font-size: 48px;
+}
+
+.tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.filmInfo {
+  padding: 10px 12px 8px;
+}
+
+.filmName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rating {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.ratingLabel {
+  font-size: 11px;
+  color: #ff6b35;
+}
+
+.ratingValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ff6b35;
+}
+
+.wantCount {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 2px;
+}
+
+.releaseDate {
+  font-size: 11px;
+  color: #666;
+}
+
+.buyButton {
+  margin: 8px 12px 12px !important;
+  border-radius: 16px !important;
+  height: 28px !important;
+  font-size: 12px !important;
+}
+
+/* ========== 底部按钮 ========== */
+.bottomAction {
+  padding: 24px 16px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.homeButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: transform 0.2s;
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
