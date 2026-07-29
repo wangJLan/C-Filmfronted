@@ -1,0 +1,151 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+/* ========== 余额卡片 ========== */
+.header {
+  padding: 16px 16px 0;
+  display: flex;
+  gap: 12px;
+}
+
+.balanceCard {
+  flex: 1.2;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+  border-radius: 16px;
+  padding: 20px 16px;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(255, 90, 0, 0.25);
+}
+
+.balanceLabel {
+  font-size: 12px;
+  opacity: 0.85;
+  margin: 0 0 6px;
+}
+
+.balanceNum {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  letter-spacing: 2px;
+}
+
+.balanceBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.btnOutline {
+  padding: 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.pointsCard {
+  flex: 0.8;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pointsNum {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 4px 0;
+}
+
+.pointsHint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ========== 交易记录 ========== */
+.section {
+  margin-top: 16px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 0 16px 12px;
+}
+
+.txList {
+  background: #fff;
+  margin: 0 16px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.txItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+
+  & + & { border-top: 1px solid #f5f5f5; }
+}
+
+.txLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.txIcon {
+  font-size: 24px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.txName {
+  font-size: 14px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.txTime {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.txAmount {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.txAmountIn {
+  font-size: 16px;
+  font-weight: 600;
+  color: #00b578;
+  flex-shrink: 0;
+}

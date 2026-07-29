@@ -1,0 +1,311 @@
+/* ========== 全屏选座面板 ========== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: #f7f7f8;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 顶部栏 ========== */
+.topBar {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.topClose {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.topInfo {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.topFilm {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topSpacer {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+/* ========== 场次选择器 ========== */
+.selectors {
+  background: #fff;
+  padding: 8px 16px 12px;
+}
+
+.selectorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.selLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.selChips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  flex-wrap: wrap;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.selChip {
+  font-size: 12px;
+  padding: 6px 14px;
+  background: #f2f2f2;
+  border-radius: 16px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:active { transform: scale(0.95); }
+}
+
+.selChipActive {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ========== 银幕 ========== */
+.screenArea {
+  padding: 8px 0 0;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 40px;
+}
+
+.screenCurve {
+  width: 100%;
+  height: 20px;
+  background: linear-gradient(180deg, #e8e8e8 0%, transparent 100%);
+  border-radius: 50% 50% 0 0;
+  border-bottom: 2px solid #ddd;
+}
+
+.screenText {
+  font-size: 12px;
+  color: #bbb;
+  letter-spacing: 4px;
+  margin-top: -6px;
+}
+
+/* ========== 座位区域 ========== */
+.seatContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.seatGrid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: fit-content;
+  padding: 0 4px;
+}
+
+/* 列号 */
+.colLabels {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.colNum {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #bbb;
+}
+
+/* 行 */
+.seatRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.rowLabel {
+  width: 14px;
+  font-size: 10px;
+  color: #bbb;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.emptyCell {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+/* 座位 20px×20px */
+.seat {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px 4px 3px 3px;
+  background: #c8e6c9;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+
+  &:hover { background: #a5d6a7; }
+}
+
+.seatSold {
+  background: #e0e0e0;
+  cursor: not-allowed;
+}
+
+.seatSelected {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+  box-shadow: 0 2px 8px rgba(255, 90, 0, 0.4);
+  transform: scale(1.1);
+}
+
+/* 走道 */
+.aisle {
+  width: 12px;
+  flex-shrink: 0;
+}
+
+/* ========== 图例 ========== */
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px 0 8px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legendDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.legendAvail { background: #c8e6c9; }
+.legendSelDot { background: var(--primary-color); }
+.legendSold { background: #e0e0e0; }
+
+/* ========== 底部确认栏 ========== */
+.bottomBar {
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  padding: 0 0 0 0;
+}
+
+.bottomInner {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 12px;
+}
+
+.bottomLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.bottomSeats {
+  font-size: 13px;
+  color: var(--text-primary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottomHint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.bottomPrice {
+  font-size: 13px;
+  color: var(--primary-color);
+  margin-top: 2px;
+}
+
+.priceNum {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.confirmBtn {
+  flex-shrink: 0;
+  height: 44px !important;
+  border-radius: 22px !important;
+  padding: 0 28px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%) !important;
+  border: none !important;
+  color: #fff !important;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}

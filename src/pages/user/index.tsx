@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Avatar, Form, Input, Toast, Tabs } from 'antd-mobile';
+import { useNavigate } from 'umi';
 import { useUserStore } from '@/stores/useUserStore';
+import { useOrderStore } from '@/stores/useOrderStore';
+import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import {
   BillOutline, CheckCircleOutline, StarOutline, ExclamationCircleOutline,
   SetOutline, GiftOutline, RightOutline, HistogramOutline,
@@ -15,14 +18,17 @@ const orderGrid = [
 ];
 
 const functionList = [
-  { icon: <GiftOutline fontSize={20} />, label: '我的钱包' },
-  { icon: <GiftOutline fontSize={20} />, label: '优惠券' },
-  { icon: <StarOutline fontSize={20} />, label: '想看的电影' },
-  { icon: <HistogramOutline fontSize={20} />, label: '看过的电影' },
+  { icon: <GiftOutline fontSize={20} />, label: '我的钱包', path: '/wallet' },
+  { icon: <GiftOutline fontSize={20} />, label: '优惠券', path: '/coupons' },
+  { icon: <StarOutline fontSize={20} />, label: '想看的电影', path: '/want-to-see' },
+  { icon: <HistogramOutline fontSize={20} />, label: '看过的电影', path: '/watched' },
 ];
 
 const UserPage: React.FC = () => {
   const { user, isLoggedIn, loading, init, login, register, logout } = useUserStore();
+  const orderCount = useOrderStore((s) => s.orders.filter((o) => o.status !== 'cancelled').length);
+  const wantCount = useFilmCollectionStore((s) => s.wantToSee.length);
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
@@ -56,7 +62,7 @@ const UserPage: React.FC = () => {
         </div>
 
         {/* VIP 会员卡 */}
-        <div className={styles.vipCard} onClick={() => Toast.show({ content: '会员功能开发中' })}>
+        <div className={styles.vipCard} onClick={() => navigate('/wallet')}>
           <div className={styles.vipLeft}>
             <span className={styles.vipCrown}>👑</span>
             <div>
@@ -71,11 +77,13 @@ const UserPage: React.FC = () => {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardTitle}>我的订单</span>
-            <span className={styles.cardMore} onClick={() => Toast.show({ content: '查看全部订单' })}>全部 ›</span>
+            <span className={styles.cardMore} onClick={() => navigate('/orders')}>
+              全部 {orderCount > 0 ? `(${orderCount})` : ''} ›
+            </span>
           </div>
           <div className={styles.orderGrid}>
             {orderGrid.map((item, idx) => (
-              <div key={idx} className={styles.orderItem} onClick={() => Toast.show({ content: `${item.label} — 功能开发中` })}>
+              <div key={idx} className={styles.orderItem} onClick={() => navigate('/orders')}>
                 <span className={styles.orderIcon}>{item.icon}</span>
                 <span className={styles.orderLabel}>{item.label}</span>
               </div>
@@ -86,9 +94,12 @@ const UserPage: React.FC = () => {
         {/* 功能列表 */}
         <div className={styles.card} style={{ marginTop: 10 }}>
           {functionList.map((item, idx) => (
-            <div key={idx} className={styles.funcItem} onClick={() => Toast.show({ content: `${item.label} — 功能开发中` })}>
+            <div key={idx} className={styles.funcItem} onClick={() => navigate(item.path)}>
               <span className={styles.funcIcon}>{item.icon}</span>
               <span className={styles.funcLabel}>{item.label}</span>
+              <span className={styles.funcBadge}>
+                {item.path === '/want-to-see' && wantCount > 0 ? wantCount : ''}
+              </span>
               <RightOutline fontSize={14} color="#ccc" />
             </div>
           ))}
@@ -96,7 +107,7 @@ const UserPage: React.FC = () => {
 
         {/* 设置 */}
         <div className={styles.card} style={{ marginTop: 10 }}>
-          <div className={styles.funcItem} onClick={() => Toast.show({ content: '设置 — 功能开发中' })}>
+          <div className={styles.funcItem} onClick={() => navigate('/settings')}>
             <span className={styles.funcIcon}><SetOutline fontSize={20} /></span>
             <span className={styles.funcLabel}>设置</span>
             <RightOutline fontSize={14} color="#ccc" />

@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'umi';
 import { TabBar } from 'antd-mobile';
 import { AppOutline, UnorderedListOutline, ContentOutline, CompassOutline, UserOutline } from 'antd-mobile-icons';
+import AiChat from '@/components/AiChat';
 import styles from './index.module.less';
 
 const tabs = [
@@ -16,8 +17,9 @@ const BasicLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 详情页不显示 TabBar
-  const hideTabBar = location.pathname.startsWith('/detail');
+  // 子页面不显示 TabBar
+  const hideRoutes = ['/detail', '/orders', '/wallet', '/coupons', '/want-to-see', '/watched', '/settings'];
+  const hideTabBar = hideRoutes.some((r) => location.pathname.startsWith(r));
 
   return (
     <div className={styles.layout}>
@@ -37,6 +39,8 @@ const BasicLayout: React.FC = () => {
           </TabBar>
         </div>
       )}
+      {/* AI 悬浮助手 */}
+      <AiChat />
     </div>
   );
 };

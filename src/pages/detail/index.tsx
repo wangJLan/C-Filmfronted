@@ -4,13 +4,18 @@ import { Button, NavBar, Skeleton, Toast } from 'antd-mobile';
 import { LeftOutline, StarFill, StarOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilmDetail } from '@/services/api/film';
+import SeatPicker from '@/components/SeatPicker';
+import { useOrderStore } from '@/stores/useOrderStore';
+import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import styles from './index.module.less';
 
 const DetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [showSeat, setShowSeat] = useState(false);
+  const addOrder = useOrderStore((s) => s.addOrder);
+  const { toggleWantToSee, isWanted, markAsWatched } = useFilmCollectionStore();
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
@@ -63,11 +68,22 @@ const DetailPage: React.FC = () => {
 
       {/* 操作栏 */}
       <div className={styles.actions}>
-        <div className={styles.likeBtn} onClick={() => { setLiked(!liked); Toast.show({ content: liked ? '已取消想看' : '已标记想看' }); }}>
-          {liked ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
-          <span>{liked ? '已想看' : '想看'}</span>
+        <div className={styles.likeBtn} onClick={() => {
+          if (!detail) return;
+          toggleWantToSee({
+            filmId: detail.id,
+            title: detail.title,
+            poster: detail.poster,
+            rating: detail.rating,
+            wantCount: detail.wantCount ?? '',
+            addedAt: new Date().toISOString(),
+          });
+          Toast.show({ content: isWanted(detail.id) ? '已取消想看' : '已标记想看' });
+        }}>
+          {isWanted(detail.id) ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
+          <span>{isWanted(detail.id) ? '已想看' : '想看'}</span>
         </div>
-        <Button color="primary" className={styles.buyBtn} onClick={() => Toast.show({ content: '选座购票功能开发中' })}>
+        <Button color="primary" className={styles.buyBtn} onClick={() => setShowSeat(true)}>
           选座购票
         </Button>
       </div>
@@ -120,6 +136,34 @@ const DetailPage: React.FC = () => {
 
       {/* 底部占位 */}
       <div className={styles.bottomSpace} />
+
+      {/* 选座面板 */}
+      {showSeat && detail && (
+        <SeatPicker
+          filmTitle={detail.title}
+          filmId={detail.id}
+          poster={detail.poster}
+          onClose={() => setShowSeat(false)}
+          onConfirm={(info) => {
+            addOrder({
+              id: `ORD${Date.now()}`,
+              filmId: info.filmId,
+              filmTitle: info.filmTitle,
+              poster: detail.poster,
+              cinema: info.cinema,
+              hall: info.hall,
+              date: info.date,
+              time: info.time,
+              seats: info.seats,
+              totalPrice: info.totalPrice,
+              status: 'paid',
+              createdAt: new Date().toISOString(),
+            });
+            setShowSeat(false);
+            Toast.show({ icon: 'success', content: `购票成功！${info.seats.length}张票 ¥${info.totalPrice}` });
+          }}
+        />
+      )}
     </div>
   );
 };
