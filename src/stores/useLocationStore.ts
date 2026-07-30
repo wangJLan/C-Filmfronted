@@ -1,16 +1,13 @@
 /**
- * 定位状态管理 — 真实 GPS 定位 + 高德逆地理编码
+ * 定位状态管理 — GPS 优先 → IP 定位兜底
  *
  * 流程:
- *   1. 尝试 GPS 定位 → 拿到经纬度 → 调高德 API 逆地理 → 城市名
- *   2. GPS 失败/拒绝 → 读 localStorage 缓存
- *   3. 缓存为空 → 默认"北京"，提示手动选城
- *
- * 高德 Web服务 Key: 74bfb724d417db45d5a9ffe7215eb4b1
+ *   1. GPS → 后端代理高德逆地理 → 城市名
+ *   2. GPS 失败 → 后端 IP 定位（自带城市名，无需逆地理）
+ *   3. 全失败 → 缓存或默认"北京"
  */
 import { create } from 'zustand';
 
-const AMAP_KEY = '74bfb724d417db45d5a9ffe7215eb4b1';
 const STORAGE_CITY = 'app_city';
 const STORAGE_COORDS = 'app_coords';
 
@@ -50,18 +47,16 @@ function saveCache(city: string, lat: number, lng: number) {
   } catch { /* ignore */ }
 }
 
+/** 逆地理编码 — 走后端代理 */
 async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
-    const url = `https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_KEY}&location=${lng},${lat}&output=json&radius=1000&extensions=base`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (data.status === '1' && data.regeocode) {
-      const comp = data.regeocode.addressComponent;
-      const cityName = comp.city || comp.district || comp.province || null;
-      console.log('[定位] 逆地理成功:', cityName, `(原返回: city=${comp.city}, district=${comp.district})`);
-      return cityName;
+    const resp = await fetch(`/api/geo/reverse?lat=${lat}&lng=${lng}`, { credentials: 'include' });
+    const body = await resp.json();
+    if (body.code === 0 && body.data?.city) {
+      console.log('[定位] 逆地理成功:', body.data.city);
+      return body.data.city;
     }
-    console.warn('[定位] 逆地理返回异常:', data);
+    console.warn('[定位] 逆地理返回异常:', body);
     return null;
   } catch (e) {
     console.warn('[定位] 逆地理请求失败:', e);
@@ -76,10 +71,9 @@ function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
       reject(new Error('浏览器不支持定位'));
       return;
     }
-    // 检查当前协议 — HTTP（非 localhost）会被 Chrome 拦截
     const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (location.protocol === 'http:' && !isLocalhost) {
-      console.warn(`[定位] 当前为 HTTP(${location.hostname})，浏览器会拦截 GPS。请用 localhost 访问或部署 HTTPS。`);
+      console.warn(`[定位] HTTP(${location.hostname}) 会拦截 GPS`);
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -95,6 +89,23 @@ function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
   });
 }
 
+/** IP 定位 — 城市名由后端返回，无需再调逆地理 */
+async function ipLocate(): Promise<{ city: string; lat: number; lng: number } | null> {
+  try {
+    const resp = await fetch('/api/geo/ip-locate', { credentials: 'include' });
+    const body = await resp.json();
+    if (body.code === 0 && body.data?.city) {
+      console.log('[定位] IP 定位成功:', body.data.city, body.data.lat, body.data.lng);
+      return { city: body.data.city, lat: body.data.lat, lng: body.data.lng };
+    }
+    console.warn('[定位] IP 定位返回异常:', body);
+    return null;
+  } catch (e) {
+    console.warn('[定位] IP 定位请求失败:', e);
+    return null;
+  }
+}
+
 export const useLocationStore = create<LocationState>()((set) => ({
   city: '北京',
   lat: 39.9,
@@ -108,19 +119,32 @@ export const useLocationStore = create<LocationState>()((set) => ({
     if (cache) { set({ city: cache.city, lat: cache.lat, lng: cache.lng, located: true }); console.log('[定位] 缓存命中:', cache.city); } else { console.log('[定位] 无缓存'); }
 
     set({ loading: true });
+
+    // 第1步：GPS + 后端逆地理代理
     try {
       const pos = await getCurrentPosition();
       const cityName = await reverseGeocode(pos.lat, pos.lng);
       if (cityName) {
         set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
         saveCache(cityName, pos.lat, pos.lng);
-        console.log('[定位] init 完成 — 当前城市:', cityName);
+        console.log('[定位] init 完成(GPS) —', cityName);
         return;
       }
       console.warn('[定位] GPS 成功但逆地理无结果');
-    } catch (e: any) { console.warn('[定位] GPS 失败:', e.message || e); }
+    } catch (e: any) { console.warn('[定位] GPS 失败，降级到 IP:', e.message || e); }
+
+    // 第2步：IP 定位（自带城市名）
+    const ip = await ipLocate();
+    if (ip) {
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+      saveCache(ip.city, ip.lat, ip.lng);
+      console.log('[定位] init 完成(IP) —', ip.city);
+      return;
+    }
+
+    // 第3步：全失败
     set({ loading: false });
-    if (!cache) { console.warn('[定位] 无缓存且 GPS 失败，保持默认:"北京"，请手动选城或点"重新定位"'); set({ located: false }); }
+    if (!cache) { console.warn('[定位] 失败，默认北京'); set({ located: false }); }
   },
 
   selectCity: (c) => {
@@ -130,15 +154,27 @@ export const useLocationStore = create<LocationState>()((set) => ({
 
   relocate: async () => {
     set({ loading: true });
+    // GPS
     try {
       const pos = await getCurrentPosition();
       const cityName = await reverseGeocode(pos.lat, pos.lng);
       if (cityName) {
         set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
         saveCache(cityName, pos.lat, pos.lng);
+        console.log('[定位] relocate(GPS) —', cityName);
         return;
       }
     } catch { /* ignore */ }
+
+    // IP
+    const ip = await ipLocate();
+    if (ip) {
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+      saveCache(ip.city, ip.lat, ip.lng);
+      console.log('[定位] relocate(IP) —', ip.city);
+      return;
+    }
     set({ loading: false, located: false });
+    console.warn('[定位] relocate 失败');
   },
 }));
