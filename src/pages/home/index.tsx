@@ -36,9 +36,10 @@ const HomePage: React.FC = () => {
     <div className={styles.page}>
       {/* 搜索栏 + 城市定位 */}
       <div className={styles.searchRow}>
-        <div className={styles.cityTag}>
+        <div className={styles.cityTag} onClick={() => navigate('/city-picker')}>
           <EnvironmentOutline fontSize={14} color="#FF5A00" />
           <span>{city}</span>
+          <span className={styles.cityArrow}>▾</span>
         </div>
         <div className={styles.searchWrap}>
           <SearchBar

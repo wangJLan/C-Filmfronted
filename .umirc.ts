@@ -29,6 +29,7 @@ export default defineConfig({
         { path: '/profile-edit', component: '@/pages/profile-edit/index', title: '编辑资料' },
         { path: '/forgot-password', component: '@/pages/forgot-password/index', title: '找回密码' },
         { path: '/set-password', component: '@/pages/set-password/index', title: '设置密码' },
+        { path: '/city-picker', component: '@/pages/city-picker/index', title: '选择城市' },
       ],
     },
   ],
@@ -44,7 +45,7 @@ export default defineConfig({
       changeOrigin: true,
     },
     '/uploads': {
-      target: 'http://localhost:8123',
+      target: 'http://localhost:8123/api',
       changeOrigin: true,
     },
   },

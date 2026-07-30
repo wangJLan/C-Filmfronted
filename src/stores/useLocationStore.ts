@@ -1,115 +1,125 @@
 /**
- * 定位状态管理 — Zustand + 手动 localStorage
+ * 定位状态管理 — 真实 GPS 定位 + 高德逆地理编码
  *
- * 流程：
- *   1. 首次打开 → showGate = true → 展示授权弹窗
- *   2. 用户点击"同意" → 调用浏览器定位 API → 保存城市 → showGate = false
- *   3. 用户点击"拒绝"或定位失败 → 使用默认城市 → showGate = false
- *   4. 后续打开 → permissionGranted 已持久化 → 直接跳过授权
+ * 流程:
+ *   1. 尝试 GPS 定位 → 拿到经纬度 → 调高德 API 逆地理 → 城市名
+ *   2. GPS 失败/拒绝 → 读 localStorage 缓存
+ *   3. 缓存为空 → 默认"北京"，提示手动选城
+ *
+ * 高德 Web服务 Key: 74bfb724d417db45d5a9ffe7215eb4b1
  */
 import { create } from 'zustand';
 
-const STORAGE_KEY = 'location-store';
-const DEFAULT_CITY = '北京市';
+const AMAP_KEY = '74bfb724d417db45d5a9ffe7215eb4b1';
+const STORAGE_CITY = 'app_city';
+const STORAGE_COORDS = 'app_coords';
 
-interface PersistedData {
+export interface CityInfo {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+interface LocationState {
   city: string;
-  permissionGranted: boolean;
-}
-
-function loadPersisted(): PersistedData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return { city: DEFAULT_CITY, permissionGranted: false };
-}
-
-function savePersisted(data: PersistedData) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
-}
-
-const persisted = loadPersisted();
-
-export interface LocationState {
-  city: string;
-  permissionGranted: boolean;
-  showGate: boolean;
+  lat: number;
+  lng: number;
   loading: boolean;
+  located: boolean;
+  init: () => Promise<void>;
+  selectCity: (c: CityInfo) => void;
+  relocate: () => Promise<void>;
+}
 
-  grant: () => Promise<void>;
-  deny: () => void;
+function loadCache(): { city: string; lat: number; lng: number } | null {
+  try {
+    const city = localStorage.getItem(STORAGE_CITY);
+    const coords = localStorage.getItem(STORAGE_COORDS);
+    if (city && coords) {
+      const [lat, lng] = coords.split(',').map(Number);
+      return { city, lat, lng };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveCache(city: string, lat: number, lng: number) {
+  try {
+    localStorage.setItem(STORAGE_CITY, city);
+    localStorage.setItem(STORAGE_COORDS, `${lat},${lng}`);
+  } catch { /* ignore */ }
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const url = `https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_KEY}&location=${lng},${lat}&output=json&radius=1000&extensions=base`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.status === '1' && data.regeocode) {
+      const comp = data.regeocode.addressComponent;
+      return comp.city || comp.district || comp.province || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('浏览器不支持定位'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  });
 }
 
 export const useLocationStore = create<LocationState>()((set) => ({
-  city: persisted.city,
-  permissionGranted: persisted.permissionGranted,
-  showGate: !persisted.permissionGranted,
+  city: '北京',
+  lat: 39.9,
+  lng: 116.41,
   loading: false,
+  located: false,
 
-  grant: async () => {
+  init: async () => {
+    const cache = loadCache();
+    if (cache) set({ city: cache.city, lat: cache.lat, lng: cache.lng, located: true });
+
     set({ loading: true });
-
-    let city = DEFAULT_CITY;
-
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error('浏览器不支持定位'));
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          timeout: 8000,
-          maximumAge: 10 * 60 * 1000,
-        });
-      });
-
-      city = await reverseGeocode(
-        position.coords.latitude,
-        position.coords.longitude,
-      );
-    } catch {
-      // 定位失败，使用默认城市
-    }
-
-    savePersisted({ city, permissionGranted: true });
-    set({ city, permissionGranted: true, showGate: false, loading: false });
+      const pos = await getCurrentPosition();
+      const cityName = await reverseGeocode(pos.lat, pos.lng);
+      if (cityName) {
+        set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
+        saveCache(cityName, pos.lat, pos.lng);
+        return;
+      }
+    } catch { /* GPS 拒绝/失败 */ }
+    set({ loading: false });
+    if (!cache) set({ located: false });
   },
 
-  deny: () => {
-    savePersisted({ city: DEFAULT_CITY, permissionGranted: true });
-    set({ city: DEFAULT_CITY, permissionGranted: true, showGate: false, loading: false });
+  selectCity: (c) => {
+    set({ city: c.name, lat: c.lat, lng: c.lng, located: true });
+    saveCache(c.name, c.lat, c.lng);
+  },
+
+  relocate: async () => {
+    set({ loading: true });
+    try {
+      const pos = await getCurrentPosition();
+      const cityName = await reverseGeocode(pos.lat, pos.lng);
+      if (cityName) {
+        set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
+        saveCache(cityName, pos.lat, pos.lng);
+        return;
+      }
+    } catch { /* ignore */ }
+    set({ loading: false, located: false });
   },
 }));
-
-// ================= 简易反向地理编码 =================
-
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
-  // 直接使用本地经纬度→城市映射（避免外部 API 依赖）
-  return cityFromCoords(lat, lng);
-}
-
-function cityFromCoords(lat: number, lng: number): string {
-  const cities: [string, number, number, number, number][] = [
-    ['北京市', 39.4, 40.2, 115.4, 117.5],
-    ['上海市', 30.7, 31.5, 120.8, 122.2],
-    ['广州市', 22.6, 23.6, 112.8, 114.0],
-    ['深圳市', 22.4, 22.9, 113.7, 114.6],
-    ['杭州市', 29.8, 30.6, 119.7, 120.9],
-    ['成都市', 30.1, 31.0, 103.6, 104.7],
-    ['武汉市', 30.1, 31.0, 113.7, 115.1],
-    ['南京市', 31.5, 32.5, 118.4, 119.4],
-    ['重庆市', 29.1, 30.2, 105.7, 107.1],
-    ['西安市', 33.9, 34.8, 108.4, 109.5],
-    ['长沙市', 27.9, 28.7, 112.5, 113.5],
-    ['天津市', 38.6, 39.6, 116.6, 118.0],
-  ];
-
-  for (const [c, latMin, latMax, lngMin, lngMax] of cities) {
-    if (lat >= latMin && lat <= latMax && lng >= lngMin && lng <= lngMax) {
-      return c;
-    }
-  }
-
-  return DEFAULT_CITY;
-}

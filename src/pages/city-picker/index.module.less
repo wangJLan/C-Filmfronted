@@ -1,0 +1,166 @@
+/* ========== 城市选择器 ========== */
+
+.page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  position: relative;
+}
+
+/* ===== 区块 ===== */
+.section {
+  padding: 12px 16px 8px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+/* ===== 当前定位 ===== */
+.locateRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #fff;
+  border-radius: 10px;
+}
+
+.locateInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.locateIcon {
+  font-size: 18px;
+}
+
+.locateName {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.relocateBtn {
+  font-size: 12px;
+  color: #FF5A00;
+  cursor: pointer;
+}
+
+/* ===== 热门城市 ===== */
+.hotGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hotItem {
+  position: relative;
+  width: calc(25% - 7.5px);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:active {
+    background: #f5f5f5;
+  }
+}
+
+.hotActive {
+  color: #FF5A00;
+  font-weight: 600;
+  background: #FFF7F2;
+}
+
+.hotCheck {
+  margin-left: 2px;
+  font-size: 12px;
+}
+
+/* ===== 全部城市列表 ===== */
+.listWrap {
+  flex: 1;
+  padding: 0 16px;
+  margin-top: 8px;
+}
+
+.listBox {
+  height: calc(100vh - 320px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.letterTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #999;
+  padding: 10px 0 6px 4px;
+  position: sticky;
+  top: 0;
+  background: #f5f5f5;
+  z-index: 2;
+}
+
+.cityItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 4px;
+  font-size: 15px;
+  color: #1a1a1a;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+
+  &:active {
+    background: #fafafa;
+  }
+}
+
+.cityActive {
+  color: #FF5A00;
+  font-weight: 600;
+}
+
+/* ===== 右侧字母索引 ===== */
+.indexBar {
+  position: fixed;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  z-index: 20;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.indexItem {
+  width: 22px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.indexActive {
+  color: #fff;
+  background: #FF5A00;
+  font-weight: 600;
+}
