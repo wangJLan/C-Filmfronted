@@ -95,18 +95,13 @@ const DetailPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* 快速入口：已有排场的影院 */}
-      {detail.tags && detail.tags.length > 0 && (
-        <div className={styles.quickCinema}>
-          <span className={styles.quickLabel}>支持影厅：</span>
-          {detail.tags.map((tag: string, idx: number) => (
-            <span key={idx} className={styles.quickTag}>{tag}</span>
-          ))}
-          <span className={styles.quickArrow} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
-            查看场次 ›
-          </span>
-        </div>
-      )}
+      {/* 快捷入口：查看排片 */}
+      <div className={styles.quickCinema}>
+        <span className={styles.quickLabel}>{detail.type ? `类型：${detail.type}` : ''}</span>
+        <span className={styles.quickArrow} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
+          选座购票 ›
+        </span>
+      </div>
 
       {/* 简介 */}
       <div className={styles.section}>

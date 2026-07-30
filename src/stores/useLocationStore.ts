@@ -64,6 +64,8 @@ async function reverseGeocode(lat: number, lng: number): Promise<string | null> 
   }
 }
 
+const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
 function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -71,7 +73,6 @@ function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
       reject(new Error('浏览器不支持定位'));
       return;
     }
-    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (location.protocol === 'http:' && !isLocalhost) {
       console.warn(`[定位] HTTP(${location.hostname}) 会拦截 GPS`);
     }
@@ -133,18 +134,25 @@ export const useLocationStore = create<LocationState>()((set) => ({
       console.warn('[定位] GPS 成功但逆地理无结果');
     } catch (e: any) { console.warn('[定位] GPS 失败，降级到 IP:', e.message || e); }
 
-    // 第2步：IP 定位（自带城市名）
-    const ip = await ipLocate();
-    if (ip) {
-      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
-      saveCache(ip.city, ip.lat, ip.lng);
-      console.log('[定位] init 完成(IP) —', ip.city);
-      return;
+    // 第2步：IP 定位 — localhost 下 IP 定位永远是北京，不可信
+    if (!isLocalhost || !cache) {
+      const ip = await ipLocate();
+      if (ip) {
+        set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: !isLocalhost });
+        saveCache(ip.city, ip.lat, ip.lng);
+        console.log('[定位] init 完成(IP) —', ip.city);
+        return;
+      }
     }
 
-    // 第3步：全失败
+    // 第3步：全失败 → 缓存或提示手动选择
     set({ loading: false });
-    if (!cache) { console.warn('[定位] 失败，默认北京'); set({ located: false }); }
+    if (cache) {
+      console.log('[定位] 定位失败，使用缓存:', cache.city);
+    } else {
+      console.warn('[定位] GPS+IP 均失败，请手动选城市');
+      set({ located: false });
+    }
   },
 
   selectCity: (c) => {
@@ -166,15 +174,17 @@ export const useLocationStore = create<LocationState>()((set) => ({
       }
     } catch { /* ignore */ }
 
-    // IP
-    const ip = await ipLocate();
-    if (ip) {
-      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
-      saveCache(ip.city, ip.lat, ip.lng);
-      console.log('[定位] relocate(IP) —', ip.city);
-      return;
+    // IP — localhost 下不可信
+    if (!isLocalhost) {
+      const ip = await ipLocate();
+      if (ip) {
+        set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+        saveCache(ip.city, ip.lat, ip.lng);
+        console.log('[定位] relocate(IP) —', ip.city);
+        return;
+      }
     }
     set({ loading: false, located: false });
-    console.warn('[定位] relocate 失败');
+    console.warn('[定位] relocate 失败 — 请手动选城市或检查广告拦截插件');
   },
 }));

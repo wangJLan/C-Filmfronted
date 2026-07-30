@@ -1,17 +1,12 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'umi';
-import { Button, Toast, SearchBar } from 'antd-mobile';
+import { Button, Toast, SearchBar, SpinLoading } from 'antd-mobile';
 import { StarFill, EnvironmentOutline } from 'antd-mobile-icons';
+import { useQuery } from '@tanstack/react-query';
 import { useLocationStore } from '@/stores/useLocationStore';
 import { useUserStore } from '@/stores/useUserStore';
-import {
-  MOCK_HOT_FILMS,
-  MOCK_UPCOMING_FILMS,
-  MOCK_BENEFITS,
-  type HotFilm,
-  type UpcomingFilm,
-  type BenefitItem,
-} from '@/mock/home';
+import { getFilmList, type FilmItem } from '@/services/api/film';
+import { MOCK_BENEFITS, type BenefitItem } from '@/mock/home';
 import styles from './index.module.less';
 
 const FILM_COLORS = [
@@ -25,12 +20,56 @@ const FILM_COLORS = [
   'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
 ];
 
+function formatWanted(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(0)}万人想看`;
+  return `${n}人想看`;
+}
+
+const FilmCardRow: React.FC<{ film: FilmItem; idx: number; onClick: () => void; onBuy: () => void; isHot: boolean }> =
+  ({ film, idx, onClick, onBuy, isHot }) => (
+    <div className={styles.filmCard} onClick={onClick}>
+      <div className={styles.posterPlaceholder} style={{ background: FILM_COLORS[idx % FILM_COLORS.length] }}>
+        <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
+      </div>
+      <div className={styles.filmInfo}>
+        <div className={styles.filmName}>{film.title}</div>
+        {film.rating > 0 && (
+          <div className={styles.rating}>
+            <StarFill className={styles.starIcon} />
+            <span className={styles.ratingValue}>{film.rating.toFixed(1)}</span>
+          </div>
+        )}
+        <div className={styles.wantCount}>
+          {isHot ? formatWanted(film.wantCount) : film.releaseDate}
+        </div>
+      </div>
+      <Button color={isHot ? 'primary' : 'default'} size="mini" className={styles.buyButton}
+        onClick={(e) => { e.stopPropagation(); onBuy(); }}>
+        {isHot ? '购票' : '想看'}
+      </Button>
+    </div>
+  );
+
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const city = useLocationStore((s) => s.city);
   const { isLoggedIn } = useUserStore();
   const hotScrollRef = useRef<HTMLDivElement>(null);
   const upcomingScrollRef = useRef<HTMLDivElement>(null);
+
+  const { data: hotData, isLoading: hotLoading } = useQuery({
+    queryKey: ['filmList', 'hot'],
+    queryFn: () => getFilmList({ status: 'hot', pageSize: 20 }),
+    staleTime: 60000,
+  });
+  const { data: upcomingData, isLoading: upcomingLoading } = useQuery({
+    queryKey: ['filmList', 'upcoming'],
+    queryFn: () => getFilmList({ status: 'upcoming', pageSize: 20 }),
+    staleTime: 60000,
+  });
+
+  const hotFilms = hotData?.list || [];
+  const upcomingFilms = upcomingData?.list || [];
 
   return (
     <div className={styles.page}>
@@ -42,11 +81,8 @@ const HomePage: React.FC = () => {
           <span className={styles.cityArrow}>▾</span>
         </div>
         <div className={styles.searchWrap}>
-          <SearchBar
-            placeholder="搜电影、搜影院"
-            onSearch={() => Toast.show({ content: '搜索功能开发中' })}
-            className={styles.searchBar}
-          />
+          <SearchBar placeholder="搜电影、搜影院" onSearch={() => Toast.show({ content: '搜索功能开发中' })}
+            className={styles.searchBar} />
         </div>
       </div>
 
@@ -58,9 +94,7 @@ const HomePage: React.FC = () => {
           <span className={styles.subBrand}>妙语购票</span>
           <div className={styles.headerIcons}>
             <span className={styles.iconBtn} onClick={() => navigate('/discover')}>📢</span>
-            <span className={styles.iconBtn} onClick={() => navigate('/user')}>
-              {isLoggedIn ? '👤' : '👤'}
-            </span>
+            <span className={styles.iconBtn} onClick={() => navigate('/user')}>{isLoggedIn ? '👤' : '👤'}</span>
           </div>
         </div>
         <div className={styles.giftSection}>
@@ -82,11 +116,7 @@ const HomePage: React.FC = () => {
         {MOCK_BENEFITS.map((item: BenefitItem) => (
           <div key={item.id} className={styles.benefitCard} onClick={() => Toast.show({ content: `${item.title} — 功能开发中` })}>
             <div className={styles.benefitIcon}>
-              {item.icon === 'party' ? (
-                <span className={styles.iconParty}>🎉</span>
-              ) : (
-                <span className={styles.iconCoupon}>🎟️</span>
-              )}
+              {item.icon === 'party' ? <span className={styles.iconParty}>🎉</span> : <span className={styles.iconCoupon}>🎟️</span>}
             </div>
             <div className={styles.benefitInfo}>
               <div className={styles.benefitTitle}>{item.title}</div>
@@ -99,11 +129,7 @@ const HomePage: React.FC = () => {
 
       {/* 立即使用红包下单 */}
       <div className={styles.actionSection}>
-        <Button
-          block
-          className={styles.actionButton}
-          onClick={() => navigate('/detail/3')}
-        >
+        <Button block className={styles.actionButton} onClick={() => navigate('/detail/3')}>
           🧧 立即使用红包下单 🧧
         </Button>
       </div>
@@ -111,46 +137,22 @@ const HomePage: React.FC = () => {
       {/* 热映影片 */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionTitle}>正在热映（{MOCK_HOT_FILMS.length}部）</span>
+          <span className={styles.sectionTitle}>正在热映（{hotFilms.length}部）</span>
           <span className={styles.sectionMore} onClick={() => navigate('/film')}>全部 ›</span>
         </div>
         <div className={styles.hotScrollContainer}>
           <div ref={hotScrollRef} className={styles.hotScroll}>
-            {MOCK_HOT_FILMS.map((film: HotFilm, idx: number) => (
-              <div
-                key={film.id}
-                className={styles.filmCard}
-                onClick={() => navigate(`/detail/${film.id}`)}
-              >
-                <div className={styles.posterPlaceholder} style={{ background: FILM_COLORS[idx % FILM_COLORS.length] }}>
-                  <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
-                  {film.tags.length > 0 && film.tags.map((tag, ti) => (
-                    <span key={ti} className={styles.tag}>{tag}</span>
-                  ))}
-                </div>
-                <div className={styles.filmInfo}>
-                  <div className={styles.filmName}>{film.title}</div>
-                  {film.rating > 0 && (
-                    <div className={styles.rating}>
-                      <StarFill className={styles.starIcon} />
-                      <span className={styles.ratingValue}>{film.rating.toFixed(1)}</span>
-                    </div>
-                  )}
-                  <div className={styles.wantCount}>{film.wantCount}</div>
-                </div>
-                <Button
-                  color="primary"
-                  size="mini"
-                  className={styles.buyButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/detail/${film.id}`);
-                  }}
-                >
-                  购票
-                </Button>
-              </div>
-            ))}
+            {hotLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><SpinLoading color="primary" /></div>
+            ) : hotFilms.length === 0 ? (
+              <div style={{ padding: 30, textAlign: 'center', color: '#999', fontSize: 13 }}>暂无热映影片</div>
+            ) : (
+              hotFilms.map((film, i) => (
+                <FilmCardRow key={film.id} film={film} idx={i} isHot
+                  onClick={() => navigate(`/detail/${film.id}`)}
+                  onBuy={() => navigate(`/detail/${film.id}`)} />
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -163,36 +165,17 @@ const HomePage: React.FC = () => {
         </div>
         <div className={styles.hotScrollContainer}>
           <div ref={upcomingScrollRef} className={styles.hotScroll}>
-            {MOCK_UPCOMING_FILMS.map((film: UpcomingFilm, idx: number) => (
-              <div
-                key={film.id}
-                className={styles.filmCard}
-                onClick={() => navigate(`/detail/${film.id}`)}
-              >
-                <div className={styles.posterPlaceholder} style={{ background: FILM_COLORS[(idx + 2) % FILM_COLORS.length] }}>
-                  <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
-                  {film.tags.length > 0 && film.tags.map((tag, ti) => (
-                    <span key={ti} className={styles.tag}>{tag}</span>
-                  ))}
-                </div>
-                <div className={styles.filmInfo}>
-                  <div className={styles.filmName}>{film.title}</div>
-                  <div className={styles.wantCount}>{film.wantCount}</div>
-                  <div className={styles.releaseDate}>{film.releaseDate}</div>
-                </div>
-                <Button
-                  color="default"
-                  size="mini"
-                  className={styles.buyButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/detail/${film.id}`);
-                  }}
-                >
-                  想看
-                </Button>
-              </div>
-            ))}
+            {upcomingLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><SpinLoading color="primary" /></div>
+            ) : upcomingFilms.length === 0 ? (
+              <div style={{ padding: 30, textAlign: 'center', color: '#999', fontSize: 13 }}>暂无即将上映影片</div>
+            ) : (
+              upcomingFilms.map((film, i) => (
+                <FilmCardRow key={film.id} film={film} idx={i} isHot={false}
+                  onClick={() => navigate(`/detail/${film.id}`)}
+                  onBuy={() => navigate(`/detail/${film.id}`)} />
+              ))
+            )}
           </div>
         </div>
       </div>
