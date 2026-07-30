@@ -3,20 +3,28 @@ import { Button, SpinLoading } from 'antd-mobile';
 import { useLocationStore } from '@/stores/useLocationStore';
 import styles from './index.module.less';
 
-const GATE_KEY = 'location_gate_passed';
+const GATE_KEY = 'location_gate_v2';
 
 /**
- * 定位授权门控 — 首次打开时展示，后续跳过
+ * 定位授权门控
+ *
+ * 逻辑:
+ *   · 已有缓存城市 → 跳过弹窗，静默 GPS 更新
+ *   · 无缓存 → 弹窗，同意后 GPS，拒绝后默认北京
  */
 const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const loading = useLocationStore((s) => s.loading);
   const init = useLocationStore((s) => s.init);
+  const hasCache = !!localStorage.getItem('app_city');
 
-  const [show, setShow] = React.useState(() => !localStorage.getItem(GATE_KEY));
+  // 如果有缓存城市，直接静默初始化
+  const [show, setShow] = React.useState(() => !hasCache && !localStorage.getItem(GATE_KEY));
 
   useEffect(() => {
-    // 如果之前已授权过，直接静默初始化 GPS
-    if (!show) {
+    // 清除旧版本遗留的 key（避免永远跳过弹窗）
+    localStorage.removeItem('location_gate_passed');
+
+    if (hasCache) {
       init();
     }
   }, []);
@@ -30,8 +38,6 @@ const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const handleDeny = () => {
     localStorage.setItem(GATE_KEY, '1');
     setShow(false);
-    // 不调 GPS，直接用缓存或默认值
-    init();
   };
 
   if (!show) {

@@ -57,10 +57,14 @@ async function reverseGeocode(lat: number, lng: number): Promise<string | null> 
     const data = await resp.json();
     if (data.status === '1' && data.regeocode) {
       const comp = data.regeocode.addressComponent;
-      return comp.city || comp.district || comp.province || null;
+      const cityName = comp.city || comp.district || comp.province || null;
+      console.log('[定位] 逆地理成功:', cityName, `(原返回: city=${comp.city}, district=${comp.district})`);
+      return cityName;
     }
+    console.warn('[定位] 逆地理返回异常:', data);
     return null;
-  } catch {
+  } catch (e) {
+    console.warn('[定位] 逆地理请求失败:', e);
     return null;
   }
 }
@@ -68,12 +72,24 @@ async function reverseGeocode(lat: number, lng: number): Promise<string | null> 
 function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
+      console.warn('[定位] 浏览器不支持 geolocation');
       reject(new Error('浏览器不支持定位'));
       return;
     }
+    // 检查当前协议 — HTTP（非 localhost）会被 Chrome 拦截
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (location.protocol === 'http:' && !isLocalhost) {
+      console.warn(`[定位] 当前为 HTTP(${location.hostname})，浏览器会拦截 GPS。请用 localhost 访问或部署 HTTPS。`);
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => reject(err),
+      (pos) => {
+        console.log('[定位] GPS 成功:', pos.coords.latitude, pos.coords.longitude);
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      (err) => {
+        console.warn(`[定位] GPS 失败: ${err.message} (code=${err.code})`);
+        reject(err);
+      },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
     );
   });
@@ -87,8 +103,9 @@ export const useLocationStore = create<LocationState>()((set) => ({
   located: false,
 
   init: async () => {
+    console.log('[定位] init 开始…');
     const cache = loadCache();
-    if (cache) set({ city: cache.city, lat: cache.lat, lng: cache.lng, located: true });
+    if (cache) { set({ city: cache.city, lat: cache.lat, lng: cache.lng, located: true }); console.log('[定位] 缓存命中:', cache.city); } else { console.log('[定位] 无缓存'); }
 
     set({ loading: true });
     try {
@@ -97,11 +114,13 @@ export const useLocationStore = create<LocationState>()((set) => ({
       if (cityName) {
         set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
         saveCache(cityName, pos.lat, pos.lng);
+        console.log('[定位] init 完成 — 当前城市:', cityName);
         return;
       }
-    } catch { /* GPS 拒绝/失败 */ }
+      console.warn('[定位] GPS 成功但逆地理无结果');
+    } catch (e: any) { console.warn('[定位] GPS 失败:', e.message || e); }
     set({ loading: false });
-    if (!cache) set({ located: false });
+    if (!cache) { console.warn('[定位] 无缓存且 GPS 失败，保持默认:"北京"，请手动选城或点"重新定位"'); set({ located: false }); }
   },
 
   selectCity: (c) => {
