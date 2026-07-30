@@ -1,158 +1,104 @@
 /**
- * 统一选座页 — 可视化座位图 + 批量选座 + 锁座
- *
- * 双模式：manual（手动） / ai（AI 推荐后接入）
+ * 统一选座页 — 真实座位数据 + 锁座 + 创建订单
  */
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'umi';
-import { NavBar, Button, Toast, SafeArea } from 'antd-mobile';
+import { NavBar, Button, Toast, SafeArea, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import {
-  MOCK_HOT_FILMS, MOCK_CINEMAS, getAllShowtimes,
-  getSeatLayout, lockSeats, type ShowtimeItem,
-} from '@/mock/home';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { useQuery } from '@tanstack/react-query';
+import { getSeatMap, lockSeats, type SeatItem } from '@/services/api/seat';
+import { createOrder } from '@/services/api/order';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
 
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-function seatLabel(rowIdx: number, colIdx: number): string {
-  return `${rowIdx + 1}排${colIdx + 1}座`;
-}
-
 const SeatPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
   const navigate = useNavigate();
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
-  const createPendingOrder = useOrderStore((s) => s.createPendingOrder);
-
-  // 页面级守卫：未登录弹窗，登录成功后回到本页
-  useEffect(() => {
-    if (!isLoggedIn) {
-      guard(() => {});
-    }
-  }, []);
-
   const sid = Number(showtimeId);
-  const showtime: ShowtimeItem | undefined = useMemo(
-    () => getAllShowtimes().find((s) => s.id === sid),
-    [sid],
-  );
-  const film = MOCK_HOT_FILMS.find((f) => f.id === showtime?.filmId);
-  const cinema = MOCK_CINEMAS.find((c) => c.id === showtime?.cinemaId);
 
-  const [layout] = useState(() => getSeatLayout(sid));
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // 页面守卫
+  React.useEffect(() => { if (!isLoggedIn) guard(() => {}); }, []);
 
-  const remaining = showtime ? showtime.totalSeats - showtime.soldSeats : 0;
-  const maxSelect = Math.min(4, remaining);
+  const { data: seatMap, isLoading } = useQuery({
+    queryKey: ['seatMap', sid],
+    queryFn: () => getSeatMap(sid),
+    enabled: !!sid && isLoggedIn,
+  });
 
-  const toggle = useCallback((key: string) => {
-    if (layout.soldSeats.has(key)) return;
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [locking, setLocking] = useState(false);
+  const maxSelect = 4;
 
-    // 情侣座：找到该座位所属的 pair
-    const couplePair = layout.couplePairs.find(([a, b]) => a === key || b === key);
+  const { rows, cols, seats, price } = useMemo(() => {
+    if (!seatMap) return { rows: 0, cols: 0, seats: [], price: 0 };
+    return {
+      rows: seatMap.rowCount,
+      cols: seatMap.colCount,
+      seats: seatMap.seats,
+      price: seatMap.price || 0,
+    };
+  }, [seatMap]);
 
-    setSelected((prev) => {
+  // 按行列索引的座位映射
+  const seatGrid = useMemo(() => {
+    const grid = new Map<string, SeatItem>();
+    seats.forEach(s => grid.set(`${s.rowNum}-${s.colNum}`, s));
+    return grid;
+  }, [seats]);
+
+  const toggle = (row: number, col: number) => {
+    const seat = seatGrid.get(`${row}-${col}`);
+    if (!seat || seat.status !== 'available') return;
+    setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        // 取消选中：成对取消
-        next.delete(key);
-        if (couplePair) {
-          next.delete(couplePair[0]);
-          next.delete(couplePair[1]);
-        }
-      } else {
-        if (couplePair) {
-          // 情侣座必须成对选
-          const [a, b] = couplePair;
-          if (layout.soldSeats.has(a) || layout.soldSeats.has(b)) return prev;
-          if (next.size + 2 > maxSelect) {
-            Toast.show({ content: `最多选${maxSelect}座` });
-            return prev;
-          }
-          next.add(a);
-          next.add(b);
-        } else {
-          if (next.size >= maxSelect) {
-            Toast.show({ content: `最多选${maxSelect}座` });
-            return prev;
-          }
-          next.add(key);
-        }
-      }
+      if (next.has(seat.id)) { next.delete(seat.id); return next; }
+      if (next.size >= maxSelect) { Toast.show({ content: `最多选${maxSelect}座` }); return prev; }
+      next.add(seat.id);
       return next;
     });
-  }, [layout, maxSelect]);
-
-  const totalPrice = selected.size * (showtime?.price || 0);
-
-  const handleConfirm = () => {
-    if (selected.size === 0) {
-      Toast.show({ content: '请先选择座位' });
-      return;
-    }
-    if (!showtime || !film || !cinema) return;
-
-    const keys = Array.from(selected);
-    const ok = lockSeats(sid, keys);
-    if (!ok) {
-      Toast.show({ content: '部分座位已被抢走，请重新选择 😅' });
-      // 清空 locked 缓存并重新加载 layout
-      window.location.reload();
-      return;
-    }
-
-    const seats = keys.map((k) => {
-      const [r, c] = k.split('-').map(Number);
-      return seatLabel(r, c);
-    });
-
-    const orderId = createPendingOrder({
-      filmId: film.id,
-      filmTitle: film.title,
-      poster: film.poster,
-      cinema: cinema.name,
-      hall: showtime.hall,
-      date: showtime.date,
-      time: showtime.time,
-      seats,
-      totalPrice,
-    });
-
-    Toast.show({ icon: 'success', content: '锁座成功！' });
-    navigate(`/order-confirm/${orderId}`, { replace: true });
   };
 
-  if (!showtime || !film || !cinema) {
-    return (
-      <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
-        <div className={styles.empty}>场次不存在或已失效</div>
-      </div>
-    );
-  }
+  const totalPrice = selectedIds.size * price;
 
-  const { rows, cols, soldSeats, couplePairs, aisleCols } = layout;
-  const coupleSet = new Set(couplePairs.flat());
+  const handleConfirm = async () => {
+    if (selectedIds.size === 0) { Toast.show({ content: '请先选择座位' }); return; }
+    setLocking(true);
+    try {
+      // 1. 锁座
+      await lockSeats(sid, Array.from(selectedIds));
+      // 2. 创建订单
+      const order = await createOrder(sid, Array.from(selectedIds));
+      Toast.show({ icon: 'success', content: '下单成功！' });
+      navigate(`/order-confirm/${order.id}`, { replace: true });
+    } catch (e: any) {
+      Toast.show({ icon: 'fail', content: e.message || '操作失败' });
+    } finally { setLocking(false); }
+  };
+
+  if (isLoading) {
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
+      <div style={{ textAlign: 'center', padding: 80 }}><SpinLoading color="primary" /></div></div>;
+  }
+  if (!seatMap) {
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
+      <div className={styles.empty}>场次不存在或已失效</div></div>;
+  }
 
   return (
     <div className={styles.page}>
       <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
 
-      {/* 影片+影院信息 */}
       <div className={styles.infoBar}>
-        <div className={styles.filmName}>{film.title}</div>
         <div className={styles.meta}>
-          {cinema.name.split('(')[0]} · {showtime.hall} · {showtime.date} · {showtime.time}
+          {seatMap.hallName} · {seatMap.hallType} · ¥{price}/座
         </div>
-        <div className={styles.priceTag}>¥{showtime.price}/座</div>
       </div>
 
-      {/* 银幕 */}
       <div className={styles.screenArea}>
         <div className={styles.screen}>
           <div className={styles.screenCurve} />
@@ -160,92 +106,60 @@ const SeatPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 座位图 */}
       <div className={styles.seatWrap}>
         <div className={styles.seatGrid}>
-          {Array.from({ length: rows }, (_, row) => (
-            <div key={row} className={styles.seatRow}>
-              <span className={styles.rowLabel}>{ROW_LABELS[row]}</span>
-              <div className={styles.seatCells}>
-                {Array.from({ length: cols }, (_, col) => {
-                  const key = `${row}-${col}`;
-                  const isSold = soldSeats.has(key);
-                  const isSel = selected.has(key);
-                  const isCouple = coupleSet.has(key);
-                  const isAisle = aisleCols.includes(col);
-
-                  if (isAisle) {
-                    return <span key={col} className={styles.aisle} />;
-                  }
-
-                  let cls = styles.seat;
-                  if (isSold) cls += ` ${styles.seatSold}`;
-                  else if (isSel) cls += ` ${styles.seatSelected}`;
-                  else if (isCouple) cls += ` ${styles.seatCouple}`;
-                  else cls += ` ${styles.seatAvail}`;
-
-                  return (
-                    <div
-                      key={col}
-                      className={cls}
-                      onClick={() => toggle(key)}
-                    />
-                  );
-                })}
+          {Array.from({ length: rows }, (_, rowIdx) => {
+            const rowNum = rowIdx + 1;
+            return (
+              <div key={rowNum} className={styles.seatRow}>
+                <span className={styles.rowLabel}>{ROW_LABELS[rowIdx]}</span>
+                <div className={styles.seatCells}>
+                  {Array.from({ length: cols }, (_, colIdx) => {
+                    const colNum = colIdx + 1;
+                    const seat = seatGrid.get(`${rowNum}-${colNum}`);
+                    if (!seat) return <span key={colNum} className={styles.aisle} />;
+                    const isSold = seat.status === 'sold' || seat.status === 'locked';
+                    const isSel = selectedIds.has(seat.id);
+                    const isVip = seat.zone === 'vip';
+                    let cls = styles.seat;
+                    if (isSold) cls += ` ${styles.seatSold}`;
+                    else if (isSel) cls += ` ${styles.seatSelected}`;
+                    else if (isVip) cls += ` ${styles.seatCouple}`;
+                    else cls += ` ${styles.seatAvail}`;
+                    return <div key={colNum} className={cls} onClick={() => toggle(rowNum, colNum)} />;
+                  })}
+                </div>
+                <span className={styles.rowLabel}>{ROW_LABELS[rowIdx]}</span>
               </div>
-              <span className={styles.rowLabel}>{ROW_LABELS[row]}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
-
-        {/* 图例 */}
         <div className={styles.legend}>
-          <div className={styles.legendItem}>
-            <span className={`${styles.legendDot} ${styles.legendAvail}`} />
-            <span>可选</span>
-          </div>
-          <div className={styles.legendItem}>
-            <span className={`${styles.legendDot} ${styles.legendCouple}`} />
-            <span>情侣座</span>
-          </div>
-          <div className={styles.legendItem}>
-            <span className={`${styles.legendDot} ${styles.legendSel}`} />
-            <span>已选</span>
-          </div>
-          <div className={styles.legendItem}>
-            <span className={`${styles.legendDot} ${styles.legendSold}`} />
-            <span>已售</span>
-          </div>
+          <div className={styles.legendItem}><span className={`${styles.legendDot} ${styles.legendAvail}`} /><span>可选</span></div>
+          <div className={styles.legendItem}><span className={`${styles.legendDot} ${styles.legendCouple}`} /><span>VIP</span></div>
+          <div className={styles.legendItem}><span className={`${styles.legendDot} ${styles.legendSel}`} /><span>已选</span></div>
+          <div className={styles.legendItem}><span className={`${styles.legendDot} ${styles.legendSold}`} /><span>已售</span></div>
         </div>
       </div>
 
-      {/* 底部确认栏 */}
       <div className={styles.bottomBar}>
         <SafeArea position="bottom" />
         <div className={styles.bottomInner}>
           <div className={styles.bottomLeft}>
-            {selected.size > 0 ? (
+            {selectedIds.size > 0 ? (
               <>
                 <span className={styles.bottomSeats}>
-                  {Array.from(selected).slice(0, 3).map((k) => {
-                    const [r, c] = k.split('-').map(Number);
-                    return seatLabel(r, c);
+                  {Array.from(selectedIds).slice(0,3).map(id => {
+                    const s = seats.find(x => x.id === id);
+                    return s ? s.seatLabel : '';
                   }).join('、')}
-                  {selected.size > 3 ? ` 等${selected.size}座` : ''}
+                  {selectedIds.size > 3 ? ` 等${selectedIds.size}座` : ''}
                 </span>
-                <span className={styles.bottomPrice}>
-                  ¥<strong>{totalPrice}</strong>
-                </span>
+                <span className={styles.bottomPrice}>¥<strong>{totalPrice}</strong></span>
               </>
-            ) : (
-              <span className={styles.bottomHint}>请选择座位（可选{remaining}座）</span>
-            )}
+            ) : <span className={styles.bottomHint}>请选择座位</span>}
           </div>
-          <Button
-            className={styles.confirmBtn}
-            onClick={handleConfirm}
-            disabled={selected.size === 0}
-          >
+          <Button className={styles.confirmBtn} onClick={handleConfirm} loading={locking} disabled={selectedIds.size === 0}>
             确认选座
           </Button>
         </div>
