@@ -8,14 +8,14 @@ import { LeftOutline, CheckCircleOutline } from 'antd-mobile-icons';
 import { getOrderDetail, payOrder, type OrderVO } from '@/services/api/order';
 import styles from './index.module.less';
 
-function loadFromCache(oid: number): OrderVO | null {
+function loadFromCache(oid: string): OrderVO | null {
   try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
 
 const PaymentPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const oid = Number(orderId);
+  const oid = orderId!; // 雪花ID, 不能用Number()
   const [order, setOrder] = useState<OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);

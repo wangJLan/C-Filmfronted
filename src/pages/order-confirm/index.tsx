@@ -18,7 +18,7 @@ function formatCountdown(seconds: number): string {
 const OrderConfirmPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const oid = Number(orderId);
+  const oid = orderId!;  // 雪花ID: 19位超大数字,不能用Number()会截断
 
   // sessionStorage 读取（createOrder 时写入的）
   const [order, setOrder] = useState<OrderVO | null>(() => {

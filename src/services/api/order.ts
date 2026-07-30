@@ -4,7 +4,8 @@
 import http from '../request';
 
 export interface OrderVO {
-  id: number;
+  /** 雪花ID, 19位, JS Number装不下 → 用string */
+  id: string;
   orderNo: string;
   userId: number;
   scheduleId: number;
@@ -24,17 +25,20 @@ export interface OrderVO {
 
 /** 创建订单 */
 export async function createOrder(scheduleId: number, seatIds: number[]): Promise<OrderVO> {
-  return http.post('/order/create', { scheduleId, seatIds });
+  const raw = await http.post('/order/create', { scheduleId, seatIds }) as any;
+  return { ...raw, id: String(raw.id) };
 }
 
 /** 支付订单 */
-export async function payOrder(orderId: number): Promise<{ payForm: string; orderNo: string }> {
-  return http.post('/order/pay', { orderId });
+export async function payOrder(orderId: string): Promise<{ payForm: string; orderNo: string }> {
+  return http.post('/order/pay', { orderId: Number(orderId) });
 }
 
 /** 订单详情 */
-export async function getOrderDetail(orderId: number): Promise<OrderVO> {
-  return http.get(`/order/${orderId}`);
+export async function getOrderDetail(orderId: string): Promise<OrderVO> {
+  // ID 走 URL 路径传字符串，Spring 会自动解析 Long
+  const raw = await http.get(`/order/${orderId}`) as any;
+  return { ...raw, id: String(raw.id) };
 }
 
 /** 订单列表 */
@@ -42,5 +46,6 @@ export async function getOrderList(params: {
   pageNum?: number;
   pageSize?: number;
 }): Promise<{ records: OrderVO[]; totalRow: number }> {
-  return http.get('/order/list', { params });
+  const raw = await http.get('/order/list', { params }) as any;
+  return { records: (raw.records || []).map((r: any) => ({ ...r, id: String(r.id) })), totalRow: raw.totalRow };
 }
