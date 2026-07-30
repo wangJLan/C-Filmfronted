@@ -3,7 +3,7 @@
  *
  * 双模式：manual（手动） / ai（AI 推荐后接入）
  */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
@@ -12,6 +12,8 @@ import {
   getSeatLayout, lockSeats, type ShowtimeItem,
 } from '@/mock/home';
 import { useOrderStore } from '@/stores/useOrderStore';
+import { useGuard } from '@/hooks/useGuard';
+import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
 
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -23,7 +25,16 @@ function seatLabel(rowIdx: number, colIdx: number): string {
 const SeatPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
   const navigate = useNavigate();
+  const guard = useGuard();
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const createPendingOrder = useOrderStore((s) => s.createPendingOrder);
+
+  // 页面级守卫：未登录弹窗，登录成功后回到本页
+  useEffect(() => {
+    if (!isLoggedIn) {
+      guard(() => {});
+    }
+  }, []);
 
   const sid = Number(showtimeId);
   const showtime: ShowtimeItem | undefined = useMemo(

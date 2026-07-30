@@ -1,13 +1,29 @@
 import React from 'react';
 import { useNavigate } from 'umi';
-import { NavBar, Toast } from 'antd-mobile';
+import { NavBar, Toast, Button, Empty } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { useUserStore } from '@/stores/useUserStore';
+import { useGuard } from '@/hooks/useGuard';
 import styles from './index.module.less';
 
 const CouponsPage: React.FC = () => {
   const navigate = useNavigate();
+  const guard = useGuard();
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const { coupons, useCoupon } = useFilmCollectionStore();
+
+  if (!isLoggedIn) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>我的优惠券</NavBar>
+        <Empty description="登录后可查看优惠券" style={{ paddingTop: 80 }} />
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
+        </div>
+      </div>
+    );
+  }
   const available = coupons.filter((c) => !c.used);
   const used = coupons.filter((c) => c.used);
 

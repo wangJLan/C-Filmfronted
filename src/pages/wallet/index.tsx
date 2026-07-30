@@ -1,13 +1,29 @@
 import React from 'react';
 import { useNavigate } from 'umi';
-import { NavBar } from 'antd-mobile';
+import { NavBar, Button, Empty } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { useUserStore } from '@/stores/useUserStore';
+import { useGuard } from '@/hooks/useGuard';
 import styles from './index.module.less';
 
 const WalletPage: React.FC = () => {
   const navigate = useNavigate();
+  const guard = useGuard();
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const { balance, points } = useFilmCollectionStore();
+
+  if (!isLoggedIn) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>我的钱包</NavBar>
+        <Empty description="登录后可查看钱包" style={{ paddingTop: 80 }} />
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

@@ -3,6 +3,8 @@ import { useNavigate } from 'umi';
 import { NavBar, Button, Empty } from 'antd-mobile';
 import { LeftOutline, StarFill } from 'antd-mobile-icons';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { useUserStore } from '@/stores/useUserStore';
+import { useGuard } from '@/hooks/useGuard';
 import { MOCK_HOT_FILMS, MOCK_UPCOMING_FILMS } from '@/mock/home';
 import styles from './index.module.less';
 
@@ -10,7 +12,21 @@ const ALL_FILMS = [...MOCK_HOT_FILMS, ...MOCK_UPCOMING_FILMS];
 
 const WatchedPage: React.FC = () => {
   const navigate = useNavigate();
+  const guard = useGuard();
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const { watched } = useFilmCollectionStore();
+
+  if (!isLoggedIn) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>看过的电影</NavBar>
+        <Empty description="登录后可查看看过的电影" style={{ paddingTop: 80 }} />
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

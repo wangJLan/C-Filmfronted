@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'umi';
 import { TabBar } from 'antd-mobile';
 import { AppOutline, UnorderedListOutline, ContentOutline, CompassOutline, UserOutline } from 'antd-mobile-icons';
 import AiChat from '@/components/AiChat';
+import LoginModal from '@/components/LoginModal';
 import styles from './index.module.less';
 
 const tabs = [
@@ -41,6 +42,8 @@ const BasicLayout: React.FC = () => {
       )}
       {/* AI 悬浮助手 */}
       <AiChat />
+      {/* 全局登录弹窗 */}
+      <LoginModal />
     </div>
   );
 };

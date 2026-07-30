@@ -17,6 +17,7 @@ import { NavBar, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { MOCK_HOT_FILMS, MOCK_CINEMAS, getShowtimes, getAllShowtimes, type ShowtimeItem } from '@/mock/home';
 import { useAiStore } from '@/stores/useAiStore';
+import { useGuard } from '@/hooks/useGuard';
 import dayjs from 'dayjs';
 import styles from './index.module.less';
 
@@ -58,6 +59,7 @@ const ShowtimePage: React.FC = () => {
   const params = useParams<{ filmId?: string; cinemaId?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const guard = useGuard();
   const triggerAi = useAiStore((s) => s.triggerAi);
 
   // 推断当前模式
@@ -145,7 +147,7 @@ const ShowtimePage: React.FC = () => {
       Toast.show({ content: `已售罄 😅 推荐：${tips}`, duration: 4000 });
       return;
     }
-    navigate(`/seat/${item.id}`);
+    guard(() => navigate(`/seat/${item.id}`));
   };
 
   // ==================== 渲染：选影院模式（filmOnly） ====================

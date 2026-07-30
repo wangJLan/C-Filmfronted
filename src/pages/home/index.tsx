@@ -3,6 +3,7 @@ import { useNavigate } from 'umi';
 import { Button, Toast, SearchBar } from 'antd-mobile';
 import { StarFill, EnvironmentOutline } from 'antd-mobile-icons';
 import { useLocationStore } from '@/stores/useLocationStore';
+import { useUserStore } from '@/stores/useUserStore';
 import {
   MOCK_HOT_FILMS,
   MOCK_UPCOMING_FILMS,
@@ -27,6 +28,7 @@ const FILM_COLORS = [
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const city = useLocationStore((s) => s.city);
+  const { isLoggedIn } = useUserStore();
   const hotScrollRef = useRef<HTMLDivElement>(null);
   const upcomingScrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +57,9 @@ const HomePage: React.FC = () => {
           <span className={styles.subBrand}>妙语购票</span>
           <div className={styles.headerIcons}>
             <span className={styles.iconBtn} onClick={() => navigate('/discover')}>📢</span>
-            <span className={styles.iconBtn} onClick={() => navigate('/user')}>👤</span>
+            <span className={styles.iconBtn} onClick={() => navigate('/user')}>
+              {isLoggedIn ? '👤' : '👤'}
+            </span>
           </div>
         </div>
         <div className={styles.giftSection}>

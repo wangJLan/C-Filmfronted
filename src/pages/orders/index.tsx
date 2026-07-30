@@ -3,6 +3,8 @@ import { useNavigate } from 'umi';
 import { Button, NavBar, Tabs, Toast, Empty } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useOrderStore, type OrderItem } from '@/stores/useOrderStore';
+import { useUserStore } from '@/stores/useUserStore';
+import { useGuard } from '@/hooks/useGuard';
 import styles from './index.module.less';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -14,8 +16,27 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const guard = useGuard();
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const { orders, cancelOrder } = useOrderStore();
   const [tab, setTab] = useState<'all' | 'pending' | 'paid' | 'completed'>('all');
+
+  // 页面级守卫
+  if (!isLoggedIn) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>
+          我的订单
+        </NavBar>
+        <div className={styles.emptyWrap} style={{ paddingTop: 80 }}>
+          <Empty description="登录后可查看订单" />
+          <Button color="primary" size="small" onClick={() => guard(() => {})} style={{ marginTop: 12, borderRadius: 16 }}>
+            去登录
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = orders.filter((o) => {
     if (tab === 'all') return true;

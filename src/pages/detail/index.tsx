@@ -10,11 +10,13 @@ import { LeftOutline, StarFill, StarOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilmDetail } from '@/services/api/film';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { useGuard } from '@/hooks/useGuard';
 import styles from './index.module.less';
 
 const DetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const guard = useGuard();
   const [expanded, setExpanded] = useState(false);
   const { toggleWantToSee, isWanted } = useFilmCollectionStore();
 
@@ -69,7 +71,7 @@ const DetailPage: React.FC = () => {
 
       {/* 操作栏 */}
       <div className={styles.actions}>
-        <div className={styles.likeBtn} onClick={() => {
+        <div className={styles.likeBtn} onClick={() => guard(() => {
           if (!detail) return;
           toggleWantToSee({
             filmId: detail.id,
@@ -80,14 +82,14 @@ const DetailPage: React.FC = () => {
             addedAt: new Date().toISOString(),
           });
           Toast.show({ content: isWanted(detail.id) ? '已取消想看' : '已标记想看' });
-        }}>
+        })}>
           {isWanted(detail.id) ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
           <span>{isWanted(detail.id) ? '已想看' : '想看'}</span>
         </div>
         <Button
           color="primary"
           className={styles.buyBtn}
-          onClick={() => navigate(`/showtime/film/${id}`)}
+          onClick={() => guard(() => navigate(`/showtime/film/${id}`))}
         >
           选座购票
         </Button>
@@ -100,7 +102,7 @@ const DetailPage: React.FC = () => {
           {detail.tags.map((tag: string, idx: number) => (
             <span key={idx} className={styles.quickTag}>{tag}</span>
           ))}
-          <span className={styles.quickArrow} onClick={() => navigate(`/showtime/film/${id}`)}>
+          <span className={styles.quickArrow} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
             查看场次 ›
           </span>
         </div>
