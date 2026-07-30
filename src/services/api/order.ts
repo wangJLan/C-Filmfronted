@@ -31,7 +31,8 @@ export async function createOrder(scheduleId: number, seatIds: number[]): Promis
 
 /** 支付订单 */
 export async function payOrder(orderId: string): Promise<{ payForm: string; orderNo: string }> {
-  return http.post('/order/pay', { orderId: Number(orderId) });
+  // BigInt → safeStringify 保留 19位精度写入 JSON body
+  return http.post('/order/pay', { orderId: BigInt(orderId) });
 }
 
 /** 订单详情 */

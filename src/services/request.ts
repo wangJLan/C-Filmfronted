@@ -8,13 +8,29 @@
 import axios from 'axios';
 
 const http = axios.create({
-  baseURL: '/api',        // 经 Umi proxy → http://localhost:8123/api
+  baseURL: '/api',
   timeout: 10000,
-  withCredentials: true,  // Session 认证需要携带 Cookie
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
-  // 所有响应都走 then 分支，在拦截器里判断业务 code
   validateStatus: () => true,
+  // 自定义 JSON 序列化：BigInt → 原始数字字面量，保留 19位雪花ID 精度
+  transformRequest: [
+    (data, headers) => {
+      if (headers?.['Content-Type']?.includes('application/json') && data && typeof data === 'object') {
+        return safeStringify(data);
+      }
+      return JSON.stringify(data);
+    },
+  ],
 });
+
+/** JSON.stringify 但 BigInt 直接写入数字（不截断），如 {"id":1842234567890123456} */
+function safeStringify(obj: any): string {
+  const marked = JSON.stringify(obj, (_, v) =>
+    typeof v === 'bigint' ? `__BIGINT_${v.toString()}__` : v,
+  );
+  return marked.replace(/"__BIGINT_(\d+)__"/g, '$1');
+}
 
 // ================= 响应拦截器：统一解包 BaseResponse =================
 http.interceptors.response.use(
