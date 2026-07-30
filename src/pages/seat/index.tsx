@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, Toast, SafeArea, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
-import { getSeatMap, lockSeats, type SeatItem } from '@/services/api/seat';
+import { getSeatMap, type SeatItem } from '@/services/api/seat';
 import { createOrder } from '@/services/api/order';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
@@ -69,10 +69,10 @@ const SeatPage: React.FC = () => {
     if (selectedIds.size === 0) { Toast.show({ content: '请先选择座位' }); return; }
     setLocking(true);
     try {
-      // 1. 锁座
-      await lockSeats(sid, Array.from(selectedIds));
-      // 2. 创建订单
+      // createOrder 内部已包含锁座逻辑，无需单独调 lockSeat
       const order = await createOrder(sid, Array.from(selectedIds));
+      // 暂存到 sessionStorage，防止跳页后 getOrderDetail 偶发失败
+      sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
       Toast.show({ icon: 'success', content: '下单成功！' });
       navigate(`/order-confirm/${order.id}`, { replace: true });
     } catch (e: any) {

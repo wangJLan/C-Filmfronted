@@ -21,10 +21,19 @@ const OrderConfirmPage: React.FC = () => {
   const navigate = useNavigate();
   const oid = Number(orderId);
 
+  // 优先从 sessionStorage 读取（createOrder 时存的），API 失败时做兜底
+  const cached = (() => {
+    try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) as OrderVO : null; } catch { return null; }
+  })();
+
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', oid],
     queryFn: () => getOrderDetail(oid) as Promise<OrderVO>,
     enabled: !!oid,
+    retry: 1,
+    retryDelay: 500,
+    // 用 sessionStorage 数据作为占位，API 返回后覆盖
+    placeholderData: cached || undefined,
   });
 
   const [showCancel, setShowCancel] = useState(false);
