@@ -168,6 +168,206 @@ export const MOCK_CINEMAS: Cinema[] = [
   { id: 8, name: '大地影院(望京店)', address: '朝阳区广顺北大街17号', distance: '3.5km', tags: ['激光', 'VIP'] },
 ];
 
+// ================= 场次类型 =================
+
+export interface ShowtimeItem {
+  id: number;
+  filmId: number;
+  cinemaId: number;
+  hall: string;            // e.g. '1号IMAX厅'
+  time: string;            // e.g. '10:30'
+  price: number;           // 票价
+  discountPrice?: number;  // 优惠价
+  date: string;            // e.g. '2026-07-29'
+  totalSeats: number;
+  soldSeats: number;
+}
+
+const HALL_NAMES: Record<number, string[]> = {
+  1: ['1号IMAX厅', '2号杜比全景声厅', '3号激光厅', '4号VIP厅', '5号普通厅'],
+  2: ['1号IMAX厅', '2号4DX厅', '3号ScreenX厅', '4号普通厅'],
+  3: ['1号杜比厅', '2号VIP厅', '3号普通厅', '4号普通厅'],
+  4: ['1号LD厅', '2号RealD厅', '3号普通厅', '4号普通厅'],
+  5: ['1号CINITY厅', '2号IMAX厅', '3号普通厅', '4号激光厅'],
+  6: ['1号IMAX厅', '2号VIP厅', '3号4D厅', '4号普通厅'],
+  7: ['1号杜比厅', '2号IMAX厅', '3号普通厅', '4号普通厅'],
+  8: ['1号激光厅', '2号VIP厅', '3号普通厅'],
+};
+
+const TIME_SLOTS = ['09:30', '10:45', '12:00', '13:30', '14:45', '16:00', '17:15', '18:30', '19:15', '20:00', '21:30', '22:45'];
+
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+/** 生成某影片在某影院未来7天的场次 */
+function generateShowtimes(filmId: number, cinemaId: number): ShowtimeItem[] {
+  const rand = seededRandom(filmId * 100 + cinemaId);
+  const halls = HALL_NAMES[cinemaId] || ['1号普通厅', '2号普通厅'];
+  const result: ShowtimeItem[] = [];
+  let id = filmId * 10000 + cinemaId * 100;
+
+  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    const date = new Date();
+    date.setDate(date.getDate() + dayOffset);
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+    // 每天 3~7 场
+    const count = 3 + Math.floor(rand() * 5);
+    const shuffled = [...TIME_SLOTS].sort(() => rand() - 0.5).slice(0, count).sort();
+
+    shuffled.forEach((time) => {
+      const hall = halls[Math.floor(rand() * halls.length)];
+      const totalSeats = hall.includes('VIP') ? 48 : hall.includes('IMAX') ? 144 : 96;
+      const basePrice = hall.includes('IMAX') ? 55 : hall.includes('VIP') ? 68 : hall.includes('杜比') || hall.includes('CINITY') ? 48 : hall.includes('LD') || hall.includes('RealD') ? 42 : 35;
+      const price = basePrice + Math.floor(rand() * 15) - 5;
+      const soldSeats = Math.floor(rand() * totalSeats);
+
+      result.push({ id: ++id, filmId, cinemaId, hall, time, date: dateStr, price, totalSeats, soldSeats });
+    });
+  }
+  return result;
+}
+
+/**
+ * 每部热映影片固定选 N 家影院排片（用确定性哈希，不随机跳过）
+ * 确保从详情页"选座购票"进去时至少能看到几家影院可选
+ */
+function pickCinemasForFilm(filmId: number): number[] {
+  // 用 seed 打乱 1-8 的影院 ID 顺序，取前 5-6 家
+  const rand = seededRandom(filmId * 777);
+  const all = [1, 2, 3, 4, 5, 6, 7, 8];
+  const shuffled = all.sort(() => rand() - 0.5);
+  // 不同影片分配不同数量（5-7家），确保至少 5 家
+  const count = 5 + Math.floor((filmId * 3) % 3); // 5~7
+  return shuffled.slice(0, count);
+}
+
+/** 所有场次 Mock 数据（按需懒生成） */
+let _allShowtimes: ShowtimeItem[] | null = null;
+export function getAllShowtimes(): ShowtimeItem[] {
+  if (_allShowtimes) return _allShowtimes;
+  const all: ShowtimeItem[] = [];
+  for (let filmId = 1; filmId <= 8; filmId++) {
+    const cinemaIds = pickCinemasForFilm(filmId);
+    for (const cinemaId of cinemaIds) {
+      all.push(...generateShowtimes(filmId, cinemaId));
+    }
+  }
+  _allShowtimes = all;
+  return _allShowtimes;
+}
+
+/** 查询：影片+影院+日期 → 场次列表 */
+export function getShowtimes(filmId: number, cinemaId: number, date: string): ShowtimeItem[] {
+  return getAllShowtimes().filter(
+    (s) => s.filmId === filmId && s.cinemaId === cinemaId && s.date === date,
+  );
+}
+
+/** 查询：影院+日期 → 所有影片场次 */
+export function getShowtimesByCinemaAndDate(cinemaId: number, date: string): ShowtimeItem[] {
+  return getAllShowtimes().filter((s) => s.cinemaId === cinemaId && s.date === date);
+}
+
+// ================= 座位布局 =================
+
+export interface SeatLayout {
+  rows: number;
+  cols: number;
+  /** 已售座位 key: "row-col" */
+  soldSeats: Set<string>;
+  /** 锁定中的座位 key: "row-col"（同一会话暂存） */
+  lockedSeats: Set<string>;
+  /** 情侣座对：每对两个相邻座位，需要成对选择 ["row-col", "row-col"] */
+  couplePairs: string[][];
+  /** 走道列索引 */
+  aisleCols: number[];
+}
+
+/** 根据影厅生成座位布局 */
+function buildSeatLayout(hall: string, seed: number): SeatLayout {
+  const rand = seededRandom(seed);
+  const isIMAX = hall.includes('IMAX');
+  const isVIP = hall.includes('VIP');
+
+  const totalRows = isVIP ? 6 : isIMAX ? 10 : 8;
+  const totalCols = isVIP ? 8 : 12;
+
+  // 已售座位（基于种子固定生成 30%~60% 已售）
+  const soldSeats = new Set<string>();
+  const soldRate = 0.3 + rand() * 0.3;
+  for (let row = 0; row < totalRows; row++) {
+    for (let col = 0; col < totalCols; col++) {
+      if (rand() < soldRate) {
+        soldSeats.add(`${row}-${col}`);
+      }
+    }
+  }
+
+  // 情侣座：最后 2 排靠边的双连座
+  const couplePairs: string[][] = [];
+  if (!isIMAX && totalRows >= 6) {
+    for (let row = totalRows - 2; row < totalRows; row++) {
+      for (let col = 0; col < totalCols - 1; col += 3) {
+        const key1 = `${row}-${col}`;
+        const key2 = `${row}-${col + 1}`;
+        if (!soldSeats.has(key1) && !soldSeats.has(key2)) {
+          couplePairs.push([key1, key2]);
+        }
+      }
+    }
+  }
+
+  // 走道：IMAX 在中间，普通影厅在 1/2 处
+  const aisleCols: number[] = [];
+  if (isIMAX) {
+    aisleCols.push(Math.floor(totalCols / 2) - 1);
+    aisleCols.push(Math.floor(totalCols / 2));
+  } else if (!isVIP) {
+    aisleCols.push(Math.floor(totalCols / 2) - 0.5);
+  }
+
+  return { rows: totalRows, cols: totalCols, soldSeats, lockedSeats: new Set(), couplePairs, aisleCols };
+}
+
+/** seat layout 缓存 */
+const _layoutCache = new Map<number, SeatLayout>();
+
+/** 根据 showtimeId 获取座位布局（确定性，相同 id 始终相同） */
+export function getSeatLayout(showtimeId: number): SeatLayout {
+  if (_layoutCache.has(showtimeId)) {
+    const cached = _layoutCache.get(showtimeId)!;
+    // 清空 locked
+    cached.lockedSeats.clear();
+    return cached;
+  }
+  const showtime = getAllShowtimes().find((s) => s.id === showtimeId);
+  const layout = buildSeatLayout(showtime?.hall || '普通厅', showtimeId);
+  _layoutCache.set(showtimeId, layout);
+  return layout;
+}
+
+/** 模拟锁座（加入 locked 集合） */
+export function lockSeats(showtimeId: number, seatKeys: string[]): boolean {
+  const layout = getSeatLayout(showtimeId);
+  for (const key of seatKeys) {
+    if (layout.soldSeats.has(key) || layout.lockedSeats.has(key)) return false;
+  }
+  for (const key of seatKeys) layout.lockedSeats.add(key);
+  return true;
+}
+
+/** 释放锁定的座位 */
+export function unlockSeats(showtimeId: number, seatKeys: string[]) {
+  const layout = getSeatLayout(showtimeId);
+  for (const key of seatKeys) layout.lockedSeats.delete(key);
+}
+
 export const MOCK_DISCOVERS: DiscoverCard[] = [
   { id: 1, title: '暑期档观影指南', image: 'https://picsum.photos/seed/discover1/400/200', tag: '资讯', description: '2026暑期档强片云集，多部大片定档' },
   { id: 2, title: 'IMAX vs 杜比影院怎么选', image: 'https://picsum.photos/seed/discover2/400/200', tag: '攻略', description: '一文看懂不同特效厅的区别' },

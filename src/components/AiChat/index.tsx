@@ -3,6 +3,7 @@ import { Button, TextArea, Toast, SpinLoading, SafeArea } from 'antd-mobile';
 import { CloseOutline } from 'antd-mobile-icons';
 import { chatStream, chat as chatOnce } from '@/services/api/ai';
 import { MOCK_HOT_FILMS, MOCK_UPCOMING_FILMS, MOCK_CINEMAS } from '@/mock/home';
+import { useAiStore } from '@/stores/useAiStore';
 import styles from './index.module.less';
 
 // ================= 给 AI 的系统上下文 =================
@@ -44,6 +45,19 @@ const AiChat: React.FC = () => {
   }, []);
 
   useEffect(() => { if (open) scrollBottom(); }, [open, messages]);
+
+  // ===== 外部触发：从其他页面"转交 AI" =====
+  const pendingTriggerRef = useRef<string | null>(null);
+  useEffect(() => {
+    const unsub = useAiStore.subscribe((state) => {
+      if (state.pendingMessage) {
+        pendingTriggerRef.current = state.pendingMessage;
+        useAiStore.getState().consumeMessage();
+        setOpen(true);
+      }
+    });
+    return unsub;
+  }, []);
 
   const send = useCallback(async (text: string) => {
     const userMsg: Message = { id: ++msgId.current, role: 'user', content: text };
@@ -114,6 +128,18 @@ const AiChat: React.FC = () => {
       },
     );
   }, [scrollBottom]);
+
+  // sendRef 必须放在 send 定义之后以避免 use-before-declaration
+  const sendRef = useRef(send);
+  sendRef.current = send;
+
+  useEffect(() => {
+    if (open && pendingTriggerRef.current) {
+      const msg = pendingTriggerRef.current;
+      pendingTriggerRef.current = null;
+      setTimeout(() => sendRef.current?.(msg), 300);
+    }
+  }, [open]);
 
   const handleSend = () => {
     const text = input.trim();

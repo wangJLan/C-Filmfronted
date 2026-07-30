@@ -13,6 +13,18 @@
   background: var(--primary-gradient);
   color: #fff;
   text-align: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.editHint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .nickname {
@@ -155,4 +167,98 @@
   color: var(--primary-color);
   margin-right: 4px;
   font-weight: 500;
+}
+
+/* ========== 入口按钮 ========== */
+.entryBtn {
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 16px;
+  height: 48px;
+  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
+  --text-color: #fff;
+  --border-radius: 24px;
+}
+
+/* ========== 登录表单容器 ========== */
+.formWrap {
+  padding: 0 16px;
+}
+
+.loginTabs {
+  margin-bottom: 8px;
+}
+
+.loginPanel {
+  padding: 0 4px;
+}
+
+.loginTip {
+  font-size: 12px;
+  color: #bbb;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* ========== 输入框 ========== */
+.inputGroup {
+  margin-bottom: 12px;
+}
+
+.loginInput {
+  --font-size: 15px;
+  --placeholder-color: #ccc;
+}
+
+/* ========== 验证码行 ========== */
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.codeInput {
+  flex: 1;
+  --font-size: 15px;
+  --placeholder-color: #ccc;
+}
+
+.codeBtn {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #FF5A00 !important;
+  font-weight: 500;
+  padding: 0 12px;
+  border: 1px solid #FFD4B8 !important;
+  border-radius: 20px;
+  height: 36px;
+
+  &:disabled {
+    color: #ccc !important;
+    border-color: #eee !important;
+  }
+}
+
+/* ========== 提交按钮 ========== */
+.submitBtn {
+  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 16px;
+  height: 46px;
+  margin-top: 4px;
+}
+
+/* ========== 忘记密码 ========== */
+.forgotRow {
+  text-align: right;
+  margin-top: -6px;
+  margin-bottom: 12px;
+}
+
+.forgotLink {
+  font-size: 13px;
+  color: #FF5A00;
+  cursor: pointer;
 }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Avatar, Form, Input, Toast, Tabs } from 'antd-mobile';
+import React, { useState, useEffect, useRef } from 'react';
+import { Button, Avatar, Form, Input, Toast, Tabs, Modal } from 'antd-mobile';
 import { useNavigate } from 'umi';
 import { useUserStore } from '@/stores/useUserStore';
 import { useOrderStore } from '@/stores/useOrderStore';
@@ -24,44 +24,314 @@ const functionList = [
   { icon: <HistogramOutline fontSize={20} />, label: '看过的电影', path: '/watched' },
 ];
 
+// ==================== 邮箱验证码登录 Tab ====================
+
+const EmailLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const { sendMailCode, loginByMail, loading } = useUserStore();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  const startCountdown = () => {
+    setCountdown(60);
+    timerRef.current = window.setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendCode = async () => {
+    if (!email || !email.includes('@')) {
+      Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
+      return;
+    }
+    if (countdown > 0) return;
+    try {
+      await sendMailCode(email);
+      Toast.show({ icon: 'success', content: '验证码已发送，请查收邮件' });
+      startCountdown();
+    } catch (e: any) {
+      Toast.show({ icon: 'fail', content: e.message || '发送失败' });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!email || !email.includes('@')) {
+      Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
+      return;
+    }
+    if (!code || code.length !== 6) {
+      Toast.show({ icon: 'fail', content: '请输入6位验证码' });
+      return;
+    }
+    try {
+      await loginByMail(email, code);
+      onSuccess();
+
+      // 新用户弹窗提醒设置密码
+      const user = useUserStore.getState().user;
+      if (user?.needSetPassword) {
+        Modal.confirm({
+          title: '设置登录密码',
+          content: '检测到您还未设置密码。\n建议设置密码，方便下次使用邮箱+密码登录。',
+          confirmText: '去设置',
+          cancelText: '暂跳过',
+          onConfirm: () => navigate('/set-password'),
+        });
+      }
+    } catch (e: any) {
+      Toast.show({ icon: 'fail', content: e.message || '登录失败' });
+    }
+  };
+
+  return (
+    <div className={styles.loginPanel}>
+      <div className={styles.loginTip}>未注册手机号验证后自动创建账号</div>
+
+      <div className={styles.inputGroup}>
+        <Input
+          className={styles.loginInput}
+          placeholder="请输入邮箱地址"
+          value={email}
+          onChange={(v) => setEmail(v)}
+          clearable
+        />
+      </div>
+
+      <div className={styles.codeRow}>
+        <Input
+          className={styles.codeInput}
+          placeholder="请输入验证码"
+          value={code}
+          onChange={(v) => setCode(v)}
+          maxLength={6}
+          type="number"
+        />
+        <Button
+          className={styles.codeBtn}
+          size="small"
+          fill="none"
+          loading={loading}
+          disabled={countdown > 0}
+          onClick={handleSendCode}
+        >
+          {countdown > 0 ? `${countdown}s` : '获取验证码'}
+        </Button>
+      </div>
+
+      <Button
+        block
+        color="primary"
+        size="large"
+        loading={loading}
+        className={styles.submitBtn}
+        onClick={handleSubmit}
+      >
+        登录
+      </Button>
+    </div>
+  );
+};
+
+// ==================== 账号密码登录 Tab ====================
+
+const PasswordLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const { login, loading } = useUserStore();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (values: { account: string; password: string }) => {
+    if (!values.account || !values.password) {
+      Toast.show({ icon: 'fail', content: '请输入邮箱和密码' });
+      return;
+    }
+    try {
+      await login({
+        userAccount: values.account,
+        userPassword: values.password,
+        checkPassword: values.password,
+      });
+      Toast.show({ icon: 'success', content: '登录成功' });
+      onSuccess();
+    } catch (e: any) {
+      Toast.show({ icon: 'fail', content: e.message || '登录失败' });
+    }
+  };
+
+  return (
+    <div className={styles.loginPanel}>
+      <Form
+        onFinish={handleSubmit}
+        layout="horizontal"
+        footer={
+          <Button
+            block
+            type="submit"
+            color="primary"
+            size="large"
+            loading={loading}
+            className={styles.submitBtn}
+          >
+            登录
+          </Button>
+        }
+      >
+        <Form.Item
+          name="account"
+          rules={[{ required: true, message: '请输入邮箱' }]}
+        >
+          <Input
+            className={styles.loginInput}
+            placeholder="请输入邮箱"
+            clearable
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="password"
+          rules={[{ required: true, message: '请输入密码' }]}
+        >
+          <Input
+            className={styles.loginInput}
+            placeholder="请输入密码（8位以上）"
+            type="password"
+            clearable
+          />
+        </Form.Item>
+      </Form>
+
+      <div className={styles.forgotRow}>
+        <span className={styles.forgotLink} onClick={() => navigate('/forgot-password')}>
+          忘记密码？
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ==================== 账号密码注册 Tab ====================
+
+const RegisterForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const { register, loading } = useUserStore();
+
+  const handleSubmit = async (values: { account: string; password: string; confirm: string }) => {
+    if (!values.account || values.account.length < 4) {
+      Toast.show({ icon: 'fail', content: '邮箱至少 4 位' });
+      return;
+    }
+    if (!values.password || values.password.length < 8) {
+      Toast.show({ icon: 'fail', content: '密码至少 8 位' });
+      return;
+    }
+    if (values.password !== values.confirm) {
+      Toast.show({ icon: 'fail', content: '两次密码不一致' });
+      return;
+    }
+    try {
+      await register({
+        userAccount: values.account,
+        userPassword: values.password,
+        checkPassword: values.confirm,
+      });
+      Toast.show({ icon: 'success', content: '注册成功，已自动登录' });
+      onSuccess();
+    } catch (e: any) {
+      Toast.show({ icon: 'fail', content: e.message || '注册失败' });
+    }
+  };
+
+  return (
+    <div className={styles.loginPanel}>
+      <Form
+        onFinish={handleSubmit}
+        layout="horizontal"
+        footer={
+          <Button
+            block
+            type="submit"
+            color="primary"
+            size="large"
+            loading={loading}
+            className={styles.submitBtn}
+          >
+            注册
+          </Button>
+        }
+      >
+        <Form.Item
+          name="account"
+          rules={[{ required: true, message: '请输入邮箱作为账号' }]}
+        >
+          <Input
+            className={styles.loginInput}
+            placeholder="请输入邮箱作为登录账号"
+            clearable
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="password"
+          rules={[{ required: true, message: '密码至少8位' }]}
+        >
+          <Input
+            className={styles.loginInput}
+            placeholder="请设置密码（8位以上）"
+            type="password"
+            clearable
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="confirm"
+          rules={[{ required: true, message: '请再次输入密码' }]}
+        >
+          <Input
+            className={styles.loginInput}
+            placeholder="确认密码"
+            type="password"
+            clearable
+          />
+        </Form.Item>
+      </Form>
+    </div>
+  );
+};
+
+// ==================== 用户页面 ====================
+
 const UserPage: React.FC = () => {
-  const { user, isLoggedIn, loading, init, login, register, logout } = useUserStore();
+  const { user, isLoggedIn, loading, init, logout } = useUserStore();
   const orderCount = useOrderStore((s) => s.orders.filter((o) => o.status !== 'cancelled').length);
   const wantCount = useFilmCollectionStore((s) => s.wantToSee.length);
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [loginTab, setLoginTab] = useState<'email' | 'password' | 'register'>('email');
 
   useEffect(() => { init(); }, []);
 
-  const handleSubmit = async (values: { account: string; password: string; confirm?: string }) => {
-    try {
-      const params = { userAccount: values.account, userPassword: values.password, checkPassword: values.confirm || values.password };
-      if (activeTab === 'register') {
-        if (values.password !== values.confirm) { Toast.show({ icon: 'fail', content: '两次密码不一致' }); return; }
-        await register(params);
-        Toast.show({ icon: 'success', content: '注册成功' });
-      } else {
-        await login(params);
-        Toast.show({ icon: 'success', content: '登录成功' });
-      }
-      setShowForm(false);
-    } catch (e: any) {
-      Toast.show({ icon: 'fail', content: e.message || '操作失败' });
-    }
-  };
+  const handleLoginSuccess = () => setShowForm(false);
 
   // ========== 已登录 ==========
   if (isLoggedIn && user) {
     return (
       <div className={styles.page}>
-        <div className={styles.header}>
+        <div className={styles.header} onClick={() => navigate('/profile-edit')}>
           <Avatar src={user.userAvatar || ''} style={{ '--size': '68px', border: '3px solid rgba(255,255,255,0.5)' }} />
           <h2 className={styles.nickname}>{user.userName || user.userAccount}</h2>
           <p className={styles.desc}>{user.userProfile || '欢迎来到妙语购票'}</p>
+          <span className={styles.editHint}>点击编辑资料 ›</span>
         </div>
 
-        {/* VIP 会员卡 */}
         <div className={styles.vipCard} onClick={() => navigate('/wallet')}>
           <div className={styles.vipLeft}>
             <span className={styles.vipCrown}>👑</span>
@@ -73,7 +343,6 @@ const UserPage: React.FC = () => {
           <div className={styles.vipBtn}>立即开通 ›</div>
         </div>
 
-        {/* 订单入口 */}
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardTitle}>我的订单</span>
@@ -91,7 +360,6 @@ const UserPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 功能列表 */}
         <div className={styles.card} style={{ marginTop: 10 }}>
           {functionList.map((item, idx) => (
             <div key={idx} className={styles.funcItem} onClick={() => navigate(item.path)}>
@@ -105,7 +373,6 @@ const UserPage: React.FC = () => {
           ))}
         </div>
 
-        {/* 设置 */}
         <div className={styles.card} style={{ marginTop: 10 }}>
           <div className={styles.funcItem} onClick={() => navigate('/settings')}>
             <span className={styles.funcIcon}><SetOutline fontSize={20} /></span>
@@ -132,37 +399,29 @@ const UserPage: React.FC = () => {
 
       {!showForm ? (
         <div style={{ padding: '16px' }}>
-          <Button block color="primary" size="large" loading={loading} onClick={() => setShowForm(true)}>
+          <Button block size="large" loading={loading} className={styles.entryBtn} onClick={() => setShowForm(true)}>
             登录 / 注册
           </Button>
         </div>
       ) : (
-        <div style={{ padding: '16px' }}>
-          <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as 'login' | 'register')} style={{ marginBottom: 16 }}>
-            <Tabs.Tab title="登录" key="login" />
+        <div className={styles.formWrap}>
+          <Tabs
+            activeKey={loginTab}
+            onChange={(key) => setLoginTab(key as typeof loginTab)}
+            className={styles.loginTabs}
+          >
+            <Tabs.Tab title="验证码登录" key="email" />
+            <Tabs.Tab title="密码登录" key="password" />
             <Tabs.Tab title="注册" key="register" />
           </Tabs>
-          <Form
-            onFinish={handleSubmit}
-            footer={
-              <Button block type="submit" color="primary" size="large" loading={loading}>
-                {activeTab === 'login' ? '登录' : '注册'}
-              </Button>
-            }
-          >
-            <Form.Item name="account" label="账号" rules={[{ required: true, message: '请输入账号' }]}>
-              <Input placeholder="请输入账号" clearable />
-            </Form.Item>
-            <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input placeholder="请输入密码" type="password" clearable />
-            </Form.Item>
-            {activeTab === 'register' && (
-              <Form.Item name="confirm" label="确认密码" rules={[{ required: true, message: '请再次输入密码' }]}>
-                <Input placeholder="请确认密码" type="password" clearable />
-              </Form.Item>
-            )}
-          </Form>
-          <Button block fill="none" size="small" onClick={() => setShowForm(false)} style={{ marginTop: 12 }}>返回</Button>
+
+          {loginTab === 'email' && <EmailLoginForm onSuccess={handleLoginSuccess} />}
+          {loginTab === 'password' && <PasswordLoginForm onSuccess={handleLoginSuccess} />}
+          {loginTab === 'register' && <RegisterForm onSuccess={handleLoginSuccess} />}
+
+          <Button block fill="none" size="small" onClick={() => setShowForm(false)} style={{ marginTop: 8 }}>
+            返回
+          </Button>
         </div>
       )}
     </div>

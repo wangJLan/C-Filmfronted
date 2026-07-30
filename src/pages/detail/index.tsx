@@ -1,11 +1,14 @@
+/**
+ * 影片详情页 — 查看影片信息 + 标记想看 + 选影院购票
+ *
+ * 购票流程：选座购票 → 选影院 → 选日期场次 → 选座 → 确认 → 支付 → 出票
+ */
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { Button, NavBar, Skeleton, Toast } from 'antd-mobile';
 import { LeftOutline, StarFill, StarOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilmDetail } from '@/services/api/film';
-import SeatPicker from '@/components/SeatPicker';
-import { useOrderStore } from '@/stores/useOrderStore';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import styles from './index.module.less';
 
@@ -13,9 +16,7 @@ const DetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
-  const [showSeat, setShowSeat] = useState(false);
-  const addOrder = useOrderStore((s) => s.addOrder);
-  const { toggleWantToSee, isWanted, markAsWatched } = useFilmCollectionStore();
+  const { toggleWantToSee, isWanted } = useFilmCollectionStore();
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
@@ -83,10 +84,27 @@ const DetailPage: React.FC = () => {
           {isWanted(detail.id) ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
           <span>{isWanted(detail.id) ? '已想看' : '想看'}</span>
         </div>
-        <Button color="primary" className={styles.buyBtn} onClick={() => setShowSeat(true)}>
+        <Button
+          color="primary"
+          className={styles.buyBtn}
+          onClick={() => navigate(`/showtime/film/${id}`)}
+        >
           选座购票
         </Button>
       </div>
+
+      {/* 快速入口：已有排场的影院 */}
+      {detail.tags && detail.tags.length > 0 && (
+        <div className={styles.quickCinema}>
+          <span className={styles.quickLabel}>支持影厅：</span>
+          {detail.tags.map((tag: string, idx: number) => (
+            <span key={idx} className={styles.quickTag}>{tag}</span>
+          ))}
+          <span className={styles.quickArrow} onClick={() => navigate(`/showtime/film/${id}`)}>
+            查看场次 ›
+          </span>
+        </div>
+      )}
 
       {/* 简介 */}
       <div className={styles.section}>
@@ -122,48 +140,8 @@ const DetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* 标签 */}
-      {detail.tags && detail.tags.length > 0 && (
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>影厅</h3>
-          <div className={styles.tags}>
-            {detail.tags.map((tag: string, idx: number) => (
-              <span key={idx} className={styles.tag}>{tag}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* 底部占位 */}
       <div className={styles.bottomSpace} />
-
-      {/* 选座面板 */}
-      {showSeat && detail && (
-        <SeatPicker
-          filmTitle={detail.title}
-          filmId={detail.id}
-          poster={detail.poster}
-          onClose={() => setShowSeat(false)}
-          onConfirm={(info) => {
-            addOrder({
-              id: `ORD${Date.now()}`,
-              filmId: info.filmId,
-              filmTitle: info.filmTitle,
-              poster: detail.poster,
-              cinema: info.cinema,
-              hall: info.hall,
-              date: info.date,
-              time: info.time,
-              seats: info.seats,
-              totalPrice: info.totalPrice,
-              status: 'paid',
-              createdAt: new Date().toISOString(),
-            });
-            setShowSeat(false);
-            Toast.show({ icon: 'success', content: `购票成功！${info.seats.length}张票 ¥${info.totalPrice}` });
-          }}
-        />
-      )}
     </div>
   );
 };

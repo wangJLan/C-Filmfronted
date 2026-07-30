@@ -1,0 +1,138 @@
+/* ========== 找回密码页 ========== */
+
+.page {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* ===== 步骤指示器 ===== */
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 40px 12px;
+  gap: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepNum {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e8e8e8;
+  color: #bbb;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.stepLabel {
+  font-size: 11px;
+  color: #bbb;
+  transition: color 0.3s;
+}
+
+.stepActive .stepNum {
+  background: linear-gradient(135deg, #FF5A00, #FF8C42);
+  color: #fff;
+}
+
+.stepActive .stepLabel {
+  color: #FF5A00;
+  font-weight: 500;
+}
+
+.stepLine {
+  width: 50px;
+  height: 2px;
+  background: #e8e8e8;
+  margin: 0 8px 20px;
+}
+
+/* ===== 卡片 ===== */
+.card {
+  margin: 12px 16px;
+  padding: 24px 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 20px;
+  strong {
+    color: #FF5A00;
+    font-weight: 600;
+  }
+}
+
+/* ===== 表单字段 ===== */
+.field {
+  margin-bottom: 12px;
+
+  :global(.adm-input) {
+    --font-size: 15px;
+  }
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.codeField {
+  flex: 1;
+}
+
+.codeBtn {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #FF5A00 !important;
+  font-weight: 500;
+  padding: 0 12px;
+  border: 1px solid #FFD4B8 !important;
+  border-radius: 20px;
+  height: 36px;
+
+  &:disabled {
+    color: #ccc !important;
+    border-color: #eee !important;
+  }
+}
+
+.passwordHint {
+  font-size: 11px;
+  color: #ccc;
+  margin-top: -4px;
+  margin-bottom: 16px;
+}
+
+/* ===== 提交按钮 ===== */
+.submitBtn {
+  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 16px;
+  height: 46px;
+  margin-top: 4px;
+}

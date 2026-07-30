@@ -1,0 +1,60 @@
+/* ========== 编辑个人资料页 ========== */
+
+.page {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.empty {
+  text-align: center;
+  padding: 80px 16px;
+  font-size: 14px;
+  color: #999;
+}
+
+/* ===== 头像预览区 ===== */
+.avatarSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 12px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.avatarHint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #bbb;
+}
+
+/* ===== 表单卡片 ===== */
+.formCard {
+  margin: 0 12px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.formCard :global(.adm-form) {
+  --border-top: none;
+  --border-bottom: none;
+}
+
+.formCard :global(.adm-form-footer) {
+  padding: 16px;
+}
+
+.fieldExtra {
+  font-size: 11px;
+  color: #bbb;
+  line-height: 1.5;
+}
+
+.submitBtn {
+  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 16px;
+  height: 46px;
+}

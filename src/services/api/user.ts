@@ -1,11 +1,11 @@
 /**
  * 用户相关 API — 对接后端 UserController
  * 后端路径: /api/user/...
- * 认证方式: Session（Cookie），登录后自动携带
+ * 认证方式: Session（Cookie），登录后自动携带，前端无需存 Token
  */
 import http from '../request';
 
-// ================= 类型定义（与后端 DTO/VO 对齐） =================
+// ================= 类型 =================
 
 export interface LoginUserVO {
   id: number;
@@ -14,6 +14,8 @@ export interface LoginUserVO {
   userAvatar: string;
   userProfile: string;
   userRole: string;
+  /** 是否需要设置密码（密码仍为默认值，新用户/未设过密码的老用户为 true） */
+  needSetPassword?: boolean;
   createTime: string;
   updateTime: string;
 }
@@ -26,14 +28,39 @@ export interface UserRegisterParams {
 
 // ================= API =================
 
-/** 用户注册 */
+/** 发送邮箱验证码 */
+export async function sendMailCode(email: string): Promise<string> {
+  return http.post('/user/send-mail-code', { email, captcha: '' });
+}
+
+/** 邮箱验证码登录 / 自动注册 */
+export async function loginByMail(email: string, code: string): Promise<LoginUserVO> {
+  return http.post('/user/login-by-mail', { email, code });
+}
+
+/** 通过邮箱验证码重置密码 */
+export async function resetPassword(
+  email: string,
+  code: string,
+  newPassword: string,
+  checkPassword: string,
+): Promise<string> {
+  return http.post('/user/reset-password', { email, code, newPassword, checkPassword });
+}
+
+/** 账号密码注册 */
 export async function register(params: UserRegisterParams): Promise<number> {
   return http.post('/user/register', params);
 }
 
-/** 用户登录（成功后 Session 自动写入 Cookie） */
+/** 账号密码登录（成功后 Session 自动写入 Cookie） */
 export async function login(params: UserRegisterParams): Promise<LoginUserVO> {
   return http.post('/user/login', params);
+}
+
+/** 退出登录 */
+export async function logout(): Promise<boolean> {
+  return http.post('/user/logout');
 }
 
 /** 获取当前登录用户（从 Session 读取） */
@@ -55,4 +82,27 @@ export async function updateUser(params: {
   userRole?: string;
 }): Promise<boolean> {
   return http.post('/user/update', params);
+}
+
+/** 设置登录密码（当前密码为默认值时使用，无需旧密码） */
+export async function setPassword(newPassword: string, checkPassword: string): Promise<string> {
+  return http.post('/user/set-password', { newPassword, checkPassword });
+}
+
+/** 修改登录密码（需校验旧密码） */
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string,
+  checkPassword: string,
+): Promise<string> {
+  return http.post('/user/change-password', { oldPassword, newPassword, checkPassword });
+}
+
+/** 当前用户修改自己的个人信息（昵称/头像/简介） */
+export async function updateMyProfile(params: {
+  userName?: string;
+  userAvatar?: string;
+  userProfile?: string;
+}): Promise<LoginUserVO> {
+  return http.post('/user/update/my', params);
 }

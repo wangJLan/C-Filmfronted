@@ -1,5 +1,6 @@
 import React from 'react';
-import { Toast, SearchBar } from 'antd-mobile';
+import { useNavigate } from 'umi';
+import { SearchBar } from 'antd-mobile';
 import { EnvironmentOutline } from 'antd-mobile-icons';
 import { useLocationStore } from '@/stores/useLocationStore';
 import { MOCK_CINEMAS, type Cinema } from '@/mock/home';
@@ -7,6 +8,7 @@ import styles from './index.module.less';
 
 const CinemaPage: React.FC = () => {
   const city = useLocationStore((s) => s.city);
+  const navigate = useNavigate();
 
   return (
     <div className={styles.page}>
@@ -24,7 +26,7 @@ const CinemaPage: React.FC = () => {
           <div
             key={cinema.id}
             className={styles.card}
-            onClick={() => Toast.show({ content: `${cinema.name} — 选座功能开发中` })}
+            onClick={() => navigate(`/showtime/cinema/${cinema.id}`)}
           >
             <div className={styles.cardBody}>
               <div className={styles.name}>{cinema.name}</div>

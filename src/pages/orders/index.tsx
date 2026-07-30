@@ -6,7 +6,8 @@ import { useOrderStore, type OrderItem } from '@/stores/useOrderStore';
 import styles from './index.module.less';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  paid: { label: '已支付', color: '#FF5A00' },
+  pending: { label: '待支付', color: '#FF5A00' },
+  paid: { label: '已支付', color: '#00b578' },
   completed: { label: '已完成', color: '#00b578' },
   cancelled: { label: '已取消', color: '#ccc' },
 };
@@ -14,7 +15,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const { orders, cancelOrder } = useOrderStore();
-  const [tab, setTab] = useState<'all' | 'paid' | 'completed'>('all');
+  const [tab, setTab] = useState<'all' | 'pending' | 'paid' | 'completed'>('all');
 
   const filtered = orders.filter((o) => {
     if (tab === 'all') return true;
@@ -35,6 +36,7 @@ const OrdersPage: React.FC = () => {
       <div className={styles.tabBar}>
         <Tabs activeKey={tab} onChange={(k) => setTab(k as typeof tab)} className={styles.tabs}>
           <Tabs.Tab title="全部" key="all" />
+          <Tabs.Tab title="待支付" key="pending" />
           <Tabs.Tab title="已支付" key="paid" />
           <Tabs.Tab title="已完成" key="completed" />
         </Tabs>
@@ -57,7 +59,11 @@ const OrdersPage: React.FC = () => {
                   <span className={styles.cinemaName}>{order.cinema}</span>
                   <span className={styles.statusTag} style={{ color: st.color }}>{st.label}</span>
                 </div>
-                <div className={styles.cardBody} onClick={() => navigate(`/detail/${order.filmId}`)}>
+                <div className={styles.cardBody} onClick={() => {
+                  if (order.status === 'paid') navigate(`/ticket/${order.id}`);
+                  else if (order.status === 'pending') navigate(`/order-confirm/${order.id}`);
+                  else navigate(`/detail/${order.filmId}`);
+                }}>
                   <div className={styles.poster}>
                     <img src={order.poster} alt={order.filmTitle} />
                   </div>
@@ -78,6 +84,16 @@ const OrdersPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                {order.status === 'pending' && (
+                  <div className={styles.cardFoot}>
+                    <Button size="mini" fill="none" className={styles.cancelBtn} onClick={() => handleCancel(order.id)}>
+                      取消
+                    </Button>
+                    <Button size="mini" color="primary" className={styles.payBtn} onClick={() => navigate(`/order-confirm/${order.id}`)}>
+                      去支付
+                    </Button>
+                  </div>
+                )}
                 {order.status === 'paid' && (
                   <div className={styles.cardFoot}>
                     <Button size="mini" fill="none" className={styles.cancelBtn} onClick={() => handleCancel(order.id)}>
