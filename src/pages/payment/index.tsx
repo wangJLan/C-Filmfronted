@@ -1,31 +1,43 @@
 /**
- * 模拟收银台 — 使用真实订单接口
+ * 模拟收银台 — sessionStorage 主数据 + API 后台刷新
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
-import { NavBar, Button, Toast, SafeArea, SpinLoading } from 'antd-mobile';
+import { NavBar, Button, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline, CheckCircleOutline } from 'antd-mobile-icons';
-import { useQuery } from '@tanstack/react-query';
 import { getOrderDetail, payOrder, type OrderVO } from '@/services/api/order';
 import styles from './index.module.less';
+
+function loadFromCache(oid: number): OrderVO | null {
+  try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
 
 const PaymentPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = Number(orderId);
+  const [order, setOrder] = useState<OrderVO | null>(() => loadFromCache(oid));
+  const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
 
-  const { data: order, isLoading } = useQuery({
-    queryKey: ['order', oid],
-    queryFn: () => getOrderDetail(oid) as Promise<OrderVO>,
-    enabled: !!oid,
-  });
+  useEffect(() => {
+    if (!oid) return;
+    getOrderDetail(oid).then((o) => {
+      setOrder(o);
+      sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [oid]);
 
   const handlePay = async (success: boolean) => {
     setPaying(true);
     try {
       if (success) {
         await payOrder(oid);
+        // 更新缓存状态
+        if (order) {
+          const updated = { ...order, status: 'paid' };
+          sessionStorage.setItem(`order_${oid}`, JSON.stringify(updated));
+        }
         Toast.show({ icon: 'success', content: '支付成功！🎉' });
         navigate(`/ticket/${oid}`, { replace: true });
       } else {
@@ -36,8 +48,8 @@ const PaymentPage: React.FC = () => {
     } finally { setPaying(false); }
   };
 
-  if (isLoading) return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
-    <div style={{ textAlign:'center',padding:80 }}><SpinLoading color="primary" /></div></div>;
+  if (loading) return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
+    <div style={{ textAlign:'center', padding:80, color:'#999' }}>加载中…</div></div>;
 
   if (!order) return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
     <div className={styles.empty}>订单状态异常</div></div>;

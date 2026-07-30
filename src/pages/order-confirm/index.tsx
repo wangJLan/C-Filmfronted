@@ -1,11 +1,10 @@
 /**
- * 订单确认页 — 使用真实订单数据 + 15分钟支付倒计时
+ * 订单确认页 — sessionStorage 主数据 + API 后台静默刷新
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
-import { NavBar, Button, Toast, SafeArea, Mask, SpinLoading } from 'antd-mobile';
+import { NavBar, Button, Toast, SafeArea, Mask } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { useQuery } from '@tanstack/react-query';
 import { getOrderDetail, type OrderVO } from '@/services/api/order';
 import styles from './index.module.less';
 
@@ -16,51 +15,56 @@ function formatCountdown(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+function loadFromCache(oid: number): OrderVO | null {
+  try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+
 const OrderConfirmPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = Number(orderId);
 
-  // 优先从 sessionStorage 读取（createOrder 时存的），API 失败时做兜底
-  const cached = (() => {
-    try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) as OrderVO : null; } catch { return null; }
-  })();
-
-  const { data: order, isLoading } = useQuery({
-    queryKey: ['order', oid],
-    queryFn: () => getOrderDetail(oid) as Promise<OrderVO>,
-    enabled: !!oid,
-    retry: 1,
-    retryDelay: 500,
-    // 用 sessionStorage 数据作为占位，API 返回后覆盖
-    placeholderData: cached || undefined,
-  });
+  // sessionStorage 做主数据源，确保立即渲染
+  const [order, setOrder] = useState<OrderVO | null>(() => loadFromCache(oid));
+  const [loading, setLoading] = useState(!order);
 
   const [showCancel, setShowCancel] = useState(false);
   const [expired, setExpired] = useState(false);
   const [remainSec, setRemainSec] = useState(0);
 
+  // 后台静默用 API 刷新（不阻塞渲染）
+  useEffect(() => {
+    if (!oid) return;
+    getOrderDetail(oid).then((o) => {
+      setOrder(o);
+      sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
+    }).catch(() => {
+      // API 失败无所谓，sessionStorage 数据够用
+    }).finally(() => setLoading(false));
+  }, [oid]);
+
+  // 倒计时
   useEffect(() => {
     if (!order?.createTime) return;
     const created = new Date(order.createTime).getTime();
-    const elapsed = Math.floor((Date.now() - created) / 1000);
-    const remaining = Math.max(0, LOCK_DURATION - elapsed);
+    const remaining = Math.max(0, LOCK_DURATION - Math.floor((Date.now() - created) / 1000));
     setRemainSec(remaining);
     if (remaining <= 0) { setExpired(true); return; }
     const timer = setInterval(() => {
-      setRemainSec(prev => {
-        if (prev <= 1) { clearInterval(timer); setExpired(true); return 0; }
-        return prev - 1;
-      });
+      setRemainSec(prev => { if (prev <= 1) { clearInterval(timer); setExpired(true); return 0; } return prev - 1; });
     }, 1000);
     return () => clearInterval(timer);
   }, [order?.createTime]);
 
-  if (isLoading) return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
-    <div style={{ textAlign:'center', padding:80 }}><SpinLoading color="primary" /></div></div>;
+  if (loading) {
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
+      <div style={{ textAlign: 'center', padding: 80, color: '#999', fontSize: 14 }}>加载中…</div></div>;
+  }
 
-  if (!order) return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
-    <div className={styles.empty}>订单不存在</div></div>;
+  if (!order) {
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
+      <div className={styles.empty}>订单不存在</div></div>;
+  }
 
   if (expired || order.status === 'cancelled') {
     return <div className={styles.page}><NavBar onBack={() => navigate('/')} back={<LeftOutline />}>订单确认</NavBar>
