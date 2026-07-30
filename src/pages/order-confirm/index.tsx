@@ -1,5 +1,5 @@
 /**
- * 订单确认页 — sessionStorage 主数据 + API 后台静默刷新
+ * 订单确认页 — 完全使用 sessionStorage，不依赖 API
  */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
@@ -15,38 +15,32 @@ function formatCountdown(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function loadFromCache(oid: number): OrderVO | null {
-  try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
-}
-
 const OrderConfirmPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = Number(orderId);
 
-  // sessionStorage 做主数据源，确保立即渲染
-  const [order, setOrder] = useState<OrderVO | null>(() => loadFromCache(oid));
-  const [loading, setLoading] = useState(!order);
+  // sessionStorage 读取（createOrder 时写入的）
+  const [order, setOrder] = useState<OrderVO | null>(() => {
+    try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  });
 
   const [showCancel, setShowCancel] = useState(false);
   const [expired, setExpired] = useState(false);
-  const [remainSec, setRemainSec] = useState(0);
+  const [remainSec, setRemainSec] = useState(LOCK_DURATION);
 
-  // 后台静默用 API 刷新（不阻塞渲染）
+  // 后台用 API 刷新最新状态（静默，失败不影响）
   useEffect(() => {
     if (!oid) return;
     getOrderDetail(oid).then((o) => {
       setOrder(o);
       sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
-    }).catch(() => {
-      // API 失败无所谓，sessionStorage 数据够用
-    }).finally(() => setLoading(false));
+    }).catch(() => {});
   }, [oid]);
 
-  // 倒计时
+  // 倒计时：用缓存里的 createTime 或当前时间
   useEffect(() => {
-    if (!order?.createTime) return;
-    const created = new Date(order.createTime).getTime();
+    const created = order?.createTime ? new Date(order.createTime).getTime() : Date.now();
     const remaining = Math.max(0, LOCK_DURATION - Math.floor((Date.now() - created) / 1000));
     setRemainSec(remaining);
     if (remaining <= 0) { setExpired(true); return; }
@@ -56,14 +50,9 @@ const OrderConfirmPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [order?.createTime]);
 
-  if (loading) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
-      <div style={{ textAlign: 'center', padding: 80, color: '#999', fontSize: 14 }}>加载中…</div></div>;
-  }
-
   if (!order) {
     return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
-      <div className={styles.empty}>订单不存在</div></div>;
+      <div className={styles.empty}>订单数据丢失，请返回重新选座</div></div>;
   }
 
   if (expired || order.status === 'cancelled') {
@@ -99,7 +88,10 @@ const OrderConfirmPage: React.FC = () => {
       <div className={styles.bottomBar}><SafeArea position="bottom" />
         <div className={styles.bottomInner}>
           <Button className={styles.cancelBtn} fill="none" onClick={() => setShowCancel(true)}>取消订单</Button>
-          <Button className={styles.payBtn} color="primary" onClick={() => navigate(`/payment/${order.id}`)}>去支付 ¥{order.totalPrice}</Button>
+          <Button className={styles.payBtn} color="primary" onClick={() => {
+            sessionStorage.setItem(`order_${oid}`, JSON.stringify(order));
+            navigate(`/payment/${oid}`);
+          }}>去支付 ¥{order.totalPrice}</Button>
         </div>
       </div>
       <Mask visible={showCancel} onMaskClick={() => setShowCancel(false)} opacity={0.5} />
