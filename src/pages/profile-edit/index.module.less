@@ -12,20 +12,41 @@
   color: #999;
 }
 
-/* ===== 头像预览区 ===== */
+/* ===== 头像区域 ===== */
 .avatarSection {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 12px;
+  padding: 28px 16px 16px;
   background: #fff;
   margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.avatarWrap {
+  position: relative;
+}
+
+.cameraIcon {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF5A00, #FF8C42);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 90, 0, 0.3);
 }
 
 .avatarHint {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #bbb;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #FF5A00;
+  font-weight: 500;
 }
 
 /* ===== 表单卡片 ===== */
@@ -43,12 +64,6 @@
 
 .formCard :global(.adm-form-footer) {
   padding: 16px;
-}
-
-.fieldExtra {
-  font-size: 11px;
-  color: #bbb;
-  line-height: 1.5;
 }
 
 .submitBtn {

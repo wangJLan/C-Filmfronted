@@ -98,6 +98,21 @@ export async function changePassword(
   return http.post('/user/change-password', { oldPassword, newPassword, checkPassword });
 }
 
+/** 上传头像（返回路径如 /uploads/avatars/xxx.jpg） */
+export async function uploadAvatar(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const resp = await fetch('/api/file/upload/avatar', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  if (!resp.ok) throw new Error('上传失败');
+  const body = await resp.json();
+  if (body.code !== 0) throw new Error(body.message || '上传失败');
+  return body.data;
+}
+
 /** 当前用户修改自己的个人信息（昵称/头像/简介） */
 export async function updateMyProfile(params: {
   userName?: string;

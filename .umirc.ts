@@ -43,6 +43,10 @@ export default defineConfig({
       target: 'http://localhost:8123',
       changeOrigin: true,
     },
+    '/uploads': {
+      target: 'http://localhost:8123',
+      changeOrigin: true,
+    },
   },
 
   // ================= 移动端 H5 适配 =================
