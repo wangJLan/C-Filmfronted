@@ -33,13 +33,13 @@ const MailTab: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   };
 
   const handleSend = async () => {
-    if (!email.includes('@')) { Toast.show({ icon: 'fail', content: '请输入正确邮箱' }); return; }
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim())) { Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' }); return; }
     if (countdown > 0) return;
     try { await sendMailCode(email); Toast.show({ icon: 'success', content: '验证码已发送' }); startCd(); } catch (e: any) { Toast.show({ icon: 'fail', content: e.message || '发送失败' }); }
   };
 
   const handleLogin = async () => {
-    if (!email.includes('@')) { Toast.show({ icon: 'fail', content: '请输入正确邮箱' }); return; }
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim())) { Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' }); return; }
     if (code.length !== 6) { Toast.show({ icon: 'fail', content: '请输入6位验证码' }); return; }
     try {
       await loginByMail(email, code);
@@ -81,7 +81,8 @@ const PwdTab: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const [password, setPassword] = useState('');
 
   const handleSubmit = async () => {
-    if (!account || !password) { Toast.show({ icon: 'fail', content: '请输入邮箱和密码' }); return; }
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(account.trim())) { Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' }); return; }
+    if (!password) { Toast.show({ icon: 'fail', content: '请输入密码' }); return; }
     try {
       await login({ userAccount: account, userPassword: password, checkPassword: password });
       onDone();

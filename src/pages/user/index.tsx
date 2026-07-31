@@ -24,6 +24,15 @@ const functionList = [
   { icon: <HistogramOutline fontSize={20} />, label: '看过的电影', path: '/watched' },
 ];
 
+// ==================== 工具函数 ====================
+
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/** 校验邮箱格式 */
+function isValidEmail(email: string): boolean {
+  return EMAIL_RE.test(email.trim());
+}
+
 // ==================== 邮箱验证码登录 Tab ====================
 
 const EmailLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
@@ -52,7 +61,7 @@ const EmailLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   };
 
   const handleSendCode = async () => {
-    if (!email || !email.includes('@')) {
+    if (!isValidEmail(email)) {
       Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
       return;
     }
@@ -67,7 +76,7 @@ const EmailLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!email || !email.includes('@')) {
+    if (!isValidEmail(email)) {
       Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
       return;
     }
@@ -151,8 +160,12 @@ const PasswordLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =
   const navigate = useNavigate();
 
   const handleSubmit = async (values: { account: string; password: string }) => {
-    if (!values.account || !values.password) {
-      Toast.show({ icon: 'fail', content: '请输入邮箱和密码' });
+    if (!isValidEmail(values.account)) {
+      Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
+      return;
+    }
+    if (!values.password) {
+      Toast.show({ icon: 'fail', content: '请输入密码' });
       return;
     }
     try {
@@ -225,8 +238,8 @@ const RegisterForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   const { register, loading } = useUserStore();
 
   const handleSubmit = async (values: { account: string; password: string; confirm: string }) => {
-    if (!values.account || values.account.length < 4) {
-      Toast.show({ icon: 'fail', content: '邮箱至少 4 位' });
+    if (!isValidEmail(values.account)) {
+      Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
       return;
     }
     if (!values.password || values.password.length < 8) {

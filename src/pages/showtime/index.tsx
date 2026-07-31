@@ -102,15 +102,23 @@ const ShowtimePage: React.FC = () => {
   const dates = useMemo(() => buildDates(), []);
   const [activeDateIdx, setActiveDateIdx] = useState(0);
 
-  // 场次
+  // 判断场次是否已过期（开场时间 < 当前时间）
+  const isPast = (showDate: string, startTime: string) => {
+    const dt = `${showDate}T${startTime}`;
+    return new Date(dt).getTime() < Date.now();
+  };
+
+  // 场次（自动过滤已开场的）
   const showtimes = useMemo(() => {
     if (!scheduleData) return [];
-    return scheduleData.filter(s => s.cinemaId === selectedCinemaId && s.showDate === dates[activeDateIdx]);
+    return scheduleData.filter(s => s.cinemaId === selectedCinemaId && s.showDate === dates[activeDateIdx]
+      && !isPast(s.showDate, s.startTime));
   }, [scheduleData, selectedCinemaId, dates, activeDateIdx]);
 
   const dateCounts = useMemo(() => {
     if (!scheduleData || !selectedCinemaId) return dates.map(() => 0);
-    return dates.map(d => scheduleData.filter(s => s.cinemaId === selectedCinemaId && s.showDate === d).length);
+    return dates.map(d => scheduleData.filter(s => s.cinemaId === selectedCinemaId && s.showDate === d
+      && !isPast(s.showDate, s.startTime)).length);
   }, [scheduleData, selectedCinemaId, dates]);
 
   const handleAiHelp = () => {
