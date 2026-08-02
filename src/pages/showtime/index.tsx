@@ -67,7 +67,7 @@ const ShowtimePage: React.FC = () => {
   });
 
   // 影院列表（按影片筛选）
-  const { data: scheduleData } = useQuery({
+  const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
     queryKey: ['schedule', selectedFilmId],
     queryFn: () => selectedFilmId ? getScheduleList({ filmId: selectedFilmId }) : Promise.resolve([]),
     enabled: !!selectedFilmId,
@@ -75,8 +75,8 @@ const ShowtimePage: React.FC = () => {
 
   const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))], [scheduleData]);
 
-  // 影院详情
-  const { data: cinemasRaw } = useQuery({
+  // 影院详情（scheduleData 为空时显示空状态，不卡转圈）
+  const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
     queryKey: ['cinemas', cinemaIds],
     queryFn: async () => {
       const all: CinemaItem[] = [];
@@ -90,6 +90,7 @@ const ShowtimePage: React.FC = () => {
     },
     enabled: cinemaIds.length > 0,
   });
+  const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
   // 当前选中影院
   const { data: cinema } = useQuery({
@@ -136,8 +137,8 @@ const ShowtimePage: React.FC = () => {
       <div className={styles.page}>
         <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选择影院</NavBar>
         <div className={styles.infoHead}><div className={styles.filmTitle}>{film?.title}</div></div>
-        {!cinemasRaw ? <div style={{ textAlign:'center',padding:40 }}><SpinLoading color="primary" /></div>
-        : cinemasRaw.length === 0 ? <div className={styles.empty}><div className={styles.emptyIcon}>📭</div><div className={styles.emptyText}>暂无影院排片</div></div>
+        {!cinemasReady ? <div style={{ textAlign:'center',padding:40 }}><SpinLoading color="primary" /></div>
+        : !cinemasRaw || cinemasRaw.length === 0 ? <div className={styles.empty}><div className={styles.emptyIcon}>📭</div><div className={styles.emptyText}>暂无影院排片</div></div>
         : <div className={styles.cinemaList}>
           <div className={styles.filmGridTitle}>有排场的影院（{cinemasRaw.length}家）</div>
           {cinemasRaw.map(c => (
