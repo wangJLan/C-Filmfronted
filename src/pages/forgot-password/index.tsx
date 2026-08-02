@@ -66,7 +66,11 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleReset = async () => {
     if (!newPassword || newPassword.length < 8) {
-      Toast.show({ icon: 'fail', content: '新密码至少 8 位' });
+      Toast.show({ icon: 'fail', content: '密码至少 8 位' });
+      return;
+    }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      Toast.show({ icon: 'fail', content: '密码必须包含字母和数字' });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -85,7 +89,7 @@ const ForgotPasswordPage: React.FC = () => {
   return (
     <div className={styles.page}>
       <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
-        找回密码
+        设置密码
       </NavBar>
 
       {/* 进度指示 */}

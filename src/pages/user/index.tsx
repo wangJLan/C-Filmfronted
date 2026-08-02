@@ -96,7 +96,7 @@ const EmailLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
           content: '检测到您还未设置密码。\n建议设置密码，方便下次使用邮箱+密码登录。',
           confirmText: '去设置',
           cancelText: '暂跳过',
-          onConfirm: () => navigate('/set-password'),
+          onConfirm: () => navigate('/forgot-password'),
         });
       }
     } catch (e: any) {
@@ -244,6 +244,10 @@ const RegisterForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
     }
     if (!values.password || values.password.length < 8) {
       Toast.show({ icon: 'fail', content: '密码至少 8 位' });
+      return;
+    }
+    if (!/[a-zA-Z]/.test(values.password) || !/[0-9]/.test(values.password)) {
+      Toast.show({ icon: 'fail', content: '密码必须包含字母和数字' });
       return;
     }
     if (values.password !== values.confirm) {

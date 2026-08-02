@@ -2,14 +2,10 @@ import React from 'react';
 import { useNavigate } from 'umi';
 import { NavBar, Switch, Toast } from 'antd-mobile';
 import { LeftOutline, RightOutline } from 'antd-mobile-icons';
-import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const user = useUserStore((s) => s.user);
-
-  const needSet = user?.needSetPassword !== false;
 
   return (
     <div className={styles.page}>
@@ -18,22 +14,9 @@ const SettingsPage: React.FC = () => {
       {/* 账号安全 */}
       <div className={styles.group}>
         <div className={styles.title}>账号安全</div>
-        <div className={styles.itemLink} onClick={() => navigate('/set-password')}>
-          <span>{needSet ? '设置登录密码' : '修改密码'}</span>
-          <span className={styles.right}>
-            {needSet ? (
-              <span className={styles.warnTag}>建议设置</span>
-            ) : (
-              <span className={styles.hint}>已设置</span>
-            )}
-            <RightOutline fontSize={14} color="#ccc" />
-          </span>
-        </div>
         <div className={styles.itemLink} onClick={() => navigate('/forgot-password')}>
-          <span>找回密码</span>
-          <span className={styles.right}>
-            <RightOutline fontSize={14} color="#ccc" />
-          </span>
+          <span>设置密码</span>
+          <RightOutline fontSize={14} color="#ccc" />
         </div>
       </div>
 
