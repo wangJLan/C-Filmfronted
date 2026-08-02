@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline, CheckCircleOutline } from 'antd-mobile-icons';
-import { getOrderDetail, payOrder, type OrderVO } from '@/services/api/order';
+import { getOrderDetail, type OrderVO } from '@/services/api/order';
 import styles from './index.module.less';
 
 function loadFromCache(oid: string): OrderVO | null {
@@ -28,12 +28,12 @@ const PaymentPage: React.FC = () => {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [oid]);
 
-  const handlePay = async (success: boolean) => {
+  const handlePay = (success: boolean) => {
     setPaying(true);
-    try {
+    setTimeout(() => {
+      setPaying(false);
       if (success) {
-        await payOrder(oid);
-        // 更新缓存状态
+        // 模拟支付：不调后端(支付宝未配会报错)，仅本地标记
         if (order) {
           const updated = { ...order, status: 'paid' };
           sessionStorage.setItem(`order_${oid}`, JSON.stringify(updated));
@@ -43,9 +43,7 @@ const PaymentPage: React.FC = () => {
       } else {
         Toast.show({ icon: 'fail', content: '支付失败，请重试' });
       }
-    } catch (e: any) {
-      Toast.show({ icon: 'fail', content: e.message || '支付失败' });
-    } finally { setPaying(false); }
+    }, 600);
   };
 
   if (loading) return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
