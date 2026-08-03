@@ -187,7 +187,7 @@ const ShowtimePage: React.FC = () => {
   const enrichedCinemas = useMemo(() => {
     if (!cinemasRaw || !scheduleData) return [];
     return cinemasRaw.map(c => {
-      const cShowtimes = scheduleData.filter(s => s.cinemaId === c.id);
+      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
       return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
     });
   }, [cinemasRaw, scheduleData]);
@@ -219,18 +219,23 @@ const ShowtimePage: React.FC = () => {
 
   // 当前日期+影院的场次
   const showtimes = useMemo(() => {
-    if (!scheduleData || !selectedCinemaId) return [];
+    if (!scheduleData) return [];
+    const cid = selectedCinemaId;
+    if (!cid) return [];
+    const targetDate = dates[activeDateIdx];
     return scheduleData.filter(s =>
-      s.cinemaId === selectedCinemaId &&
-      s.showDate === dates[activeDateIdx] &&
+      String(s.cinemaId) === String(cid) &&
+      String(s.showDate) === targetDate &&
       !isPast(s.showDate, s.startTime)
     );
   }, [scheduleData, selectedCinemaId, dates, activeDateIdx]);
 
   const dateCounts = useMemo(() => {
-    if (!scheduleData || !selectedCinemaId) return dates.map(() => 0);
+    if (!scheduleData) return dates.map(() => 0);
+    const cid = selectedCinemaId;
+    if (!cid) return dates.map(() => 0);
     return dates.map(d => scheduleData.filter(s =>
-      s.cinemaId === selectedCinemaId && s.showDate === d && !isPast(s.showDate, s.startTime)
+      String(s.cinemaId) === String(cid) && String(s.showDate) === d && !isPast(s.showDate, s.startTime)
     ).length);
   }, [scheduleData, selectedCinemaId, dates]);
 
