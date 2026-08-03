@@ -28,41 +28,45 @@ const FakeQR: React.FC<{ code: string }> = ({ code }) => {
 const TicketPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const oid = orderId!; // 雪花ID, 不能用Number()
+  const oid = orderId!;
   const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!oid) return;
-    getOrderDetail({ id: Number(oid) }).then((o) => {
-      setOrder(o);
-      sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
+    getOrderDetail({ id: oid }).then((o: any) => {
+      const vo = o?.data ?? o;
+      setOrder(vo);
+      sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo));
     }).catch(() => {}).finally(() => setLoading(false));
   }, [oid]);
 
-  if (loading) return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
-    <div style={{ textAlign:'center', padding:80, color:'#999' }}>加载中…</div></div>;
-
-  if (!order) return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
-    <div className={styles.empty}>订单不存在</div></div>;
-
-  // 待支付 → 轮询刷新
+  // 待支付 → 5秒轮询刷新
   useEffect(() => {
-    if (order?.status !== 'pending') return;
+    if (!order || order.status !== 'pending') return;
     const timer = setInterval(() => {
-      getOrderDetail(oid).then((o) => {
-        setOrder(o);
-        sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
+      getOrderDetail({ id: oid }).then((o: any) => {
+        const vo = o?.data ?? o;
+        setOrder(vo);
+        sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo));
       }).catch(() => {});
     }, 5000);
     return () => clearInterval(timer);
   }, [order?.status, oid]);
 
+  if (loading) return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
+    <div style={{ textAlign: 'center', padding: 80, color: '#999' }}>加载中…</div></div>;
+
+  if (!order) return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
+    <div className={styles.empty}>订单不存在</div></div>;
+
   if (order.status !== 'paid') {
     return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
       <div className={styles.empty} style={{ paddingTop: 80 }}>
-        <div style={{ fontSize:16, fontWeight:600, marginBottom:8 }}>{order.status === 'pending' ? '支付处理中…' : '订单状态异常'}</div>
-        <div style={{ fontSize:13, color: '#999', marginBottom:16 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+          {order.status === 'pending' ? '支付处理中…' : '订单状态异常'}
+        </div>
+        <div style={{ fontSize: 13, color: '#999', marginBottom: 16 }}>
           {order.status === 'pending' ? '支付宝支付完成后将自动刷新，请稍候' : '请返回重新操作'}
         </div>
         {order.status === 'pending' && (
@@ -78,7 +82,7 @@ const TicketPage: React.FC = () => {
       <div className={styles.ticketCard}>
         <div className={styles.qrSection}><FakeQR code={order.orderNo || '000000'} /></div>
         <div className={styles.codeSection}><div className={styles.codeLabel}>取票码</div>
-          <div className={styles.codeNum}>{(order.orderNo || '000000').slice(-6)}</div>
+          <div className={styles.codeNum}>{order.orderNo?.slice(-6) || '000000'}</div>
           <div className={styles.codeHint}>请在影院取票机输入此码</div>
         </div>
       </div>
