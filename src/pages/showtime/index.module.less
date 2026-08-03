@@ -684,14 +684,15 @@
 /* ========== Tab 切换 ========== */
 .tabSwitch {
   display: flex;
-  gap: 28px;
+  justify-content: center;
+  gap: 40px;
   background: #fff;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid #f5f5f5;
 }
 
 .tabItem {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-secondary);
   cursor: pointer;
   padding: 4px 0;
@@ -980,8 +981,9 @@
 .filmStrip {
   display: flex;
   overflow-x: auto;
+  overflow-y: visible;
   scroll-behavior: smooth;
-  padding: 0 50%;
+  padding: 14px 50% 8px;
   -webkit-overflow-scrolling: touch;
 
   &::-webkit-scrollbar { display: none; }
