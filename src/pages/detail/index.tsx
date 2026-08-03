@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { Button, NavBar, Skeleton, Toast, Tabs } from 'antd-mobile';
-import { LeftOutline, StarFill, StarOutline, EyeOutline, HeartFill, HeartOutline } from 'antd-mobile-icons';
+import { LeftOutline, StarFill, StarOutline, UpOutline, EyeOutline, HeartFill, HeartOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilm } from '@/api/filmController';
 import { useFilmCollectionStore, type CollectedFilm } from '@/stores/useFilmCollectionStore';
