@@ -46,11 +46,28 @@ const TicketPage: React.FC = () => {
   if (!order) return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
     <div className={styles.empty}>订单不存在</div></div>;
 
+  // 待支付 → 轮询刷新
+  useEffect(() => {
+    if (order?.status !== 'pending') return;
+    const timer = setInterval(() => {
+      getOrderDetail(oid).then((o) => {
+        setOrder(o);
+        sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
+      }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [order?.status, oid]);
+
   if (order.status !== 'paid') {
     return <div className={styles.page}><NavBar onBack={() => navigate('/orders')} back={<LeftOutline />}>电子票</NavBar>
       <div className={styles.empty} style={{ paddingTop: 80 }}>
-        <div style={{ fontSize:16, fontWeight:600, marginBottom:8 }}>{order.status === 'pending' ? '订单尚未支付' : '订单状态异常'}</div>
-        {order.status === 'pending' && <Button color="primary" size="small" onClick={() => navigate(`/payment/${oid}`)}>去支付</Button>}
+        <div style={{ fontSize:16, fontWeight:600, marginBottom:8 }}>{order.status === 'pending' ? '支付处理中…' : '订单状态异常'}</div>
+        <div style={{ fontSize:13, color: '#999', marginBottom:16 }}>
+          {order.status === 'pending' ? '支付宝支付完成后将自动刷新，请稍候' : '请返回重新操作'}
+        </div>
+        {order.status === 'pending' && (
+          <Button color="primary" size="small" onClick={() => navigate(`/payment/${oid}`)}>返回收银台</Button>
+        )}
       </div></div>;
   }
 
