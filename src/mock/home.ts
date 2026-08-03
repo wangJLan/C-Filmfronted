@@ -634,3 +634,66 @@ export const MOCK_BRANDS = [
   '万达影城', '奥斯卡影城', '横店影城', '卢米埃影城',
   '沃美影城', '新华国际影城', '耀莱影城', '其他',
 ];
+
+// ================= 影片卡片 Mock 补充数据 =================
+
+// 根据 filmId 生成稳定的 Mock 补充字段
+export interface EnrichedFilm {
+  id: number;
+  name: string;
+  posterUrl: string;
+  rating: number;
+  duration: number;
+  type: string;
+  releaseDate: string;
+  // Mock 补充字段
+  englishTitle: string;
+  formatTags: string[];
+  ranking: string;
+  wantCount: string;
+  watchedCount: string;
+  isWanted: boolean;
+}
+
+const MOCK_ENGLISH_TITLES: Record<number, string> = {
+  1: 'Spider-Man: Brand New Day',
+  2: 'The Wandering Earth III',
+  3: 'Ne Zha: The First Battle',
+  4: 'Operation Red Sea',
+  5: 'The Battle at Lake Changjin',
+  6: 'Fengshen Part III',
+  7: 'Detective War 2',
+};
+
+const MOCK_FORMAT_POOL = [
+  ['IMAX 2D', 'CINITY', 'CINITY2D'],
+  ['IMAX 2D', 'CINITY'],
+  ['IMAX 2D'],
+  ['2D', '中国巨幕'],
+  ['IMAX 2D', '4DX', 'CINITY'],
+  ['2D'],
+  ['IMAX 2D', 'CINITY', '杜比全景声'],
+];
+
+export function enrichFilm(film: {
+  id: number; name: string; posterUrl: string; rating?: number;
+  duration?: number; type?: string; releaseDate?: string;
+}): EnrichedFilm {
+  const id = film.id;
+  return {
+    id,
+    name: film.name,
+    posterUrl: film.posterUrl,
+    rating: film.rating ?? 0,
+    duration: film.duration ?? 120,
+    type: film.type ?? '剧情',
+    releaseDate: film.releaseDate ?? '',
+    // Mock 补充
+    englishTitle: MOCK_ENGLISH_TITLES[id] || `${film.name} (English)`,
+    formatTags: MOCK_FORMAT_POOL[id % MOCK_FORMAT_POOL.length],
+    ranking: id <= 3 ? `一周票房榜 第${id}名` : '',
+    wantCount: `${(10 + id * 7.3).toFixed(1)}万想看`,
+    watchedCount: `${(20 + id * 15.2).toFixed(1)}万看过`,
+    isWanted: false,
+  };
+}
