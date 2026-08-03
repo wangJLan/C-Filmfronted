@@ -1,0 +1,172 @@
+/**
+ * 影片横向卡片组件（左海报 + 右信息）
+ * 数据库字段直接展示，缺失字段用 Mock 补充
+ */
+import React from 'react';
+import { useNavigate } from 'umi';
+import { StarFill, EyeOutline, HeartFill, HeartOutline, UpOutline } from 'antd-mobile-icons';
+import { enrichFilm, type EnrichedFilm } from '@/mock/home';
+import { useGuard } from '@/hooks/useGuard';
+import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { Toast } from 'antd-mobile';
+import styles from './index.module.less';
+
+interface FilmCardProps {
+  film: {
+    id: number;
+    name: string;
+    posterUrl: string;
+    rating?: number;
+    duration?: number;
+    type?: string;
+    releaseDate?: string;
+  };
+  variant?: 'list' | 'hero';
+  onSelect?: (id: number) => void;
+}
+
+const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect }) => {
+  const navigate = useNavigate();
+  const guard = useGuard();
+  const enriched = enrichFilm(film);
+
+  const collectionStore = useFilmCollectionStore();
+  const isWanted = collectionStore.isWanted(enriched.id);
+  const isWatched = collectionStore.isWatched(enriched.id);
+
+  const handleToggleWant = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    guard(() => {
+      if (isWanted) {
+        collectionStore.removeWantToSee(enriched.id);
+        Toast.show({ content: '已取消想看' });
+      } else {
+        collectionStore.toggleWantToSee({
+          filmId: enriched.id,
+          title: enriched.name,
+          poster: enriched.posterUrl,
+          rating: enriched.rating,
+          wantCount: '',
+          addedAt: new Date().toISOString(),
+        });
+        Toast.show({ content: '已标记想看' });
+      }
+    });
+  };
+
+  const handleToggleWatched = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    guard(() => {
+      if (isWatched) {
+        collectionStore.removeWatched(enriched.id);
+        Toast.show({ content: '已取消看过' });
+      } else {
+        collectionStore.toggleWatched({
+          filmId: enriched.id,
+          title: enriched.name,
+          poster: enriched.posterUrl,
+          rating: enriched.rating,
+          watchedAt: new Date().toISOString(),
+        });
+        Toast.show({ content: '已标记看过' });
+      }
+    });
+  };
+
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(enriched.id);
+    } else {
+      navigate(`/detail/${enriched.id}`);
+    }
+  };
+
+  if (variant === 'hero') {
+    return (
+      <div className={styles.cardHero} onClick={handleClick}>
+        <div className={styles.heroPoster}>
+          <img src={enriched.posterUrl} alt={enriched.name} />
+        </div>
+        <div className={styles.heroInfo}>
+          <h2 className={styles.heroTitle}>{enriched.name}</h2>
+          <div className={styles.heroEnTitle}>{enriched.englishTitle}</div>
+          {enriched.ranking && (
+            <div className={styles.heroRanking}>
+              <EyeOutline fontSize={12} />
+              <span>{enriched.ranking}</span>
+              <span className={styles.heroRankingArrow}>›</span>
+            </div>
+          )}
+          <div className={styles.heroTags}>
+            {enriched.formatTags.map(tag => (
+              <span key={tag} className={styles.heroTag}>{tag}</span>
+            ))}
+          </div>
+          <div className={styles.heroMeta}>
+            {enriched.releaseDate} {enriched.duration}分钟 ›
+          </div>
+          <div className={styles.heroActions}>
+            <div className={styles.heroBtn} onClick={handleToggleWant}>
+              {isWanted ? <HeartFill fontSize={16} color="#FF5A00" /> : <HeartOutline fontSize={16} color="#999" />}
+              <span>想看</span>
+            </div>
+            <div className={styles.heroBtn} onClick={handleToggleWatched}>
+              <UpOutline fontSize={14} color={isWatched ? '#FFB800' : '#999'} />
+              <span>看过</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // list 模式：紧凑版卡片
+  return (
+    <div className={styles.cardList} onClick={handleClick}>
+      <div className={styles.listPoster}>
+        <img src={enriched.posterUrl} alt={enriched.name} />
+      </div>
+      <div className={styles.listInfo}>
+        <div className={styles.listTitleRow}>
+          <h3 className={styles.listTitle}>{enriched.name}</h3>
+          {enriched.rating > 0 && (
+            <div className={styles.listRating}>
+              <StarFill className={styles.listStar} />
+              <span>{enriched.rating.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+        {enriched.ranking && (
+          <div className={styles.listRanking}>
+            <EyeOutline fontSize={10} />
+            <span>{enriched.ranking}</span>
+          </div>
+        )}
+        <div className={styles.listTags}>
+          {enriched.formatTags.slice(0, 2).map(tag => (
+            <span key={tag} className={styles.listTag}>{tag}</span>
+          ))}
+          {enriched.type && <span className={styles.listTag}>{enriched.type}</span>}
+        </div>
+        <div className={styles.listMeta}>
+          {enriched.releaseDate ? enriched.releaseDate.replace(/-/g, '.') : ''}
+          {' · '}
+          {enriched.duration}分钟
+        </div>
+      </div>
+      <div className={styles.listRight}>
+        <div
+          className={styles.listBuyBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            guard(() => navigate(`/showtime/film/${enriched.id}`));
+          }}
+        >
+          购票
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FilmCard;

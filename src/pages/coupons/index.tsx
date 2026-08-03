@@ -16,7 +16,7 @@ const CouponsPage: React.FC = () => {
   if (!isLoggedIn) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>我的优惠券</NavBar>
+        <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>我的优惠券</NavBar>
         <Empty description="登录后可查看优惠券" style={{ paddingTop: 80 }} />
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
@@ -29,7 +29,7 @@ const CouponsPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>我的优惠券</NavBar>
+      <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>我的优惠券</NavBar>
 
       <div className={styles.summary}>
         <span className={styles.sumNum}>{available.length}</span>

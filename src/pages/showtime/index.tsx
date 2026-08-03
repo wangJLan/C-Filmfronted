@@ -23,7 +23,6 @@ import { useAiStore } from '@/stores/useAiStore';
 import { useGuard } from '@/hooks/useGuard';
 import { useLocationStore } from '@/stores/useLocationStore';
 import {
-  MOCK_SCREEN_TYPES,
   MOCK_BRANDS,
   MOCK_REGIONS,
 } from '@/mock/home';
@@ -128,11 +127,11 @@ const ShowtimePage: React.FC = () => {
 
   const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
 
-  // 影院详情（真实数据）
+  // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
-    queryKey: ['cinemas', cinemaIds],
+    queryKey: ['cinemas', cinemaIds, cityName],
     queryFn: async () => {
-      const results: { id: number; name: string; address: string; tags: string }[] = [];
+      const results: { id: number; name: string; address: string; tags: string; city: string }[] = [];
       for (const cId of cinemaIds.slice(0, 20)) {
         try {
           const c = await http.get(`/cinema/getInfo/${cId}`) as any;
@@ -141,6 +140,7 @@ const ShowtimePage: React.FC = () => {
             name: c.name || '',
             address: c.address || '',
             tags: c.tags || '',
+            city: c.city || '未知',
           });
         } catch { /* skip */ }
       }
@@ -148,6 +148,18 @@ const ShowtimePage: React.FC = () => {
     },
     enabled: cinemaIds.length > 0,
   });
+
+  // 按当前城市筛选影院
+  const cityFilteredCinemas = useMemo(() => {
+    if (!cinemasRaw) return [];
+    const cn = cityName || '';
+    if (!cn || cn === '全城' || cn === '北京') return cinemasRaw;
+    return cinemasRaw.filter(c => {
+      try { return cn.includes(c.city || '') || (c.city || '').includes(cn); }
+      catch { return true; } // 防崩溃兜底
+    });
+  }, [cinemasRaw, cityName]);
+
   const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
   // 当前选中影院
@@ -182,12 +194,12 @@ const ShowtimePage: React.FC = () => {
 
   // 合并真实场次 + Mock 补充字段的影院列表
   const enrichedCinemas = useMemo(() => {
-    if (!cinemasRaw || !scheduleData) return [];
-    return cinemasRaw.map(c => {
-      const cShowtimes = scheduleData.filter(s => s.cinemaId === c.id);
+    if (!cityFilteredCinemas || !scheduleData) return [];
+    return cityFilteredCinemas.map(c => {
+      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
       return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
     });
-  }, [cinemasRaw, scheduleData]);
+  }, [cityFilteredCinemas, scheduleData]);
 
   // 筛选后的影院列表
   const filteredCinemas = useMemo(() => {
@@ -216,18 +228,22 @@ const ShowtimePage: React.FC = () => {
 
   // 当前日期+影院的场次
   const showtimes = useMemo(() => {
-    if (!scheduleData || !selectedCinemaId) return [];
+    if (!scheduleData) return [];
+    const cid = selectedCinemaId;
+    if (!cid) return [];
     return scheduleData.filter(s =>
-      s.cinemaId === selectedCinemaId &&
+      String(s.cinemaId) === String(cid) &&
       s.showDate === dates[activeDateIdx] &&
       !isPast(s.showDate!, s.startTime!)
     );
   }, [scheduleData, selectedCinemaId, dates, activeDateIdx]);
 
   const dateCounts = useMemo(() => {
-    if (!scheduleData || !selectedCinemaId) return dates.map(() => 0);
+    if (!scheduleData) return dates.map(() => 0);
+    const cid = selectedCinemaId;
+    if (!cid) return dates.map(() => 0);
     return dates.map(d => scheduleData.filter(s =>
-      s.cinemaId === selectedCinemaId && s.showDate === d && !isPast(s.showDate!, s.startTime!)
+      String(s.cinemaId) === String(cid) && s.showDate === d && !isPast(s.showDate!, s.startTime!)
     ).length);
   }, [scheduleData, selectedCinemaId, dates]);
 
@@ -306,18 +322,24 @@ const ShowtimePage: React.FC = () => {
           </div>
         </div>
 
-        {/* 影厅快捷标签 */}
-        <div className={styles.hallBar}>
-          {['特殊场', ...MOCK_SCREEN_TYPES.slice(0, 5)].map(type => (
-            <span
-              key={type}
-              className={`${styles.hallTag} ${screenFilter.includes(type) ? styles.hallTagActive : ''}`}
-              onClick={() => toggleArrayItem(screenFilter, setScreenFilter, type)}
-            >
-              {type}
-            </span>
-          ))}
-        </div>
+        {/* 影厅快捷标签 — 从真实排片中提取 */}
+        {(() => {
+          const hallTypes = [...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))];
+          if (hallTypes.length === 0) return null;
+          return (
+            <div className={styles.hallBar}>
+              {hallTypes.map(type => (
+                <span
+                  key={type}
+                  className={`${styles.hallTag} ${screenFilter.includes(type) ? styles.hallTagActive : ''}`}
+                  onClick={() => toggleArrayItem(screenFilter, setScreenFilter, type)}
+                >
+                  {type}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* 影院列表 */}
         <div className={styles.cinemaList}>
@@ -373,6 +395,7 @@ const ShowtimePage: React.FC = () => {
           priceRange={priceRange}
           setPriceRange={setPriceRange}
           onClear={clearFilters}
+          hallTypes={[...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))]}
         />
         <BrandPopup
           visible={brandPanelVisible}
@@ -553,7 +576,8 @@ const FilterPopup: React.FC<{
   priceRange: [number, number];
   setPriceRange: (v: [number, number]) => void;
   onClear: () => void;
-}> = ({ visible, onClose, screenFilter, setScreenFilter, priceRange, setPriceRange, onClear }) => {
+  hallTypes: string[];
+}> = ({ visible, onClose, screenFilter, setScreenFilter, priceRange, setPriceRange, onClear, hallTypes }) => {
   const toggle = (item: string) => {
     if (screenFilter.includes(item)) {
       setScreenFilter(screenFilter.filter(i => i !== item));
@@ -587,7 +611,7 @@ const FilterPopup: React.FC<{
         <div className={styles.filterSection}>
           <div className={styles.filterSectionTitle}>放映影厅</div>
           <div className={styles.screenGrid}>
-            {MOCK_SCREEN_TYPES.map(screen => (
+            {hallTypes.map(screen => (
               <span
                 key={screen}
                 className={`${styles.screenItem} ${screenFilter.includes(screen) ? styles.screenItemActive : ''}`}

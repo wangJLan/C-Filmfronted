@@ -19,7 +19,7 @@ const WatchedPage: React.FC = () => {
   if (!isLoggedIn) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>看过的电影</NavBar>
+        <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>看过的电影</NavBar>
         <Empty description="登录后可查看看过的电影" style={{ paddingTop: 80 }} />
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
@@ -30,7 +30,7 @@ const WatchedPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>看过的电影</NavBar>
+      <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>看过的电影</NavBar>
 
       <div className={styles.list}>
         {watched.length === 0 ? (
