@@ -23,7 +23,6 @@ import { useAiStore } from '@/stores/useAiStore';
 import { useGuard } from '@/hooks/useGuard';
 import { useLocationStore } from '@/stores/useLocationStore';
 import {
-  MOCK_SCREEN_TYPES,
   MOCK_BRANDS,
   MOCK_REGIONS,
 } from '@/mock/home';
@@ -323,18 +322,24 @@ const ShowtimePage: React.FC = () => {
           </div>
         </div>
 
-        {/* 影厅快捷标签 */}
-        <div className={styles.hallBar}>
-          {['特殊场', ...MOCK_SCREEN_TYPES.slice(0, 5)].map(type => (
-            <span
-              key={type}
-              className={`${styles.hallTag} ${screenFilter.includes(type) ? styles.hallTagActive : ''}`}
-              onClick={() => toggleArrayItem(screenFilter, setScreenFilter, type)}
-            >
-              {type}
-            </span>
-          ))}
-        </div>
+        {/* 影厅快捷标签 — 从真实排片中提取 */}
+        {(() => {
+          const hallTypes = [...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))];
+          if (hallTypes.length === 0) return null;
+          return (
+            <div className={styles.hallBar}>
+              {hallTypes.map(type => (
+                <span
+                  key={type}
+                  className={`${styles.hallTag} ${screenFilter.includes(type) ? styles.hallTagActive : ''}`}
+                  onClick={() => toggleArrayItem(screenFilter, setScreenFilter, type)}
+                >
+                  {type}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* 影院列表 */}
         <div className={styles.cinemaList}>
