@@ -9,8 +9,10 @@ const GATE_KEY = 'location_gate_v2';
  * 定位授权门控
  *
  * 逻辑:
- *   · 已有缓存城市 → 跳过弹窗，静默 GPS 更新
- *   · 无缓存 → 弹窗，同意后 GPS，拒绝后默认北京
+ *   · 已有缓存 → 跳过弹窗，静默 GPS→IP 定位
+ *   · 无缓存 → 弹窗说明用途
+ *     - 同意 → GPS→IP 定位
+ *     - 暂不使用 → GPS 快速失败 → IP 定位兜底（保证至少拿到 IP 城市）
  */
 const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const loading = useLocationStore((s) => s.loading);
@@ -21,11 +23,10 @@ const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [show, setShow] = React.useState(() => !hasCache && !localStorage.getItem(GATE_KEY));
 
   useEffect(() => {
-    // 清除旧版本遗留的 key（避免永远跳过弹窗）
     localStorage.removeItem('location_gate_passed');
 
     if (hasCache) {
-      init();
+      init(); // 有缓存 → GPS → IP 静默定位
     }
   }, []);
 
@@ -38,6 +39,7 @@ const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const handleDeny = () => {
     localStorage.setItem(GATE_KEY, '1');
     setShow(false);
+    init(); // GPS 会因权限失败自动降级到 IP 定位
   };
 
   if (!show) {
