@@ -1,19 +1,18 @@
 /* ========== 影院场次页 ========== */
-
 .page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-page);
   padding-bottom: 80px;
 }
 
-/* ===== AI 转交按钮 ===== */
+/* ===== AI 按钮 ===== */
 .aiBtn {
   font-size: 14px;
-  color: #FF5A00;
+  color: var(--primary-color);
   cursor: pointer;
 }
 
-/* ===== 影片+影院信息头部 ===== */
+/* ===== 信息头部 ===== */
 .infoHead {
   padding: 16px 16px 4px;
   background: #fff;
@@ -22,441 +21,563 @@
 .filmTitle {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text-primary);
   line-height: 1.4;
 }
 
-.cinemaName {
+.cinemaNameText {
   margin-top: 4px;
-  font-size: 13px;
-  color: #999;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
-/* ===== 影片切换 Chips（cinema-only 进入场次页后） ===== */
+/* ===== 影片/影院切换条 ===== */
 .filmSwitch {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
-  padding-bottom: 4px;
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  margin-top: 10px;
+  padding-bottom: 6px;
+
   &::-webkit-scrollbar { display: none; }
 }
 
 .filmSwitchChip {
   flex-shrink: 0;
-  font-size: 12px;
-  color: #666;
   padding: 4px 12px;
-  border-radius: 16px;
+  font-size: 12px;
   background: #f5f5f5;
+  color: var(--text-secondary);
+  border-radius: 14px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
 }
 
 .filmSwitchChipActive {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
   color: #fff;
-  background: linear-gradient(135deg, #FF5A00, #FF8C42);
 }
 
-/* ===== 影片选择网格（cinema-only 初始页面） ===== */
-.filmGrid {
-  padding: 16px;
-}
-
-.filmGridTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 12px;
-}
-
-.filmCard {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
+/* ===== 日期选择条 ===== */
+.dateBar {
   background: #fff;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-
-  &:active {
-    transform: scale(0.985);
-    background: #fafafa;
-  }
+  padding: 10px 0 6px;
+  border-bottom: 1px solid #f5f5f5;
 }
 
-.filmCardPoster {
-  flex-shrink: 0;
-  width: 72px;
-  height: 96px;
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
+.dateScroll {
+  display: flex;
+  overflow-x: auto;
+  padding: 0 8px;
+  gap: 4px;
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  &::-webkit-scrollbar { display: none; }
 }
 
-.filmCardTag {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 9px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 1px 5px;
-  border-radius: 3px;
-}
-
-.filmCardInfo {
-  flex: 1;
+.dateItem {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 4px;
+  align-items: center;
+  padding: 6px 10px;
+  min-width: 58px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.filmCardTitle {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
+.dateItemActive {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
 }
 
-.filmCardMeta {
+.dateLabel {
   font-size: 12px;
-  color: #999;
+  color: var(--text-muted);
+  margin-bottom: 2px;
 }
 
-.filmCardPick {
-  margin-top: 4px;
+.dateItemActive .dateLabel {
+  color: #fff;
+}
+
+.dateNum {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dateItemActive .dateNum {
+  color: #fff;
+}
+
+.dateCount {
+  font-size: 10px;
+  color: var(--primary-color);
+  margin-top: 2px;
+}
+
+.dateItemActive .dateCount {
+  color: #fff;
+}
+
+.dateNoData {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dateItemEmpty {
+  opacity: 0.5;
+}
+
+/* ===== 筛选条 ===== */
+.filterBar {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 10px 8px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.filterItem {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
   font-size: 13px;
-  color: #FF5A00;
-  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
 }
 
-/* ===== 影院选择列表（filmOnly 模式） ===== */
+.filterActive {
+  color: var(--primary-color);
+}
+
+.filterText {
+  white-space: nowrap;
+}
+
+/* ===== 影厅快捷标签 ===== */
+.hallBar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  overflow-x: auto;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.hallTag {
+  font-size: 12px;
+  padding: 5px 12px;
+  background: #f5f5f5;
+  color: var(--text-secondary);
+  border-radius: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.hallTagActive {
+  background: #fff6f0;
+  color: var(--primary-color);
+  border: 1px solid #FFD4B8;
+}
+
+/* ===== 影院列表 ===== */
 .cinemaList {
-  padding: 16px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listCount {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 0;
 }
 
 .cinemaCard {
-  padding: 14px;
-  margin-bottom: 10px;
   background: #fff;
   border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s;
 
   &:active {
-    transform: scale(0.985);
-    background: #fafafa;
+    transform: scale(0.98);
   }
 }
 
-.cinemaCardHead {
+.cinemaHeader {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
-.cinemaCardName {
+.cinemaTitle {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   flex: 1;
+  line-height: 1.4;
+}
+
+.cinemaPrice {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--primary-color);
+}
+
+.priceSymbol {
+  font-size: 12px;
+}
+
+.priceValue {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.priceSuffix {
+  font-size: 12px;
+}
+
+.cinemaAddr {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cinemaCardDist {
-  font-size: 13px;
-  color: #FF5A00;
-  font-weight: 500;
-  margin-left: 8px;
+.cinemaInfoRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
-.cinemaCardAddr {
+.cinemaDistance {
   font-size: 12px;
-  color: #999;
-  margin-top: 6px;
+  color: var(--text-secondary);
 }
 
-.cinemaCardTags {
+.cinemaServices {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 4px;
 }
 
-.cinemaCardTag {
+.serviceTag {
   font-size: 10px;
-  color: #FF5A00;
-  background: #FFF0E6;
+  padding: 2px 6px;
+  background: #f5f5f5;
+  color: var(--text-secondary);
+  border-radius: 3px;
+}
+
+.cinemaHalls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hallBadge {
+  font-size: 10px;
   padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.cinemaCardShowtimeCount {
-  font-size: 11px;
-  color: #00b578;
-  font-weight: 500;
-  margin-left: auto;
-}
-
-/* ===== 日期横向切换 ===== */
-.dateBar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #fff;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.dateScroll {
-  display: flex;
-  gap: 8px;
-  padding: 0 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar { display: none; }
-}
-
-.dateItem {
-  flex-shrink: 0;
-  width: 72px;
-  height: 72px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: #f7f8fa;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-
-  &:active {
-    transform: scale(0.96);
-  }
-}
-
-.dateItemActive {
-  background: linear-gradient(135deg, #FF5A00, #FF8C42);
-  .dateLabel, .dateNum, .dateCount {
-    color: #fff;
-  }
-}
-
-.dateItemEmpty {
-  opacity: 0.55;
-}
-
-.dateLabel {
-  font-size: 12px;
-  color: #666;
-  font-weight: 500;
-}
-
-.dateNum {
-  font-size: 15px;
-  color: #1a1a1a;
-  font-weight: 700;
-  margin-top: 2px;
-}
-
-.dateCount {
-  font-size: 10px;
-  color: #FF5A00;
-  margin-top: 2px;
-}
-
-.dateNoData {
-  font-size: 10px;
-  color: #ccc;
-  margin-top: 2px;
+  background: #e6f4ff;
+  color: #1677ff;
+  border-radius: 3px;
 }
 
 /* ===== 场次列表 ===== */
-.list {
-  padding: 12px 16px;
+.showtimeListSection {
+  padding: 10px 12px;
 }
 
 .listHeader {
-  font-size: 12px;
-  color: #999;
-  padding: 4px 0 12px;
-  strong {
-    color: #1a1a1a;
-  }
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
 }
 
-/* ===== 场次卡片 ===== */
-.card {
+.showtimeCard {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: #fff;
   border-radius: 12px;
-  padding: 16px;
+  padding: 14px 16px;
   margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s;
 
   &:active {
-    transform: scale(0.985);
-    background: #fafafa;
+    transform: scale(0.98);
   }
 }
 
-.cardSoldOut {
-  opacity: 0.65;
-  background: #fafafa;
-  border: 1px dashed #e0e0e0;
+.showtimeSoldOut {
+  opacity: 0.5;
 }
 
-.cardLeft {
+.showtimeLeft {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.cardTime {
-  font-size: 22px;
+.showtimeTime {
+  font-size: 18px;
   font-weight: 700;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  color: var(--text-primary);
 }
 
 .soldTag {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: #ff4d4f;
   color: #fff;
-  background: #ccc;
-  padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 3px;
+  margin-left: 6px;
 }
 
-.hurryTag {
+.showtimeHall {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.showtimeEnd {
   font-size: 11px;
-  font-weight: 500;
-  color: #FF5A00;
-  background: #FFF0E6;
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: var(--text-muted);
 }
 
-.cardHall {
-  font-size: 13px;
-  color: #888;
-}
-
-.cardRight {
+.showtimeRight {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
 }
 
-.cardPrice {
+.showtimePrice {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  color: var(--primary-color);
 }
 
-.priceNum {
-  font-size: 20px;
-  font-weight: 700;
-  color: #FF5A00;
-}
-
-.priceDiscount {
-  font-size: 12px;
-  color: #999;
-  text-decoration: line-through;
-}
-
-.cardSeats {
-  font-size: 12px;
-  color: #00b578;
-  font-weight: 500;
-}
-
-.seatsHurry {
-  color: #FF5A00;
+.showtimeSeats {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .seatsZero {
-  color: #ccc;
+  color: #ff4d4f;
 }
 
-.similarBtn {
-  margin-top: 4px;
-  font-size: 11px;
-  color: #FF5A00;
-  padding: 3px 10px;
-  border: 1px solid #FFD4B8;
+.showtimeBuyBtn {
+  font-size: 12px;
+  padding: 4px 14px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: #fff;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+/* ===== 影片选择列表 ===== */
+.filmList {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filmCardRow {
+  display: flex;
+  gap: 12px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:active { transform: scale(0.98); }
+}
+
+.filmCardPoster {
+  width: 60px;
+  height: 84px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.filmCardInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filmCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.filmCardMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.filmCardPick {
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--primary-color);
+}
+
+/* ===== 筛选面板 ===== */
+.filterPanel {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 16px 16px 0;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.filterPanelTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 8px 0 16px;
+}
+
+.filterClose {
+  font-size: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.filterSection {
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.filterSectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.timeRange {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.screenGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.screenItem {
+  font-size: 13px;
+  padding: 8px 16px;
+  background: #f5f5f5;
+  color: var(--text-secondary);
   border-radius: 20px;
   cursor: pointer;
-  &:active {
-    background: #FFF0E6;
-  }
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.screenItemActive {
+  background: #fff6f0;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 0;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+}
+
+.filterClear {
+  flex: 1;
+  height: 44px;
+  border-radius: 22px;
+  background: #f5f5f5;
+  color: var(--text-secondary);
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+}
+
+.filterConfirm {
+  flex: 2;
+  height: 44px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+/* ===== 排序面板 ===== */
+.sortPanel {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 8px 0 24px;
+}
+
+.sortItem {
+  padding: 16px 20px;
+  font-size: 15px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+
+  &:last-child { border-bottom: none; }
+}
+
+.sortItemActive {
+  color: var(--primary-color);
+  font-weight: 600;
 }
 
 /* ===== 空状态 ===== */
 .empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px 24px;
+  padding: 60px 16px;
   text-align: center;
 }
 
 .emptyIcon {
-  font-size: 56px;
-  margin-bottom: 16px;
-  opacity: 0.6;
+  font-size: 48px;
+  margin-bottom: 12px;
 }
 
 .emptyText {
-  font-size: 16px;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.emptyHint {
-  font-size: 13px;
-  color: #aaa;
-  margin-bottom: 20px;
-}
-
-.emptyAiBtn {
-  display: inline-block;
   font-size: 14px;
-  font-weight: 600;
-  color: #FF5A00;
-  padding: 8px 24px;
-  border: 1px solid #FF5A00;
-  border-radius: 24px;
-  cursor: pointer;
-  &:active {
-    background: #FFF5F0;
-  }
+  color: var(--text-muted);
 }

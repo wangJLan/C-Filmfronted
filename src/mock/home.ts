@@ -376,3 +376,261 @@ export const MOCK_DISCOVERS: DiscoverCard[] = [
   { id: 5, title: '《功夫女足》笑点合集', image: 'https://picsum.photos/seed/discover5/400/200', tag: '花絮', description: '周星驰式笑点如何炼成' },
   { id: 6, title: '本周观影福利汇总', image: 'https://picsum.photos/seed/discover6/400/200', tag: '福利', description: '各大影院优惠活动一键查看' },
 ];
+
+// ================= 影评 =================
+
+export interface FilmReview {
+  id: number;
+  userName: string;
+  userAvatar: string;
+  location: string;
+  rating: number;
+  content: string;
+  helpfulCount: number;
+  commentCount: number;
+  date: string;
+  isPurchased: boolean;
+  tags: string[];
+}
+
+export const MOCK_REVIEWS: FilmReview[] = [
+  {
+    id: 1,
+    userName: '青**柳',
+    userAvatar: '🦸',
+    location: '湖南',
+    rating: 5,
+    content: '依旧漫威！作为一个资深的Marvel fan，只能评论"依旧漫威"。不仅有许多的漫威角色回归，蜘蛛侠也是有了街头科学家的形象啊，还有我们的X战警中的凤凰女（新版）！Hooray Marvel!',
+    helpfulCount: 82,
+    commentCount: 11,
+    date: '4天前',
+    isPurchased: true,
+    tags: ['购票好评'],
+  },
+  {
+    id: 2,
+    userName: '乔橋',
+    userAvatar: '🕷️',
+    location: '山东',
+    rating: 5,
+    content: '特别好看的一部电影，期待已久的蜘蛛侠4新之日终于看完了！这一部可以说是回归了街头英雄。而且还引进了一个非常牛逼的强大角色：格普雷，打戏的部分真的看的太爽了！尤其是康纳博士失控变成浩克和蜘蛛侠的那段，真的是打过瘾啊。影片的风格也很独特，动画的质感非常棒！',
+    helpfulCount: 56,
+    commentCount: 8,
+    date: '4天前',
+    isPurchased: true,
+    tags: ['购票好评'],
+  },
+  {
+    id: 3,
+    userName: '影痴****ck',
+    userAvatar: '🎬',
+    location: '上海',
+    rating: 4,
+    content: '画面炸裂，故事线略显单薄。作为动画电影来说，这部的视觉效果确实是顶级水准，每一帧都能当壁纸。但剧情推进稍显仓促，反派的动机也不够立体。整体来说，值得IMAX票价。',
+    helpfulCount: 34,
+    commentCount: 5,
+    date: '3天前',
+    isPurchased: true,
+    tags: ['有图'],
+  },
+  {
+    id: 4,
+    userName: '小李**飞刀',
+    userAvatar: '🗡️',
+    location: '北京',
+    rating: 5,
+    content: '蜘蛛侠粉必看！平行宇宙的设定玩出了新高度，动画风格在延续前作基础上又有创新。角色塑造非常饱满，尤其是彼得·帕克的内心挣扎，让人共情。配乐也是一绝，DTS音效炸裂！',
+    helpfulCount: 128,
+    commentCount: 23,
+    date: '5天前',
+    isPurchased: true,
+    tags: ['购票好评', '有图'],
+  },
+  {
+    id: 5,
+    userName: '影评***人',
+    userAvatar: '✍️',
+    location: '广东',
+    rating: 3,
+    content: '可能是期待值太高了，看完觉得中规中矩。前半小时节奏太慢，后面才渐入佳境。不过最后的大战还是挺燃的，建议降低预期去看。',
+    helpfulCount: 19,
+    commentCount: 3,
+    date: '2天前',
+    isPurchased: true,
+    tags: ['购票中评'],
+  },
+];
+
+// ================= 影片动态 =================
+
+export interface FilmNews {
+  id: number;
+  source: string;
+  sourceType: 'material' | 'schedule' | 'updates';
+  title: string;
+  summary: string;
+  time: string;
+  image?: string;
+}
+
+export const MOCK_NEWS: FilmNews[] = [
+  { id: 1, source: '物料发布', sourceType: 'material', title: '打戏高燃！《蜘蛛侠：崭新之日》票房破3亿', summary: '上映3天票房突破3亿，口碑持续走高', time: '2026-07-30 21:31', image: 'https://picsum.photos/seed/news1/300/200' },
+  { id: 2, source: '剧组动态', sourceType: 'updates', title: '今日上映点燃暑期预售、零点场均破票房纪录', summary: '预售火爆，多部影片零点场售罄', time: '2026-07-29 19:03', image: 'https://picsum.photos/seed/news2/300/200' },
+  { id: 3, source: '物料发布', sourceType: 'material', title: '胡彦斌献唱《蜘蛛侠：崭新之日》中文推广曲', summary: '金曲奖得主操刀制作，MV同步上线', time: '2026-07-27 10:02', image: 'https://picsum.photos/seed/news3/300/200' },
+  { id: 4, source: '剧组动态', sourceType: 'updates', title: '"荷兰弟"赞达亚空降上海全网刷屏《蜘蛛侠》粉丝狂欢', summary: '主创团队现身亚洲首映礼', time: '2026-07-26 12:14', image: 'https://picsum.photos/seed/news4/300/200' },
+  { id: 5, source: '物料发布', sourceType: 'material', title: '预售开启内外交困之下蜘蛛侠如何破局重生', summary: '《蜘蛛侠：崭新之日》预售火爆开启', time: '2026-07-21 10:00', image: 'https://picsum.photos/seed/news5/300/200' },
+  { id: 6, source: '剧组动态', sourceType: 'updates', title: '主题快闪来袭 六天空间解锁蜘蛛侠双重人生', summary: '影迷互动体验活动盛大开启', time: '2026-07-17 10:00', image: 'https://picsum.photos/seed/news6/300/200' },
+  { id: 7, source: '物料发布', sourceType: 'material', title: 'IMAX独家海报发布 蜘蛛侠全新造型曝光', summary: 'IMAX特制海报震撼亮相', time: '2026-07-15 14:20', image: 'https://picsum.photos/seed/news7/300/200' },
+  { id: 8, source: '档期信息', sourceType: 'schedule', title: '《蜘蛛侠：崭新之日》7月29日全球同步上映', summary: '暑期档重磅大片定档', time: '2026-07-10 09:00', image: 'https://picsum.photos/seed/news8/300/200' },
+  { id: 9, source: '物料发布', sourceType: 'material', title: '导演解读：蜘蛛侠平行宇宙的全新叙事', summary: '导演乔伊姆专访揭秘创作幕后', time: '2026-07-08 16:45', image: 'https://picsum.photos/seed/news9/300/200' },
+  { id: 10, source: '剧组动态', sourceType: 'updates', title: '蜘蛛侠系列十周年庆典：粉丝见面会圆满举行', summary: '全球粉丝齐聚庆祝IP诞生十年', time: '2026-07-05 11:30', image: 'https://picsum.photos/seed/news10/300/200' },
+  { id: 11, source: '档期信息', sourceType: 'schedule', title: '预售火爆！《蜘蛛侠》零点场全国售罄', summary: '首日预售票房破亿', time: '2026-07-03 20:00', image: 'https://picsum.photos/seed/news11/300/200' },
+  { id: 12, source: '物料发布', sourceType: 'material', title: '特效解析：蜘蛛侠动画背后的视觉革命', summary: '每一帧都值得细细品味', time: '2026-07-01 15:20', image: 'https://picsum.photos/seed/news12/300/200' },
+];
+
+export interface BoxOfficeData {
+  realtime: string;
+  cumulative: string;
+  rank: number;
+}
+
+export const MOCK_BOX_OFFICE: BoxOfficeData = {
+  realtime: '15632.02',
+  cumulative: '82311.28',
+  rank: 1,
+};
+
+export interface FilmInfoItem {
+  title: string;
+  items: { label: string; value: string; link?: boolean }[];
+}
+
+export const MOCK_FILM_INFO: FilmInfoItem[] = [
+  {
+    title: '出品发行',
+    items: [
+      { label: '出品公司', value: '美国哥伦比亚影片公司' },
+      { label: '发行公司', value: '索尼影视发行' },
+    ],
+  },
+  {
+    title: '发行通知',
+    items: [
+      { label: '发行日期', value: '2026年07月29日' },
+      { label: '发行版本', value: 'IMAX/CINITY/杜比视界' },
+    ],
+  },
+];
+
+// ================= 推荐 =================
+
+export interface RecommendFilm {
+  id: number;
+  title: string;
+  poster: string;
+  rating: number;
+  genre: string;
+  duration: number;
+  reason: string;
+  director: string;
+  actors: string[];
+}
+
+export const MOCK_RECOMMENDS: RecommendFilm[] = [
+  {
+    id: 8, title: '哪吒之魔童闹海',
+    poster: 'https://picsum.photos/seed/film8/200/280',
+    rating: 9.3, genre: '动画/奇幻', duration: 135,
+    reason: '同类型热门', director: '饺子', actors: ['吕艳婷', '陈浩', '绿绮'],
+  },
+  {
+    id: 5, title: '长安三万里2',
+    poster: 'https://picsum.photos/seed/film5/200/280',
+    rating: 8.9, genre: '动画/历史', duration: 168,
+    reason: '口碑佳作', director: '追光动画', actors: ['杨天翔', '季冠霖'],
+  },
+  {
+    id: 1, title: '蜘蛛侠：纵横宇宙',
+    poster: 'https://picsum.photos/seed/film1/200/280',
+    rating: 9.6, genre: '动作/科幻', duration: 140,
+    reason: '上一部作品', director: '乔伊姆·多斯·桑托斯', actors: ['沙梅克·摩尔', '海莉·斯坦菲尔德'],
+  },
+  {
+    id: 4, title: '流浪地球3',
+    poster: 'https://picsum.photos/seed/film4/200/280',
+    rating: 8.5, genre: '科幻/冒险', duration: 150,
+    reason: '同类推荐', director: '郭帆', actors: ['吴京', '刘德华', '李雪健'],
+  },
+  {
+    id: 3, title: '痴迷',
+    poster: 'https://picsum.photos/seed/film3/200/280',
+    rating: 8.7, genre: '悬疑/犯罪', duration: 132,
+    reason: '近期热门', director: '陈正道', actors: ['黄渤', '周冬雨'],
+  },
+];
+
+// ================= 动态推荐(和推荐结构相同,但展示风格不同) =================
+
+export const MOCK_DYNAMIC_RECOMMENDS: RecommendFilm[] = [
+  {
+    id: 6, title: '封神第三部',
+    poster: 'https://picsum.photos/seed/film6/200/280',
+    rating: 8.3, genre: '奇幻/史诗', duration: 155,
+    reason: '即将上映', director: '乌尔善', actors: ['费翔', '李雪健', '黄渤'],
+  },
+  {
+    id: 7, title: '神探大战2',
+    poster: 'https://picsum.photos/seed/film7/200/280',
+    rating: 8.6, genre: '动作/犯罪', duration: 128,
+    reason: '热映中', director: '韦家辉', actors: ['刘青云', '蔡卓妍'],
+  },
+];
+
+// ================= 影院筛选 Mock 数据 =================
+
+export interface CinemaShowtime {
+  startTime: string;
+  hallType: string;
+  price: number;
+  isSoldOut: boolean;
+}
+
+export interface CinemaItem {
+  id: number;
+  name: string;
+  fullName: string;
+  address: string;
+  distance: string;
+  minPrice: number;
+  tags: string[];
+  services: string[];
+  halls: string[];
+  region: string;
+  showtimes: CinemaShowtime[];
+}
+
+export const MOCK_REGIONS: { name: string; count: number }[] = [
+  { name: '瀍河回族区', count: 2 },
+  { name: '吉利区', count: 2 },
+  { name: '老城区', count: 5 },
+  { name: '栾川县', count: 3 },
+  { name: '洛龙区', count: 8 },
+  { name: '洛宁县', count: 2 },
+  { name: '涧西区', count: 7 },
+  { name: '孟津区', count: 2 },
+  { name: '汝阳县', count: 2 },
+  { name: '新安县', count: 3 },
+  { name: '宜阳县', count: 2 },
+  { name: '伊川县', count: 3 },
+  { name: '偃师区', count: 3 },
+];
+
+export const MOCK_SCREEN_TYPES = [
+  'IMAX厅', '4DX厅', 'DTS:X临境音', '杜比全景声厅',
+  'realD厅', '巨幕厅', '4D厅', 'DTS临境音',
+];
+
+export const MOCK_BRANDS = [
+  '万达影城', '奥斯卡影城', '横店影城', '卢米埃影城',
+  '沃美影城', '新华国际影城', '耀莱影城', '其他',
+];
