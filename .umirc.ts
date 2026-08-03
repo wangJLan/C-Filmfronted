@@ -29,6 +29,7 @@ export default defineConfig({
         { path: '/ticket/:orderId', component: '@/pages/ticket/index', title: '电子票' },
         { path: '/profile-edit', component: '@/pages/profile-edit/index', title: '编辑资料' },
         { path: '/forgot-password', component: '@/pages/forgot-password/index', title: '设置密码' },
+        { path: '/cinema-detail/:cinemaId', component: '@/pages/cinema-detail/index', title: '影院详情' },
         { path: '/city-picker', component: '@/pages/city-picker/index', title: '选择城市' },
       ],
     },

@@ -592,22 +592,22 @@ const ShowtimePage: React.FC = () => {
         back={<LeftOutline />}
         right={<span className={styles.aiBtn} onClick={handleAiHelp}>🤖</span>}
       >
-        {(cinema?.name || '选影院')}
+        <span onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)} style={{ cursor: 'pointer' }}>{cinema?.name || '选影院'}</span>
       </NavBar>
 
       {/* 影院详情头部 */}
       <div className={styles.cinemaDetailHeader}>
-        <div className={styles.cinemaHeaderTitle}>{cinema?.name || '影院详情'}</div>
+        <div className={styles.cinemaHeaderTitle} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)} style={{ cursor: 'pointer' }}>{cinema?.name || '影院详情'}</div>
         <div className={styles.cinemaHeaderAddr}>
           <span className={styles.addrText}>{cinema?.address || '暂无地址'}</span>
           <span className={styles.addrDistance}>{cinema?.distance || '--km'}</span>
         </div>
         <div className={styles.cinemaHeaderTags}>
           {(cinema?.services || []).map((svc: string, idx: number) => (
-            <span key={idx} className={`${styles.cHeaderTag} ${getTagColor(svc) === 'tagRed' ? styles.cHeaderTagRed : styles.cHeaderTagGray}`}>{svc}</span>
+            <span key={idx} className={`${styles.cHeaderTag} ${getTagColor(svc) === 'tagRed' ? styles.cHeaderTagRed : styles.cHeaderTagGray}`} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)}>{svc}</span>
           ))}
           {(cinema?.halls || []).map((h: string, idx: number) => (
-            <span key={`h-${idx}`} className={`${styles.cHeaderTag} ${styles.cHeaderTagGray}`}>{h}</span>
+            <span key={`h-${idx}`} className={`${styles.cHeaderTag} ${styles.cHeaderTagGray}`} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)}>{h}</span>
           ))}
         </div>
       </div>
