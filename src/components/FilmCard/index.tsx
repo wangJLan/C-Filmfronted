@@ -25,6 +25,31 @@ interface FilmCardProps {
   onSelect?: (id: number) => void;
 }
 
+/**
+ * 根据标签内容返回颜色样式类名
+ */
+function getTagColor(tag: string): string {
+  const t = tag.toLowerCase();
+  // 红色：优惠/特权（放最前面）
+  if (/特权|专属|vip|影城卡|券|新人|限时|折扣|优惠/.test(tag)) return 'tagRed';
+  // 蓝色：退票改签（放红色后面）
+  if (/退票|改签/.test(tag)) return 'tagBlue';
+  // 灰色：影厅格式 + 其余（放最后）
+  return 'tagGray';
+}
+
+// 按颜色优先级排序：红色 > 蓝色 > 灰色
+function sortTags(tags: string[]): string[] {
+  const priority: Record<string, number> = {
+    tagRed: 0,
+    tagBlue: 1,
+    tagGray: 2,
+    tagOrange: 3,
+    tagGreen: 4,
+  };
+  return [...tags].sort((a, b) => priority[getTagColor(a)] - priority[getTagColor(b)]);
+}
+
 const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect }) => {
   const navigate = useNavigate();
   const guard = useGuard();
@@ -98,8 +123,8 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
             </div>
           )}
           <div className={styles.heroTags}>
-            {enriched.formatTags.map(tag => (
-              <span key={tag} className={styles.heroTag}>{tag}</span>
+            {sortTags(enriched.formatTags).map(tag => (
+              <span key={tag} className={`${styles.heroTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
             ))}
           </div>
           <div className={styles.heroMeta}>
@@ -143,10 +168,9 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
           </div>
         )}
         <div className={styles.listTags}>
-          {enriched.formatTags.slice(0, 2).map(tag => (
-            <span key={tag} className={styles.listTag}>{tag}</span>
+          {sortTags([...enriched.formatTags.slice(0, 2), ...(enriched.type ? [enriched.type] : [])]).map(tag => (
+            <span key={tag} className={`${styles.listTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
           ))}
-          {enriched.type && <span className={styles.listTag}>{enriched.type}</span>}
         </div>
         <div className={styles.listMeta}>
           {enriched.releaseDate ? enriched.releaseDate.replace(/-/g, '.') : ''}
