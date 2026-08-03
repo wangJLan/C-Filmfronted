@@ -2,8 +2,8 @@
  * 统一选座页 — 真实座位数据 + 锁座 + 创建订单
  */
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'umi';
-import { NavBar, Button, Toast, SafeArea, SpinLoading } from 'antd-mobile';
+import { useParams, useNavigate, useLocation } from 'umi';
+import { NavBar, Toast, SafeArea, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getSeatMap } from '@/api/seatController';
@@ -14,12 +14,39 @@ import styles from './index.module.less';
 
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+const WEEKDAY_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+function formatDayLabel(dateStr: string): string {
+  if (!dateStr) return '';
+  const today = new Date();
+  const target = new Date(dateStr);
+  const diffDays = Math.round((target.getTime() - today.setHours(0,0,0,0)) / 86400000);
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '明天';
+  if (diffDays === 2) return '后天';
+  return WEEKDAY_CN[target.getDay()];
+}
+
 const SeatPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const sid = Number(showtimeId);
+
+  const { filmName, filmDuration, filmType, startTime, endTime, hallType, hallName, date } = 
+    (location.state as any) || {};
+  // 从 URL 查询参数获取（如果 state 为空）
+  const queryParams = new URLSearchParams(location.search);
+  const filmNameVal = filmName || queryParams.get('filmName') || '';
+  const filmDurationVal = filmDuration || queryParams.get('filmDuration') || '';
+  const filmTypeVal = filmType || queryParams.get('filmType') || '';
+  const startTimeVal = startTime || queryParams.get('startTime') || '';
+  const endTimeVal = endTime || queryParams.get('endTime') || '';
+  const hallTypeVal = hallType || queryParams.get('hallType') || '';
+  const hallNameVal = hallName || queryParams.get('hallName') || '';
+  const dateVal = date || queryParams.get('date') || '';
 
   // 页面守卫
   React.useEffect(() => { if (!isLoggedIn) guard(() => {}); }, []);
@@ -92,12 +119,6 @@ const SeatPage: React.FC = () => {
     <div className={styles.page}>
       <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
 
-      <div className={styles.infoBar}>
-        <div className={styles.meta}>
-          {seatMap.hallName} · {seatMap.hallType} · ¥{price}/座
-        </div>
-      </div>
-
       <div className={styles.screenArea}>
         <div className={styles.screen}>
           <div className={styles.screenCurve} />
@@ -143,24 +164,44 @@ const SeatPage: React.FC = () => {
 
       <div className={styles.bottomBar}>
         <SafeArea position="bottom" />
-        <div className={styles.bottomInner}>
-          <div className={styles.bottomLeft}>
-            {selectedIds.size > 0 ? (
-              <>
-                <span className={styles.bottomSeats}>
-                  {Array.from(selectedIds).slice(0,3).map(id => {
-                    const s = seats.find(x => x.id === id);
-                    return s ? s.seatLabel : '';
-                  }).join('、')}
-                  {selectedIds.size > 3 ? ` 等${selectedIds.size}座` : ''}
-                </span>
-                <span className={styles.bottomPrice}>¥<strong>{totalPrice}</strong></span>
-              </>
-            ) : <span className={styles.bottomHint}>请选择座位</span>}
+        <div className={styles.bottomCard}>
+          {/* 电影信息行 */}
+          <div className={styles.cardHeader}>
+            <div className={styles.cardFilmName}>{filmNameVal || '电影名称'}</div>
+            <div className={styles.cardSwitch} onClick={() => navigate(-1)}>切换场次</div>
           </div>
-          <Button className={styles.confirmBtn} onClick={handleConfirm} loading={locking} disabled={selectedIds.size === 0}>
-            确认选座
-          </Button>
+          <div className={styles.cardShowtime}>
+            {dateVal && <span className={styles.showtimeDay}>{formatDayLabel(dateVal)}</span>}
+            {startTimeVal && <span>{startTimeVal.substring(0,5)}-{endTimeVal?.substring(0,5)}</span>}
+            {filmDurationVal && <span>{filmDurationVal}分钟</span>}
+            {filmTypeVal && <span>{filmTypeVal}</span>}
+            {hallTypeVal && <span>{hallTypeVal}</span>}
+          </div>
+
+          {/* 已选座位 */}
+          {selectedIds.size > 0 && (
+            <div className={styles.cardSeats}>
+              {Array.from(selectedIds).map(id => {
+                const s = seats.find(x => x.id === id);
+                return s ? (
+                  <div key={id} className={styles.seatTag}>
+                    <span>{s.seatLabel}</span>
+                    <span className={styles.seatTagClose} onClick={() => toggle(s.rowNum, s.colNum)}>×</span>
+                  </div>
+                ) : null;
+              })}
+              <span className={styles.seatTagPrice}>¥{totalPrice}</span>
+            </div>
+          )}
+
+          {/* 确认按钮 */}
+          <button
+            className={`${styles.confirmBtn} ${selectedIds.size === 0 ? styles.confirmBtnDisabled : ''}`}
+            onClick={handleConfirm}
+            disabled={selectedIds.size === 0 || locking}
+          >
+            {selectedIds.size > 0 ? `${totalPrice}元 确认选座` : '请选择座位'}
+          </button>
         </div>
       </div>
     </div>

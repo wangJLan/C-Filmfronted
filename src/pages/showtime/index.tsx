@@ -730,7 +730,19 @@ const ShowtimePage: React.FC = () => {
                   <div
                     key={item.id}
                     className={`${styles.showtimeNewCard} ${isSoldOut ? styles.showtimeSoldOut : ''}`}
-                    onClick={() => { if (!isSoldOut) guard(() => navigate(`/seat/${item.id}`)); }}
+                    onClick={() => { if (!isSoldOut) guard(() => {
+                      const params = new URLSearchParams({
+                        filmName: film?.name || '',
+                        filmDuration: String(film?.duration || ''),
+                        filmType: film?.type || '',
+                        startTime: String(item.startTime || ''),
+                        endTime: String(item.endTime || ''),
+                        hallType: item.hallType || '',
+                        hallName: item.hallName || '',
+                        date: dates[activeDateIdx],
+                      });
+                      navigate(`/seat/${item.id}?${params.toString()}`);
+                    }); }}
                   >
                     <div className={styles.showtimeNewLeft}>
                       <div className={styles.showtimeNewTime}>
