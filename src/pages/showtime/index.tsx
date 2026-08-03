@@ -395,6 +395,7 @@ const ShowtimePage: React.FC = () => {
           priceRange={priceRange}
           setPriceRange={setPriceRange}
           onClear={clearFilters}
+          hallTypes={[...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))]}
         />
         <BrandPopup
           visible={brandPanelVisible}
@@ -575,7 +576,8 @@ const FilterPopup: React.FC<{
   priceRange: [number, number];
   setPriceRange: (v: [number, number]) => void;
   onClear: () => void;
-}> = ({ visible, onClose, screenFilter, setScreenFilter, priceRange, setPriceRange, onClear }) => {
+  hallTypes: string[];
+}> = ({ visible, onClose, screenFilter, setScreenFilter, priceRange, setPriceRange, onClear, hallTypes }) => {
   const toggle = (item: string) => {
     if (screenFilter.includes(item)) {
       setScreenFilter(screenFilter.filter(i => i !== item));
@@ -609,7 +611,7 @@ const FilterPopup: React.FC<{
         <div className={styles.filterSection}>
           <div className={styles.filterSectionTitle}>放映影厅</div>
           <div className={styles.screenGrid}>
-            {MOCK_SCREEN_TYPES.map(screen => (
+            {hallTypes.map(screen => (
               <span
                 key={screen}
                 className={`${styles.screenItem} ${screenFilter.includes(screen) ? styles.screenItemActive : ''}`}
