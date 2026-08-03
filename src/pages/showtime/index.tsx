@@ -128,11 +128,11 @@ const ShowtimePage: React.FC = () => {
 
   const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
 
-  // 影院详情（真实数据）
+  // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
-    queryKey: ['cinemas', cinemaIds],
+    queryKey: ['cinemas', cinemaIds, cityName],
     queryFn: async () => {
-      const results: { id: number; name: string; address: string; tags: string }[] = [];
+      const results: { id: number; name: string; address: string; tags: string; city: string }[] = [];
       for (const cId of cinemaIds.slice(0, 20)) {
         try {
           const c = await http.get(`/cinema/getInfo/${cId}`) as any;
@@ -141,6 +141,7 @@ const ShowtimePage: React.FC = () => {
             name: c.name || '',
             address: c.address || '',
             tags: c.tags || '',
+            city: c.city || '未知',
           });
         } catch { /* skip */ }
       }
@@ -148,6 +149,17 @@ const ShowtimePage: React.FC = () => {
     },
     enabled: cinemaIds.length > 0,
   });
+
+  // 按当前城市筛选影院（无城市信息的保留作为兜底）
+  const cityFilteredCinemas = useMemo(() => {
+    if (!cinemasRaw) return [];
+    // 优先匹配当前城市，没有城市字段的也保留
+    return cinemasRaw.filter(c => {
+      if (cityName === '全城' || cityName === '北京') return true; // 默认值不过滤
+      return !c.city || c.city === '未知' || c.city.includes(cityName) || cityName.includes(c.city);
+    });
+  }, [cinemasRaw, cityName]);
+
   const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
   // 当前选中影院
@@ -182,12 +194,12 @@ const ShowtimePage: React.FC = () => {
 
   // 合并真实场次 + Mock 补充字段的影院列表
   const enrichedCinemas = useMemo(() => {
-    if (!cinemasRaw || !scheduleData) return [];
-    return cinemasRaw.map(c => {
+    if (!cityFilteredCinemas || !scheduleData) return [];
+    return cityFilteredCinemas.map(c => {
       const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
       return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
     });
-  }, [cinemasRaw, scheduleData]);
+  }, [cityFilteredCinemas, scheduleData]);
 
   // 筛选后的影院列表
   const filteredCinemas = useMemo(() => {
