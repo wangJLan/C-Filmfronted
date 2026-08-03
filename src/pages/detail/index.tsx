@@ -4,10 +4,11 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { Button, NavBar, Skeleton, Toast, Tabs } from 'antd-mobile';
-import { LeftOutline, StarFill, StarOutline, UpOutline, EyeOutline, HeartFill, HeartOutline } from 'antd-mobile-icons';
+import { LeftOutline, StarFill, StarOutline, EyeOutline, HeartFill, HeartOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilm } from '@/api/filmController';
-import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { useFilmCollectionStore, type CollectedFilm } from '@/stores/useFilmCollectionStore';
+import { useOrderStore } from '@/stores/useOrderStore';
 import { useGuard } from '@/hooks/useGuard';
 import {
   MOCK_REVIEWS,
@@ -29,13 +30,32 @@ const DetailPage: React.FC = () => {
   const guard = useGuard();
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('intro');
-  const { toggleWantToSee, isWanted } = useFilmCollectionStore();
+  const { toggleWantToSee, isWanted, markAsWatched, isWatched } = useFilmCollectionStore();
+  const orderStore = useOrderStore();
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
     queryFn: () => getFilm({ id: Number(id) }),
     enabled: !!id,
   });
+
+  // 用户已购票 → 自动标记看过
+  useEffect(() => {
+    if (!detail?.id) return;
+    const hasOrdered = orderStore.orders.some(
+      (o) => o.filmId === Number(id) && (o.status === 'paid' || o.status === 'completed'),
+    );
+    if (hasOrdered && !isWatched(Number(id))) {
+      markAsWatched({
+        filmId: detail.id!,
+        title: detail.name || '',
+        poster: detail.posterUrl || '',
+        rating: detail.rating || 0,
+        wantCount: '',
+        addedAt: new Date().toISOString(),
+      });
+    }
+  }, [detail?.id, orderStore.orders.length]);
 
   if (isLoading) {
     return (
@@ -127,9 +147,21 @@ const DetailPage: React.FC = () => {
               {isWanted(detail.id!) ? <HeartFill fontSize={16} color="#FF5A00" /> : <HeartOutline fontSize={16} color="#999" />}
               <span>想看</span>
             </div>
-            <div className={styles.heroBtn}>
-              <UpOutline fontSize={14} color="#999" />
-              <span>看过</span>
+            <div className={styles.heroBtn} onClick={() => guard(() => {
+              const wasWatched = isWatched(detail.id!);
+              if (wasWatched) return; // 看过的不能取消
+              markAsWatched({
+                filmId: detail.id!,
+                title: detail.name!,
+                poster: detail.posterUrl || '',
+                rating: detail.rating || 0,
+                wantCount: '',
+                addedAt: new Date().toISOString(),
+              });
+              Toast.show({ content: '已标记看过' });
+            })}>
+              {isWatched(detail.id!) ? <StarFill fontSize={14} color="#FFB800" /> : <StarOutline fontSize={14} color="#999" />}
+              <span style={{ color: isWatched(detail.id!) ? '#FFB800' : '#999' }}>看过</span>
             </div>
           </div>
         </div>
