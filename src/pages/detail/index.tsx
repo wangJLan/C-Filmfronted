@@ -1,7 +1,7 @@
 /**
  * 影片详情页 — 查看影片信息 + 评分 + 影评 + 动态 + 推荐 + 选座购票
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { Button, NavBar, Skeleton, Toast, Tabs } from 'antd-mobile';
 import { LeftOutline, StarFill, StarOutline, EyeOutline, HeartFill, HeartOutline } from 'antd-mobile-icons';
