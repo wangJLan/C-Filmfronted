@@ -43,6 +43,7 @@ export default defineConfig({
     '/api': {
       target: 'http://localhost:8123',
       changeOrigin: true,
+      xfwd: true,
     },
     '/uploads': {
       target: 'http://localhost:8123/api',

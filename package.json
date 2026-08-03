@@ -19,6 +19,7 @@
     "@umijs/openapi": "^1.14.1",
     "ahooks": "^3.9.7",
     "antd-mobile": "^5.42.3",
+    "antd-mobile-icons": "^0.3.0",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
     "lodash": "^4.17.21",

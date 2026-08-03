@@ -7,6 +7,7 @@
  *   3. 全失败 → 缓存或默认"北京"
  */
 import { create } from 'zustand';
+import { reverse, ipLocate } from '@/api/geoController';
 
 const STORAGE_CITY = 'app_city';
 const STORAGE_COORDS = 'app_coords';
@@ -47,16 +48,34 @@ function saveCache(city: string, lat: number, lng: number) {
   } catch { /* ignore */ }
 }
 
-/** 逆地理编码 — 走后端代理 */
+// GPS 仅在安全的本地回环地址上对 HTTP 豁免，其他 HTTP 场景浏览器静默拒绝
+const isSecureForGeolocation =
+  location.protocol === 'https:' ||
+  location.hostname === 'localhost' ||
+  location.hostname === '127.0.0.1' ||
+  location.hostname === '::1';
+
+/** 检查浏览器是否已永久拒绝定位权限 */
+async function isGeolocationDenied(): Promise<boolean> {
+  try {
+    if (!navigator.permissions) return false;
+    const result = await navigator.permissions.query({ name: 'geolocation' });
+    return result.state === 'denied';
+  } catch {
+    return false;
+  }
+}
+
+/** 逆地理编码 — 使用 OpenAPI 生成的 geoController */
 async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
-    const resp = await fetch(`/api/geo/reverse?lat=${lat}&lng=${lng}`, { credentials: 'include' });
-    const body = await resp.json();
-    if (body.code === 0 && body.data?.city) {
-      console.log('[定位] 逆地理成功:', body.data.city);
-      return body.data.city;
+    // 拦截器已解包 BaseResponse，实际返回 Record<string, any>
+    const data = await reverse({ lat, lng }) as Record<string, any> | undefined;
+    if (data?.city) {
+      console.log('[定位] 逆地理成功:', data.city);
+      return data.city as string;
     }
-    console.warn('[定位] 逆地理返回异常:', body);
+    console.warn('[定位] 逆地理返回无城市:', data);
     return null;
   } catch (e) {
     console.warn('[定位] 逆地理请求失败:', e);
@@ -64,17 +83,12 @@ async function reverseGeocode(lat: number, lng: number): Promise<string | null> 
   }
 }
 
-const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-
 function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       console.warn('[定位] 浏览器不支持 geolocation');
       reject(new Error('浏览器不支持定位'));
       return;
-    }
-    if (location.protocol === 'http:' && !isLocalhost) {
-      console.warn(`[定位] HTTP(${location.hostname}) 会拦截 GPS`);
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -90,16 +104,16 @@ function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
   });
 }
 
-/** IP 定位 — 城市名由后端返回，无需再调逆地理 */
-async function ipLocate(): Promise<{ city: string; lat: number; lng: number } | null> {
+/** IP 定位 — 使用 OpenAPI 生成的 geoController */
+async function tryIpLocate(): Promise<{ city: string; lat: number; lng: number } | null> {
   try {
-    const resp = await fetch('/api/geo/ip-locate', { credentials: 'include' });
-    const body = await resp.json();
-    if (body.code === 0 && body.data?.city) {
-      console.log('[定位] IP 定位成功:', body.data.city, body.data.lat, body.data.lng);
-      return { city: body.data.city, lat: body.data.lat, lng: body.data.lng };
+    // 拦截器已解包 BaseResponse，实际返回 Record<string, any>
+    const data = await ipLocate() as Record<string, any> | undefined;
+    if (data?.city) {
+      console.log('[定位] IP 定位成功:', data.city, data.lat, data.lng);
+      return { city: data.city as string, lat: data.lat as number, lng: data.lng as number };
     }
-    console.warn('[定位] IP 定位返回异常:', body);
+    console.warn('[定位] IP 定位返回无城市:', data);
     return null;
   } catch (e) {
     console.warn('[定位] IP 定位请求失败:', e);
@@ -108,9 +122,9 @@ async function ipLocate(): Promise<{ city: string; lat: number; lng: number } | 
 }
 
 export const useLocationStore = create<LocationState>()((set) => ({
-  city: '北京',
-  lat: 39.9,
-  lng: 116.41,
+  city: '洛阳',
+  lat: 34.62,
+  lng: 112.45,
   loading: false,
   located: false,
 
@@ -123,29 +137,36 @@ export const useLocationStore = create<LocationState>()((set) => ({
 
     // 第1步：GPS + 后端逆地理代理
     try {
-      const pos = await getCurrentPosition();
-      const cityName = await reverseGeocode(pos.lat, pos.lng);
-      if (cityName) {
-        set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
-        saveCache(cityName, pos.lat, pos.lng);
-        console.log('[定位] init 完成(GPS) —', cityName);
-        return;
+      if (isSecureForGeolocation) {
+        const denied = await isGeolocationDenied();
+        if (!denied) {
+          const pos = await getCurrentPosition();
+          const name = await reverseGeocode(pos.lat, pos.lng);
+          if (name) {
+            set({ city: name, lat: pos.lat, lng: pos.lng, loading: false, located: true });
+            saveCache(name, pos.lat, pos.lng);
+            console.log('[定位] init 完成(GPS) —', name);
+            return;
+          }
+          console.warn('[定位] GPS 成功但逆地理无结果');
+        } else {
+          console.warn('[定位] 权限已拒绝，跳过 GPS');
+        }
+      } else {
+        console.warn('[定位] HTTP 非本地环境，跳过 GPS');
       }
-      console.warn('[定位] GPS 成功但逆地理无结果');
     } catch (e: any) { console.warn('[定位] GPS 失败，降级到 IP:', e.message || e); }
 
-    // 第2步：IP 定位 — localhost 下 IP 定位永远是北京，不可信
-    if (!isLocalhost || !cache) {
-      const ip = await ipLocate();
-      if (ip) {
-        set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: !isLocalhost });
-        saveCache(ip.city, ip.lat, ip.lng);
-        console.log('[定位] init 完成(IP) —', ip.city);
-        return;
-      }
+    // 第2步：IP 定位
+    const ip = await tryIpLocate();
+    if (ip) {
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+      saveCache(ip.city, ip.lat, ip.lng);
+      console.log('[定位] init 完成(IP) —', ip.city);
+      return;
     }
 
-    // 第3步：全失败 → 缓存或提示手动选择
+    // 第3步：全失败 → 缓存或默认
     set({ loading: false });
     if (cache) {
       console.log('[定位] 定位失败，使用缓存:', cache.city);
@@ -162,28 +183,31 @@ export const useLocationStore = create<LocationState>()((set) => ({
 
   relocate: async () => {
     set({ loading: true });
-    // GPS
+
     try {
-      const pos = await getCurrentPosition();
-      const cityName = await reverseGeocode(pos.lat, pos.lng);
-      if (cityName) {
-        set({ city: cityName, lat: pos.lat, lng: pos.lng, loading: false, located: true });
-        saveCache(cityName, pos.lat, pos.lng);
-        console.log('[定位] relocate(GPS) —', cityName);
-        return;
+      if (isSecureForGeolocation) {
+        const denied = await isGeolocationDenied();
+        if (!denied) {
+          const pos = await getCurrentPosition();
+          const name = await reverseGeocode(pos.lat, pos.lng);
+          if (name) {
+            set({ city: name, lat: pos.lat, lng: pos.lng, loading: false, located: true });
+            saveCache(name, pos.lat, pos.lng);
+            console.log('[定位] relocate(GPS) —', name);
+            return;
+          }
+        }
       }
     } catch { /* ignore */ }
 
-    // IP — localhost 下不可信
-    if (!isLocalhost) {
-      const ip = await ipLocate();
-      if (ip) {
-        set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
-        saveCache(ip.city, ip.lat, ip.lng);
-        console.log('[定位] relocate(IP) —', ip.city);
-        return;
-      }
+    const ip = await tryIpLocate();
+    if (ip) {
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+      saveCache(ip.city, ip.lat, ip.lng);
+      console.log('[定位] relocate(IP) —', ip.city);
+      return;
     }
+
     set({ loading: false, located: false });
     console.warn('[定位] relocate 失败 — 请手动选城市或检查广告拦截插件');
   },

@@ -30,6 +30,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseChatSession = {
+    code?: number;
+    data?: ChatSession;
+    message?: string;
+  };
+
   type BaseResponseCinema = {
     code?: number;
     data?: Cinema;
@@ -63,6 +69,12 @@ declare namespace API {
   type BaseResponseListChatHistory = {
     code?: number;
     data?: ChatHistory[];
+    message?: string;
+  };
+
+  type BaseResponseListChatSession = {
+    code?: number;
+    data?: ChatSession[];
     message?: string;
   };
 
@@ -328,6 +340,10 @@ declare namespace API {
     seatIds?: number[];
   };
 
+  type createParams = {
+    userId: number;
+  };
+
   type DashboardVO = {
     todayOrders?: number;
     todayRevenue?: number;
@@ -399,6 +415,10 @@ declare namespace API {
 
   type getByKeyParams = {
     configKey: string;
+  };
+
+  type getCurrentSessionParams = {
+    userId: number;
   };
 
   type getFilmParams = {
@@ -480,6 +500,10 @@ declare namespace API {
 
   type listBySessionParams = {
     sessionId: number;
+  };
+
+  type listByUserParams = {
+    userId: number;
   };
 
   type listFilmParams = {
@@ -788,6 +812,11 @@ declare namespace API {
 
   type removeParams = {
     id: number;
+  };
+
+  type renameParams = {
+    id: number;
+    name: string;
   };
 
   type resetConversation1Params = {
