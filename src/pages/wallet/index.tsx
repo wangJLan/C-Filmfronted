@@ -16,7 +16,7 @@ const WalletPage: React.FC = () => {
   if (!isLoggedIn) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>我的钱包</NavBar>
+        <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>我的钱包</NavBar>
         <Empty description="登录后可查看钱包" style={{ paddingTop: 80 }} />
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
@@ -27,7 +27,7 @@ const WalletPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>我的钱包</NavBar>
+      <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>我的钱包</NavBar>
 
       <div className={styles.header}>
         <div className={styles.balanceCard}>

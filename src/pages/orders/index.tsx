@@ -34,7 +34,7 @@ const OrdersPage: React.FC = () => {
   const filtered = orders.filter(o => tab === 'all' || o.status === tab);
 
   if (!isLoggedIn) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>我的订单</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate('/user')} back={<LeftOutline />} className={styles.nav}>我的订单</NavBar>
       <div className={styles.emptyWrap} style={{ paddingTop: 80 }}><Empty description="登录后可查看订单" />
         <Button color="primary" size="small" onClick={() => guard(() => {})} style={{ marginTop: 12, borderRadius: 16 }}>去登录</Button>
       </div></div>;
@@ -42,7 +42,7 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>我的订单</NavBar>
+      <NavBar onBack={() => navigate('/user')} back={<LeftOutline />} className={styles.nav}>我的订单</NavBar>
       <div className={styles.tabBar}>
         <Tabs activeKey={tab} onChange={(k) => setTab(k as typeof tab)} className={styles.tabs}>
           <Tabs.Tab title="全部" key="all" />

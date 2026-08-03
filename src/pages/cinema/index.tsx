@@ -33,8 +33,10 @@ const CinemaPage: React.FC = () => {
     if (city === '北京') return cinemas; // 默认值不过滤
     return cinemas.filter((c: any) => {
       const cCity = c.city || '';
-      if (!cCity) return true; // 无城市信息的保留
-      return cCity.includes(city) || city.includes(cCity);
+      const cn = city || '';
+      if (!cn || !cCity) return true;
+      try { return cn.includes(cCity) || cCity.includes(cn); }
+      catch { return true; }
     });
   }, [cinemas, city]);
 

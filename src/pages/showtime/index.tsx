@@ -150,14 +150,14 @@ const ShowtimePage: React.FC = () => {
     enabled: cinemaIds.length > 0,
   });
 
-  // 按当前城市筛选影院（city 可能为 null 的不参与过滤）
+  // 按当前城市筛选影院
   const cityFilteredCinemas = useMemo(() => {
     if (!cinemasRaw) return [];
-    if (cityName === '全城' || cityName === '北京') return cinemasRaw;
+    const cn = cityName || '';
+    if (!cn || cn === '全城' || cn === '北京') return cinemasRaw;
     return cinemasRaw.filter(c => {
-      const cCity = c.city || '';
-      if (!cCity) return true; // 没有城市信息的保留作为兜底
-      return cCity.includes(cityName) || cityName.includes(cCity);
+      try { return cn.includes(c.city || '') || (c.city || '').includes(cn); }
+      catch { return true; } // 防崩溃兜底
     });
   }, [cinemasRaw, cityName]);
 
