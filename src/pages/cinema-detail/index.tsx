@@ -1,214 +1,113 @@
-﻿/**
- * 影院详情页 — 参考淘票票布局: 影院信息 + 影片排片 + 设施服务
- */
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'umi';
-import { NavBar, SafeArea, SpinLoading, Toast } from 'antd-mobile';
-import { LeftOutline, EnvironmentOutline, PhoneOutline, ClockOutline } from 'antd-mobile-icons';
-import { useQuery } from '@tanstack/react-query';
-import { getInfo7 } from '@/api/cinemaController';
-import { listSchedule } from '@/api/scheduleController';
-import { getFilm } from '@/api/filmController';
-import { useGuard } from '@/hooks/useGuard';
-import dayjs from 'dayjs';
+import { NavBar } from 'antd-mobile';
+import { LeftOutline, RightOutline } from 'antd-mobile-icons';
 import styles from './index.module.less';
 
-function buildDates(): string[] {
-  const r: string[] = [];
-  for (let i = 0; i < 5; i++) r.push(dayjs().add(i, 'day').format('YYYY-MM-DD'));
-  return r;
-}
+const MOCK_CINEMA = {
+  name: 'UME影城（安贞DTSX店）',
+  address: '东城区北三环东路36号环球贸易中心E座B1/F3',
+  phone: '18010485259',
+};
 
-const WEEKDAY_CN = ['周日','周一','周二','周三','周四','周五','周六'];
+const MOCK_SERVICES = [
+  { tag: '改签', type: 'change', desc: '未取票用户支持开场前3小时改签，改签费5.0元/张', hasDetail: true },
+  { tag: '儿童须知', type: 'child', desc: '18岁以下未成年人凭有效身份证件或学生证可于线下购买优惠票', note: '*儿童购票问题建议咨询影城' },
+  { tag: '观影小食', type: 'snack', desc: '该影院支持线上购买小食' },
+  { tag: '3D眼镜免费', type: 'glasses', desc: '影院可提供免押金3D眼镜。持私人专属3D眼镜观影更健康，线上购票后，选择一款心爱的3D眼镜吧！' },
+  { tag: '4DX厅', type: '4dx', desc: '4DX' },
+  { tag: 'realD厅', type: 'reald', desc: '10厅（激光厅），221个座位；11厅（激光厅），156个座位；2号厅，140个座位；3号厅，140个座位；5号厅，70个座位；6号厅，145个座位；7号厅，140个座位；9号厅，251个座位' },
+  { tag: 'VIP厅', type: 'vip', desc: '8号厅' },
+];
 
-function getDayLabel(d: string, i: number): string {
-  if (i === 0) return '今天';
-  if (i === 1) return '明天';
-  if (i === 2) return '后天';
-  return WEEKDAY_CN[dayjs(d).day()];
-}
+const MOCK_NEARBY = '商场内有超市、餐饮、零售等多种业态';
+const MOCK_TRANSIT = '乘坐地铁2号线至建国门站，B出口步行约5分钟；公交1路、4路、52路至建国门南站下车';
 
 const CinemaDetailPage: React.FC = () => {
   const { cinemaId } = useParams<{ cinemaId: string }>();
   const navigate = useNavigate();
-  const guard = useGuard();
-  const cid = Number(cinemaId);
-  const dates = useMemo(() => buildDates(), []);
-  const [activeDateIdx, setActiveDateIdx] = useState(0);
-
-  // 影院信息
-  const { data: cinema, isLoading: cinemaLoading } = useQuery({
-    queryKey: ['cinemaDetail', cid],
-    queryFn: async () => {
-      const raw: any = await getInfo7({ id: cid });
-      const c = raw?.data ?? raw;
-      return {
-        id: Number(c.id), name: c.name || '', address: c.address || '',
-        phone: c.phone || '', businessHours: c.businessHours || '',
-        tags: c.tags ? c.tags.split(',').filter(Boolean) : [],
-        longitude: c.longitude, latitude: c.latitude,
-        basePrice: c.basePrice,
-      };
-    },
-    enabled: !!cid,
-  });
-
-  // 该影院所有排片
-  const { data: allSchedules } = useQuery({
-    queryKey: ['schedule', 'cinema', cid],
-    queryFn: async () => {
-      const raw: any = await listSchedule({});
-      const list: any[] = raw?.data?.data ?? raw?.data ?? raw ?? [];
-      return list.filter((s: any) => String(s.cinemaId) === String(cid));
-    },
-    enabled: !!cid,
-  });
-
-  // 按日期+影片分组排片
-  const dateFilmGroups = useMemo(() => {
-    if (!allSchedules) return [];
-    const targetDate = dates[activeDateIdx];
-    const daySchedules = allSchedules.filter((s: any) => s.showDate === targetDate);
-    const filmMap = new Map<number, any>();
-    daySchedules.forEach((s: any) => {
-      if (!filmMap.has(s.filmId)) {
-        filmMap.set(s.filmId, {
-          filmId: s.filmId,
-          filmName: s.filmName,
-          filmPoster: s.filmPoster,
-          filmRating: s.filmRating,
-          filmType: s.filmType,
-          filmDuration: s.filmDuration,
-          showtimes: [],
-        });
-      }
-      filmMap.get(s.filmId).showtimes.push(s);
-    });
-    return Array.from(filmMap.values()).map(f => ({
-      ...f,
-      showtimes: f.showtimes.sort((a: any, b: any) => a.startTime?.localeCompare(b.startTime || '') || 0),
-    }));
-  }, [allSchedules, dates, activeDateIdx]);
-
-  const dateCounts = useMemo(() => {
-    if (!allSchedules) return dates.map(() => 0);
-    return dates.map(d => allSchedules.filter((s: any) => s.showDate === d).length);
-  }, [allSchedules, dates]);
-
-  const [expanded, setExpanded] = useState(false);
-
-  if (cinemaLoading) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影院详情</NavBar>
-      <div style={{ textAlign:'center',padding:80 }}><SpinLoading color="primary" /></div></div>;
-  }
-  if (!cinema) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影院详情</NavBar>
-      <div style={{ textAlign:'center',padding:80,color:'#999' }}>影院不存在</div></div>;
-  }
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema.name}</NavBar>
+      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
+        影院详情
+      </NavBar>
 
-      {/* 影院头部 */}
+      {/* ===== 影院信息（深色渐变背景） ===== */}
       <div className={styles.header}>
-        <div className={styles.cinemaName}>{cinema.name}</div>
-        <div className={styles.addressRow}>
-          <EnvironmentOutline fontSize={14} color="#999" />
-          <span className={styles.address}>{cinema.address}</span>
-          <span className={styles.mapLink}>地图 ›</span>
-        </div>
-        {cinema.phone && (
-          <div className={styles.contactRow}>
-            <PhoneOutline fontSize={14} color="#999" />
-            <span className={styles.phone}>{cinema.phone}</span>
+        <div className={styles.headerName}>{MOCK_CINEMA.name}</div>
+        <div className={styles.headerInfo}>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerAddr}>{MOCK_CINEMA.address}</div>
+            <div className={styles.headerPhone}>{MOCK_CINEMA.phone}</div>
           </div>
-        )}
-        {cinema.businessHours && (
-          <div className={styles.contactRow}>
-            <ClockOutline fontSize={14} color="#999" />
-            <span className={styles.hours}>{cinema.businessHours}</span>
-          </div>
-        )}
-        {cinema.tags.length > 0 && (
-          <div className={styles.tagRow}>
-            {cinema.tags.map((t: string) => <span key={t} className={styles.tag}>{t}</span>)}
-          </div>
-        )}
-      </div>
-
-      {/* 日期切换 */}
-      <div className={styles.dateBar}>
-        {dates.map((d, i) => (
-          <div key={d} className={`${styles.dateItem} ${activeDateIdx===i ? styles.dateItemActive : ''}`} onClick={() => setActiveDateIdx(i)}>
-            <span className={styles.dateLabel}>{getDayLabel(d, i)}</span>
-            <span className={styles.dateNum}>{dayjs(d).format('MM/DD')}</span>
-            <span className={styles.dateHint}>{dateCounts[i] > 0 ? dateCounts[i]+'场' : '无'}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* 影片+场次列表 */}
-      <div className={styles.filmList}>
-        {dateFilmGroups.length === 0 ? (
-          <div className={styles.empty}>该日期暂无排片</div>
-        ) : (
-          dateFilmGroups.map(group => (
-            <div key={group.filmId} className={styles.filmBlock}>
-              <div className={styles.filmRow} onClick={() => navigate(`/detail/${group.filmId}`)}>
-                {group.filmPoster ? (
-                  <img src={group.filmPoster} alt={group.filmName} className={styles.poster} />
-                ) : (
-                  <div className={styles.posterPlaceholder}>🎬</div>
-                )}
-                <div className={styles.filmInfo}>
-                  <div className={styles.filmTitle}>{group.filmName}</div>
-                  <div className={styles.filmMeta}>
-                    {group.filmRating && Number(group.filmRating) > 0 && (
-                      <span className={styles.rating}>⭐ {Number(group.filmRating).toFixed(1)}</span>
-                    )}
-                    <span>{group.filmType || ''}</span>
-                    <span className={styles.dot}>|</span>
-                    <span>{group.filmDuration || '--'}分钟</span>
-                  </div>
-                </div>
-                <span className={styles.arrow}>›</span>
-              </div>
-              <div className={styles.timeGrid}>
-                {group.showtimes.map((s: any) => {
-                  const startH = s.startTime?.substring(0, 5) || '';
-                  const endH = s.endTime?.substring(0, 5) || '';
-                  return (
-                    <div key={s.id} className={styles.timeCard} onClick={() => guard(() => navigate(`/seat/${s.id}`))}>
-                      <div className={styles.timeStart}>{startH}</div>
-                      <div className={styles.timeEnd}>{endH ? endH+'散' : ''}</div>
-                      <div className={styles.timeHall}>{s.hallName}</div>
-                      <div className={styles.timePrice}>
-                        <span className={styles.priceNum}>¥{s.price}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          <div className={styles.headerActions}>
+            <div className={styles.actionBtn}>
+              <div className={styles.actionIcon}>📍</div>
+              <div className={styles.actionLabel}>地图</div>
             </div>
-          ))
-        )}
-      </div>
-
-      {/* 影院详情（可展开） */}
-      <div className={styles.detailSection}>
-        <div className={styles.sectionTitle}>影院详情</div>
-        <div className={`${styles.detailContent} ${!expanded ? styles.detailContentClamp : ''}`}>
-          <div className={styles.detailRow}><span className={styles.dLabel}>影院地址</span><span className={styles.dVal}>{cinema.address}</span></div>
-          {cinema.phone && <div className={styles.detailRow}><span className={styles.dLabel}>联系电话</span><span className={styles.dVal}>{cinema.phone}</span></div>}
-          {cinema.businessHours && <div className={styles.detailRow}><span className={styles.dLabel}>营业时间</span><span className={styles.dVal}>{cinema.businessHours}</span></div>}
-          <div className={styles.detailRow}><span className={styles.dLabel}>服务设施</span><span className={styles.dVal}>{cinema.tags.join('、') || '暂无'}</span></div>
-          <div className={styles.detailRow}><span className={styles.dLabel}>参考票价</span><span className={styles.dValPrice}>¥{cinema.basePrice || '--'}</span></div>
+            <div className={styles.actionBtn}>
+              <div className={styles.actionIcon}>📞</div>
+              <div className={styles.actionLabel}>电话</div>
+            </div>
+          </div>
         </div>
-        <span className={styles.expandBtn} onClick={() => setExpanded(!expanded)}>{expanded ? '收起' : '展开更多'}</span>
       </div>
 
-      <SafeArea position="bottom" />
+      {/* ===== 影院服务 ===== */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>影院服务</div>
+        <div className={styles.serviceList}>
+          {MOCK_SERVICES.map((item, idx) => (
+            <div
+              key={idx}
+              className={styles.serviceItem}
+              onClick={() => item.type && navigate(`/cinema-service-detail/${item.type}`)}
+            >
+              <div className={styles.serviceHeader}>
+                <span className={styles.serviceTag}>{item.tag}</span>
+                {item.hasDetail && <span className={styles.serviceDetail}>详情 ›</span>}
+                {item.note && <span className={styles.serviceNote}>{item.note}</span>}
+              </div>
+              <div className={styles.serviceDesc}>{item.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== 周边设施 ===== */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>周边设施</div>
+        <div className={styles.desc}>{MOCK_NEARBY}</div>
+      </div>
+
+      {/* ===== 公交信息 ===== */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>公交信息</div>
+        <div className={styles.desc}>{MOCK_TRANSIT}</div>
+      </div>
+
+      {/* ===== 营业资质 ===== */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>营业资质</div>
+        <div className={styles.certHint}>以下信息来源于商家自行申报，具体信息以资质主管部门登记为准</div>
+        <div className={styles.certList}>
+          <div className={styles.certPlaceholder} />
+          <div className={styles.certPlaceholder} />
+        </div>
+      </div>
+
+      {/* ===== 底部链接 ===== */}
+      <div className={styles.bottomLinks}>
+        <div className={styles.linkRow} onClick={() => navigate('/cinema-feedback')}>
+          <span>给影院提建议</span>
+          <RightOutline fontSize={14} color="#ccc" />
+        </div>
+        <div className={styles.linkRow} onClick={() => navigate('/cinema-price-info')}>
+          <span>划线价格说明</span>
+          <RightOutline fontSize={14} color="#ccc" />
+        </div>
+      </div>
     </div>
   );
 };
