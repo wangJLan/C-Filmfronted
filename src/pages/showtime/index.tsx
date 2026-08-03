@@ -16,8 +16,8 @@ import {
   FilterOutline,
 } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
-import { getFilmDetail } from '@/services/api/film';
-import { getScheduleList, type ScheduleItem } from '@/services/api/schedule';
+import { getFilm } from '@/api/filmController';
+import { listSchedule } from '@/api/scheduleController';
 import http from '@/services/request';
 import { useAiStore } from '@/stores/useAiStore';
 import { useGuard } from '@/hooks/useGuard';
@@ -59,16 +59,15 @@ interface EnrichedCinema {
   halls: string[];
   region: string;
   showtimeCount: number;
-  showtimes: ScheduleItem[];
+  showtimes: API.ScheduleVO[];
 }
 
 // 根据 cinemaId 生成稳定的 Mock 补充数据
-function enrichCinema(id: number, name: string, address: string, tags: string, showtimes: ScheduleItem[]): EnrichedCinema {
+function enrichCinema(id: number, name: string, address: string, tags: string, showtimes: API.ScheduleVO[]): EnrichedCinema {
   const minPrice = showtimes.length > 0
     ? Math.min(...showtimes.map(s => Number(s.price)))
     : 30 + (id % 20);
 
-  // 根据影院名推断品牌
   const brandMatch = MOCK_BRANDS.find(b => name.includes(b.replace('影城', '')));
   const regionMatch = MOCK_REGIONS[id % MOCK_REGIONS.length];
 
@@ -81,7 +80,7 @@ function enrichCinema(id: number, name: string, address: string, tags: string, s
     tags: tags ? tags.split(',').filter(Boolean) : [],
     services: ['退票', '改签', '观影小食', ...(id % 3 === 0 ? ['影城卡'] : []), ...(id % 4 === 0 ? ['券包·4.5折起'] : [])],
     halls: showtimes.length > 0
-      ? [...new Set(showtimes.map(s => s.hallType))].filter(Boolean)
+      ? [...new Set(showtimes.map(s => s.hallType || ''))].filter(Boolean)
       : ['可停车'],
     region: regionMatch?.name || '未知',
     showtimeCount: showtimes.length,
@@ -116,18 +115,18 @@ const ShowtimePage: React.FC = () => {
   // 影片详情
   const { data: film } = useQuery({
     queryKey: ['filmDetail', selectedFilmId],
-    queryFn: () => selectedFilmId ? getFilmDetail(selectedFilmId) : null,
+    queryFn: () => selectedFilmId ? getFilm({ id: selectedFilmId }) : null,
     enabled: !!selectedFilmId,
   });
 
   // 场次列表（真实数据）
   const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
     queryKey: ['schedule', selectedFilmId],
-    queryFn: () => selectedFilmId ? getScheduleList({ filmId: selectedFilmId }) : Promise.resolve([]),
+    queryFn: () => selectedFilmId ? listSchedule({ filmId: selectedFilmId }) : Promise.resolve([]),
     enabled: !!selectedFilmId,
   });
 
-  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))], [scheduleData]);
+  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
 
   // 影院详情（真实数据）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
@@ -174,10 +173,8 @@ const ShowtimePage: React.FC = () => {
   const [sortType, setSortType] = useState<SortType>('composite');
   const [currentSort, setCurrentSort] = useState('综合排序');
 
-  // 当前城市
   const cityName = locationStore.city || '全城';
 
-  // 判断场次是否已过期
   const isPast = (showDate: string, startTime: string) => {
     const dt = `${showDate}T${startTime}`;
     return new Date(dt).getTime() < Date.now();
@@ -223,14 +220,14 @@ const ShowtimePage: React.FC = () => {
     return scheduleData.filter(s =>
       s.cinemaId === selectedCinemaId &&
       s.showDate === dates[activeDateIdx] &&
-      !isPast(s.showDate, s.startTime)
+      !isPast(s.showDate!, s.startTime!)
     );
   }, [scheduleData, selectedCinemaId, dates, activeDateIdx]);
 
   const dateCounts = useMemo(() => {
     if (!scheduleData || !selectedCinemaId) return dates.map(() => 0);
     return dates.map(d => scheduleData.filter(s =>
-      s.cinemaId === selectedCinemaId && s.showDate === d && !isPast(s.showDate, s.startTime)
+      s.cinemaId === selectedCinemaId && s.showDate === d && !isPast(s.showDate!, s.startTime!)
     ).length);
   }, [scheduleData, selectedCinemaId, dates]);
 
@@ -252,7 +249,7 @@ const ShowtimePage: React.FC = () => {
 
   const handleAiHelp = () => {
     const parts: string[] = [];
-    if (film) parts.push(`《${film.title}》`);
+    if (film) parts.push(`《${film.name}》`);
     if (cinema) parts.push(cinema.name);
     parts.push(dayjs(dates[activeDateIdx]).format('M月D日'));
     triggerAi(`我在看${parts.join(' ')}，帮我推荐合适场次`);
@@ -263,7 +260,7 @@ const ShowtimePage: React.FC = () => {
   if (isFilmOnly && !selectedCinemaId) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{film?.title || '选择影院'}</NavBar>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{film?.name || '选择影院'}</NavBar>
 
         {/* 日期选择条 */}
         <div className={styles.dateBar}>
@@ -398,7 +395,7 @@ const ShowtimePage: React.FC = () => {
 
   // ===== cinemaOnly 模式：先选影片 =====
   if (isCinemaOnly && !selectedFilmId) {
-    const filmIds = [...new Set((scheduleData || []).map(s => s.filmId))];
+    const filmIds = [...new Set((scheduleData || []).map(s => s.filmId))].filter(Boolean) as number[];
     return (
       <div className={styles.page}>
         <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选择影片</NavBar>
@@ -446,7 +443,7 @@ const ShowtimePage: React.FC = () => {
       </NavBar>
 
       <div className={styles.infoHead}>
-        <div className={styles.filmTitle}>{film?.title || '选影片'}</div>
+        <div className={styles.filmTitle}>{film?.name || '选影片'}</div>
         <div className={styles.cinemaNameText}>{cinema?.name || '选影院'}</div>
         {isCinemaOnly && (
           <div className={styles.filmSwitch}>
@@ -454,7 +451,7 @@ const ShowtimePage: React.FC = () => {
               <span
                 key={s.filmId}
                 className={`${styles.filmSwitchChip} ${s.filmId === selectedFilmId ? styles.filmSwitchChipActive : ''}`}
-                onClick={() => { setSelectedFilmId(s.filmId); setActiveDateIdx(0); }}
+                onClick={() => { setSelectedFilmId(s.filmId!); setActiveDateIdx(0); }}
               >
                 {s.filmName}
               </span>

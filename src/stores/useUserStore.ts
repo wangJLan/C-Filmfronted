@@ -11,19 +11,18 @@
 import { create } from 'zustand';
 import {
   sendMailCode as sendMailCodeApi,
-  loginByMail as loginByMailApi,
+  mailLogin as mailLoginApi,
   resetPassword as resetPasswordApi,
   setPassword as setPasswordApi,
   changePassword as changePasswordApi,
-  login as loginApi,
-  register as registerApi,
-  getCurrentUser,
-  logout as logoutApi,
-} from '@/services/api/user';
-import type { LoginUserVO, UserRegisterParams } from '@/services/api/user';
+  userLogin as userLoginApi,
+  userRegister as userRegisterApi,
+  getLoginUser,
+  userLogout as userLogoutApi,
+} from '@/api/userController';
 
 interface UserState {
-  user: LoginUserVO | null;
+  user: API.LoginUserVO | null;
   isLoggedIn: boolean;
   loading: boolean;
   lastError: string | null;
@@ -31,7 +30,7 @@ interface UserState {
   // ===== 生命周期 =====
   init: () => Promise<void>;
   logout: () => Promise<void>;
-  setUser: (user: LoginUserVO) => void;
+  setUser: (user: API.LoginUserVO) => void;
   clearError: () => void;
 
   // ===== 邮箱验证码通道 =====
@@ -39,8 +38,8 @@ interface UserState {
   loginByMail: (email: string, code: string) => Promise<void>;
 
   // ===== 账号密码通道 =====
-  login: (params: UserRegisterParams) => Promise<void>;
-  register: (params: UserRegisterParams) => Promise<void>;
+  login: (params: API.UserRegisterRequest) => Promise<void>;
+  register: (params: API.UserRegisterRequest) => Promise<void>;
 
   // ===== 找回密码 =====
   resetPassword: (email: string, code: string, newPassword: string, checkPassword: string) => Promise<void>;
@@ -62,7 +61,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
     if (get().isLoggedIn) return;
     set({ loading: true, lastError: null });
     try {
-      const user = await getCurrentUser();
+      const user = await getLoginUser();
       set({ user, isLoggedIn: true, loading: false });
     } catch {
       set({ user: null, isLoggedIn: false, loading: false });
@@ -70,7 +69,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   },
 
   logout: async () => {
-    try { await logoutApi(); } catch { /* ignore */ }
+    try { await userLogoutApi(); } catch { /* ignore */ }
     set({ user: null, isLoggedIn: false, lastError: null });
   },
 
@@ -83,7 +82,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   sendMailCode: async (email) => {
     set({ loading: true, lastError: null });
     try {
-      await sendMailCodeApi(email);
+      await sendMailCodeApi({ email, captcha: '' });
     } catch (e: any) {
       set({ lastError: e?.message || '发送失败' });
       throw e;
@@ -95,7 +94,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   loginByMail: async (email, code) => {
     set({ loading: true, lastError: null });
     try {
-      const user = await loginByMailApi(email, code);
+      const user = await mailLoginApi({ email, code });
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '登录失败' });
@@ -108,7 +107,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   login: async (params) => {
     set({ loading: true, lastError: null });
     try {
-      const user = await loginApi(params);
+      const user = await userLoginApi(params);
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '登录失败' });
@@ -119,8 +118,8 @@ export const useUserStore = create<UserState>()((set, get) => ({
   register: async (params) => {
     set({ loading: true, lastError: null });
     try {
-      await registerApi(params);
-      const user = await loginApi(params);
+      await userRegisterApi(params);
+      const user = await userLoginApi(params);
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '注册失败' });
@@ -133,7 +132,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   resetPassword: async (email, code, newPassword, checkPassword) => {
     set({ loading: true, lastError: null });
     try {
-      await resetPasswordApi(email, code, newPassword, checkPassword);
+      await resetPasswordApi({ email, code, newPassword, checkPassword });
       set({ loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '重置失败' });
@@ -146,9 +145,9 @@ export const useUserStore = create<UserState>()((set, get) => ({
   setPassword: async (newPassword, checkPassword) => {
     set({ loading: true, lastError: null });
     try {
-      await setPasswordApi(newPassword, checkPassword);
+      await setPasswordApi({ newPassword, checkPassword });
       // 刷新用户信息
-      const user = await getCurrentUser();
+      const user = await getLoginUser();
       set({ user, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '设置失败' });
@@ -159,7 +158,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   changePassword: async (oldPassword, newPassword, checkPassword) => {
     set({ loading: true, lastError: null });
     try {
-      await changePasswordApi(oldPassword, newPassword, checkPassword);
+      await changePasswordApi({ oldPassword, newPassword, checkPassword });
       set({ loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '修改失败' });

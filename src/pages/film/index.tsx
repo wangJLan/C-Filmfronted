@@ -3,7 +3,7 @@ import { useNavigate } from 'umi';
 import { Button, Tabs, SpinLoading } from 'antd-mobile';
 import { StarFill } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
-import { getFilmList, type FilmItem } from '@/services/api/film';
+import { listFilm } from '@/api/filmController';
 import styles from './index.module.less';
 
 const FILM_COLORS = [
@@ -17,35 +17,29 @@ const FILM_COLORS = [
   'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
 ];
 
-function formatWanted(n: number): string {
-  if (n >= 10000) return `${(n / 10000).toFixed(0)}万人想看`;
-  return `${n}人想看`;
-}
-
-const FilmCard: React.FC<{ film: FilmItem; idx: number; navigate: ReturnType<typeof useNavigate> }> = ({ film, idx, navigate }) => (
+const FilmCard: React.FC<{ film: API.Film; idx: number; navigate: ReturnType<typeof useNavigate> }> = ({ film, idx, navigate }) => (
   <div key={film.id} className={styles.card} onClick={() => navigate(`/detail/${film.id}`)}>
     <div className={styles.posterWrap} style={{ background: FILM_COLORS[idx % FILM_COLORS.length] }}>
-      <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
+      <img src={film.posterUrl} alt={film.name} className={styles.poster} loading="lazy" />
     </div>
     <div className={styles.info}>
-      <div className={styles.title}>{film.title}</div>
-      {film.rating > 0 && (
+      <div className={styles.title}>{film.name}</div>
+      {film.rating && film.rating > 0 && (
         <div className={styles.rating}>
           <StarFill className={styles.star} />
           <span className={styles.score}>{film.rating.toFixed(1)}</span>
         </div>
       )}
       <div className={styles.meta}>
-        {film.wantCount > 0 ? formatWanted(film.wantCount) : ''}
-        {film.releaseDate && <> · {film.releaseDate}</>}
+        {film.releaseDate && <>{film.releaseDate}</>}
       </div>
       <Button
-        color={film.rating > 0 ? 'primary' : 'default'}
+        color={film.rating && film.rating > 0 ? 'primary' : 'default'}
         size="mini"
         className={styles.buyBtn}
         onClick={(e) => { e.stopPropagation(); navigate(`/detail/${film.id}`); }}
       >
-        {film.rating > 0 ? '购票' : '想看'}
+        {film.rating && film.rating > 0 ? '购票' : '想看'}
       </Button>
     </div>
   </div>
@@ -57,11 +51,11 @@ const FilmPage: React.FC = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ['filmList', tab],
-    queryFn: () => getFilmList({ status: tab, pageSize: 50 }),
+    queryFn: () => listFilm({ filmQueryRequest: { status: tab, pageSize: 50 } }),
     staleTime: 60000,
   });
 
-  const films = data?.list || [];
+  const films = data?.records || [];
 
   return (
     <div className={styles.page}>

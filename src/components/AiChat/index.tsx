@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button, TextArea, Toast, SpinLoading, SafeArea } from 'antd-mobile';
 import { CloseOutline } from 'antd-mobile-icons';
-import { chatStream, chat as chatOnce } from '@/services/api/ai';
 import { MOCK_HOT_FILMS, MOCK_UPCOMING_FILMS, MOCK_CINEMAS } from '@/mock/home';
 import { useAiStore } from '@/stores/useAiStore';
+import { doChat1 } from '@/api/aiController';
 import styles from './index.module.less';
 
 // ================= 给 AI 的系统上下文 =================
@@ -21,6 +21,54 @@ interface Message {
   loading?: boolean;
 }
 
+// SSE 流式聊天 — 必须用原生 fetch，axios 不支持 ReadableStream
+async function chatStream(
+  message: string,
+  conversationId: string,
+  onChunk: (text: string) => void,
+  onDone: () => void,
+  onError: (err: Error) => void,
+): Promise<void> {
+  try {
+    const url = `/api/ai/chat-stream?message=${encodeURIComponent(message)}&conversationId=${encodeURIComponent(conversationId)}`;
+    const resp = await fetch(url, { credentials: 'include' });
+
+    if (!resp.ok) {
+      throw new Error(`AI 服务响应异常 (${resp.status})`);
+    }
+
+    const reader = resp.body?.getReader();
+    if (!reader) {
+      throw new Error('浏览器不支持流式读取');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const text = line.slice(5).trim();
+          if (text && text !== '[DONE]') {
+            onChunk(text);
+          }
+        }
+      }
+    }
+
+    onDone();
+  } catch (err: any) {
+    onError(err);
+  }
+}
+
 // conversationId 持久化保持上下文连续
 let globalConvId = localStorage.getItem('ai_conv_id') || `conv_${Date.now()}`;
 function saveConvId() { localStorage.setItem('ai_conv_id', globalConvId); }
@@ -35,7 +83,6 @@ const AiChat: React.FC = () => {
   const listRef = useRef<HTMLDivElement>(null);
   const msgId = useRef(1);
 
-  // 自动滚动到底部
   const scrollBottom = useCallback(() => {
     setTimeout(() => {
       if (listRef.current) {
@@ -46,7 +93,6 @@ const AiChat: React.FC = () => {
 
   useEffect(() => { if (open) scrollBottom(); }, [open, messages]);
 
-  // ===== 外部触发：从其他页面"转交 AI" =====
   const pendingTriggerRef = useRef<string | null>(null);
   useEffect(() => {
     const unsub = useAiStore.subscribe((state) => {
@@ -66,10 +112,8 @@ const AiChat: React.FC = () => {
     setSending(true);
     scrollBottom();
 
-    // 拼接系统上下文 + 用户消息
     const fullMessage = `${buildSystemPrompt()}\n\n用户：${text}`;
 
-    // 先尝试流式
     let streamDone = false;
     await chatStream(
       fullMessage,
@@ -93,7 +137,6 @@ const AiChat: React.FC = () => {
         setSending(false);
       },
       async () => {
-        // 流式失败 → 降级非流式
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
@@ -103,7 +146,7 @@ const AiChat: React.FC = () => {
           return copy;
         });
         try {
-          const reply = await chatOnce(fullMessage, globalConvId);
+          const reply = await doChat1({ message: fullMessage, conversationId: globalConvId });
           saveConvId();
           setMessages((prev) => {
             const copy = [...prev];
@@ -129,7 +172,6 @@ const AiChat: React.FC = () => {
     );
   }, [scrollBottom]);
 
-  // sendRef 必须放在 send 定义之后以避免 use-before-declaration
   const sendRef = useRef(send);
   sendRef.current = send;
 
@@ -152,7 +194,6 @@ const AiChat: React.FC = () => {
 
   return (
     <>
-      {/* 悬浮按钮 */}
       <div
         className={`${styles.floatBtn} ${open ? styles.floatBtnHidden : ''}`}
         onClick={() => setOpen(true)}
@@ -161,10 +202,8 @@ const AiChat: React.FC = () => {
         <div className={styles.floatPulse} />
       </div>
 
-      {/* 对话面板 */}
       {open && (
         <div className={styles.panel}>
-          {/* 顶部栏 */}
           <div className={styles.topBar}>
             <div className={styles.topLeft}>
               <span className={styles.topIcon}>🤖</span>
@@ -178,7 +217,6 @@ const AiChat: React.FC = () => {
             </div>
           </div>
 
-          {/* 消息列表 */}
           <div className={styles.messages} ref={listRef}>
             {messages.map((msg) => (
               <div
@@ -203,7 +241,6 @@ const AiChat: React.FC = () => {
               </div>
             ))}
 
-            {/* 快捷回复 */}
             {messages.length <= 1 && (
               <div className={styles.quickReplies}>
                 <span className={styles.quickLabel}>试试问我：</span>
@@ -217,7 +254,6 @@ const AiChat: React.FC = () => {
             )}
           </div>
 
-          {/* 输入栏 */}
           <div className={styles.inputBar}>
             <SafeArea position="bottom" />
             <div className={styles.inputRow}>

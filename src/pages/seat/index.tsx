@@ -6,8 +6,8 @@ import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, Toast, SafeArea, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
-import { getSeatMap, type SeatItem } from '@/services/api/seat';
-import { createOrder } from '@/services/api/order';
+import { getSeatMap } from '@/api/seatController';
+import { createOrder } from '@/api/orderController';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
@@ -26,7 +26,7 @@ const SeatPage: React.FC = () => {
 
   const { data: seatMap, isLoading } = useQuery({
     queryKey: ['seatMap', sid],
-    queryFn: () => getSeatMap(sid),
+    queryFn: () => getSeatMap({ scheduleId: sid }),
     enabled: !!sid && isLoggedIn,
   });
 
@@ -35,18 +35,18 @@ const SeatPage: React.FC = () => {
   const maxSelect = 4;
 
   const { rows, cols, seats, price } = useMemo(() => {
-    if (!seatMap) return { rows: 0, cols: 0, seats: [], price: 0 };
+    if (!seatMap) return { rows: 0, cols: 0, seats: [] as API.Seat[], price: 0 };
     return {
-      rows: seatMap.rowCount,
-      cols: seatMap.colCount,
-      seats: seatMap.seats,
+      rows: seatMap.rowCount || 0,
+      cols: seatMap.colCount || 0,
+      seats: seatMap.seats || [],
       price: seatMap.price || 0,
     };
   }, [seatMap]);
 
   // 按行列索引的座位映射
   const seatGrid = useMemo(() => {
-    const grid = new Map<string, SeatItem>();
+    const grid = new Map<string, API.Seat>();
     seats.forEach(s => grid.set(`${s.rowNum}-${s.colNum}`, s));
     return grid;
   }, [seats]);
@@ -56,9 +56,9 @@ const SeatPage: React.FC = () => {
     if (!seat || seat.status !== 'available') return;
     setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(seat.id)) { next.delete(seat.id); return next; }
+      if (next.has(seat.id!)) { next.delete(seat.id!); return next; }
       if (next.size >= maxSelect) { Toast.show({ content: `最多选${maxSelect}座` }); return prev; }
-      next.add(seat.id);
+      next.add(seat.id!);
       return next;
     });
   };
@@ -69,8 +69,7 @@ const SeatPage: React.FC = () => {
     if (selectedIds.size === 0) { Toast.show({ content: '请先选择座位' }); return; }
     setLocking(true);
     try {
-      // createOrder 内部已包含锁座逻辑，无需单独调 lockSeat
-      const order = await createOrder(sid, Array.from(selectedIds));
+      const order = await createOrder({ scheduleId: sid, seatIds: Array.from(selectedIds) });
       // 暂存到 sessionStorage，防止跳页后 getOrderDetail 偶发失败
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
       Toast.show({ icon: 'success', content: '下单成功！' });
@@ -119,7 +118,7 @@ const SeatPage: React.FC = () => {
                     const seat = seatGrid.get(`${rowNum}-${colNum}`);
                     if (!seat) return <span key={colNum} className={styles.aisle} />;
                     const isSold = seat.status === 'sold' || seat.status === 'locked';
-                    const isSel = selectedIds.has(seat.id);
+                    const isSel = selectedIds.has(seat.id!);
                     const isVip = seat.zone === 'vip';
                     let cls = styles.seat;
                     if (isSold) cls += ` ${styles.seatSold}`;

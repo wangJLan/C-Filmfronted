@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'umi';
 import { Button, NavBar, Skeleton, Toast, Tabs } from 'antd-mobile';
 import { LeftOutline, StarFill, StarOutline, UpOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
-import { getFilmDetail } from '@/services/api/film';
+import { getFilm } from '@/api/filmController';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import { useGuard } from '@/hooks/useGuard';
 import {
@@ -31,7 +31,7 @@ const DetailPage: React.FC = () => {
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
-    queryFn: () => getFilmDetail(Number(id)),
+    queryFn: () => getFilm({ id: Number(id) }),
     enabled: !!id,
   });
 
@@ -56,13 +56,11 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  // 模拟评分数据
   const rating = detail.rating ?? 9.2;
   const ratingCount = '6.1万人评分';
   const wantCountDisplay = '61.7万想看';
   const watchedCountDisplay = '206.5万看过';
 
-  // 评分分布（mock）
   const ratingDist = [
     { stars: 5, percent: 72 },
     { stars: 4, percent: 20 },
@@ -75,15 +73,15 @@ const DetailPage: React.FC = () => {
     <div className={styles.page}>
       {/* 顶部海报 */}
       <div className={styles.hero}>
-        <img src={detail.poster} alt={detail.title} className={styles.heroImg} />
+        <img src={detail.posterUrl} alt={detail.name} className={styles.heroImg} />
         <div className={styles.heroOverlay} />
         <div className={styles.heroBack} onClick={() => navigate(-1)}>
           <LeftOutline fontSize={20} color="#fff" />
         </div>
         <div className={styles.heroInfo}>
-          <h1 className={styles.heroTitle}>{detail.title}</h1>
+          <h1 className={styles.heroTitle}>{detail.name}</h1>
           <div className={styles.heroMeta}>
-            {detail.genre} · {detail.duration}分钟 · {detail.year}
+            {detail.type} · {detail.duration}分钟 · {detail.releaseDate ? new Date(detail.releaseDate).getFullYear() : ''}
           </div>
         </div>
       </div>
@@ -93,17 +91,17 @@ const DetailPage: React.FC = () => {
         <div className={styles.likeBtn} onClick={() => guard(() => {
           if (!detail) return;
           toggleWantToSee({
-            filmId: detail.id,
-            title: detail.title,
-            poster: detail.poster,
-            rating: detail.rating,
-            wantCount: detail.wantCount ?? '',
+            filmId: detail.id!,
+            title: detail.name!,
+            poster: detail.posterUrl || '',
+            rating: detail.rating || 0,
+            wantCount: '',
             addedAt: new Date().toISOString(),
           });
-          Toast.show({ content: isWanted(detail.id) ? '已取消想看' : '已标记想看' });
+          Toast.show({ content: isWanted(detail.id!) ? '已取消想看' : '已标记想看' });
         })}>
-          {isWanted(detail.id) ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
-          <span>{isWanted(detail.id) ? '已想看' : '想看'}</span>
+          {isWanted(detail.id!) ? <StarFill color="#FFB800" fontSize={20} /> : <StarOutline fontSize={20} />}
+          <span>{isWanted(detail.id!) ? '已想看' : '想看'}</span>
         </div>
         <Button
           color="primary"
@@ -158,7 +156,6 @@ const DetailPage: React.FC = () => {
       >
         <Tabs.Tab title="简介" key="intro">
           <div className={styles.tabContent}>
-            {/* 剧情简介 */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>剧情简介</h3>
               <p className={`${styles.desc} ${!expanded ? styles.descClamp : ''}`}>
@@ -171,7 +168,6 @@ const DetailPage: React.FC = () => {
               )}
             </div>
 
-            {/* 演职员 */}
             {detail.director && (
               <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>演职员</h3>
@@ -181,7 +177,7 @@ const DetailPage: React.FC = () => {
                     <span className={styles.castName}>{detail.director}</span>
                     <span className={styles.castRole}>导演</span>
                   </div>
-                  {detail.actors?.map((actor: string, idx: number) => (
+                  {detail.actors?.split(',').filter(Boolean).map((actor: string, idx: number) => (
                     <div key={idx} className={styles.castItem}>
                       <div className={styles.castAvatar}>👤</div>
                       <span className={styles.castName}>{actor}</span>
@@ -192,13 +188,12 @@ const DetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* 影片参数 */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>影片信息</h3>
               <div className={styles.infoList}>
                 <div className={styles.infoRow}>
                   <span className={styles.infoLabel}>类型</span>
-                  <span className={styles.infoValue}>{detail.genre}</span>
+                  <span className={styles.infoValue}>{detail.type}</span>
                 </div>
                 <div className={styles.infoRow}>
                   <span className={styles.infoLabel}>时长</span>
@@ -206,14 +201,8 @@ const DetailPage: React.FC = () => {
                 </div>
                 <div className={styles.infoRow}>
                   <span className={styles.infoLabel}>年份</span>
-                  <span className={styles.infoValue}>{detail.year}</span>
+                  <span className={styles.infoValue}>{detail.releaseDate ? new Date(detail.releaseDate).getFullYear() : ''}</span>
                 </div>
-                {detail.type && (
-                  <div className={styles.infoRow}>
-                    <span className={styles.infoLabel}>制式</span>
-                    <span className={styles.infoValue}>{detail.type}</span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -224,7 +213,6 @@ const DetailPage: React.FC = () => {
         <Tabs.Tab title={`影评(${MOCK_REVIEWS.length})`} key="reviews">
           <div className={styles.tabContent}>
             <div className={styles.section}>
-              {/* 筛选标签 */}
               <div className={styles.filterRow}>
                 {['全部', '最新', '购票好评', '购票差评', '有图', '购票'].map((tag, i) => (
                   <span key={tag} className={`${styles.filterTag} ${i === 0 ? styles.filterActive : ''}`}>
@@ -233,7 +221,6 @@ const DetailPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* 影评列表 */}
               <div className={styles.reviewList}>
                 {MOCK_REVIEWS.map(review => (
                   <div key={review.id} className={styles.reviewItem}>
@@ -278,7 +265,6 @@ const DetailPage: React.FC = () => {
 
         <Tabs.Tab title="动态" key="news">
           <div className={styles.tabContent}>
-            {/* 票房数据 */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>票房</h3>
               <div className={styles.boxOffice}>
@@ -297,7 +283,6 @@ const DetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 影片动态 */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>
                 影片动态
@@ -322,7 +307,6 @@ const DetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 电影资料 */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>电影资料</h3>
               {MOCK_FILM_INFO.map(group => (
@@ -340,7 +324,6 @@ const DetailPage: React.FC = () => {
               ))}
             </div>
 
-            {/* 即将上映/热映推荐 */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>相关影片</h3>
               <div className={styles.recommendList}>

@@ -5,7 +5,7 @@ import { StarFill, EnvironmentOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocationStore } from '@/stores/useLocationStore';
 import { useUserStore } from '@/stores/useUserStore';
-import { getFilmList, type FilmItem } from '@/services/api/film';
+import { listFilm } from '@/api/filmController';
 import { MOCK_BENEFITS, type BenefitItem } from '@/mock/home';
 import styles from './index.module.less';
 
@@ -20,27 +20,22 @@ const FILM_COLORS = [
   'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
 ];
 
-function formatWanted(n: number): string {
-  if (n >= 10000) return `${(n / 10000).toFixed(0)}万人想看`;
-  return `${n}人想看`;
-}
-
-const FilmCardRow: React.FC<{ film: FilmItem; idx: number; onClick: () => void; onBuy: () => void; isHot: boolean }> =
+const FilmCardRow: React.FC<{ film: API.Film; idx: number; onClick: () => void; onBuy: () => void; isHot: boolean }> =
   ({ film, idx, onClick, onBuy, isHot }) => (
     <div className={styles.filmCard} onClick={onClick}>
       <div className={styles.posterPlaceholder} style={{ background: FILM_COLORS[idx % FILM_COLORS.length] }}>
-        <img src={film.poster} alt={film.title} className={styles.poster} loading="lazy" />
+        <img src={film.posterUrl} alt={film.name} className={styles.poster} loading="lazy" />
       </div>
       <div className={styles.filmInfo}>
-        <div className={styles.filmName}>{film.title}</div>
-        {film.rating > 0 && (
+        <div className={styles.filmName}>{film.name}</div>
+        {film.rating && film.rating > 0 && (
           <div className={styles.rating}>
             <StarFill className={styles.starIcon} />
             <span className={styles.ratingValue}>{film.rating.toFixed(1)}</span>
           </div>
         )}
         <div className={styles.wantCount}>
-          {isHot ? formatWanted(film.wantCount) : film.releaseDate}
+          {isHot ? '想看' : film.releaseDate}
         </div>
       </div>
       <Button color={isHot ? 'primary' : 'default'} size="mini" className={styles.buyButton}
@@ -59,17 +54,17 @@ const HomePage: React.FC = () => {
 
   const { data: hotData, isLoading: hotLoading } = useQuery({
     queryKey: ['filmList', 'hot'],
-    queryFn: () => getFilmList({ status: 'hot', pageSize: 20 }),
+    queryFn: () => listFilm({ filmQueryRequest: { status: 'hot', pageSize: 20 } }),
     staleTime: 60000,
   });
   const { data: upcomingData, isLoading: upcomingLoading } = useQuery({
     queryKey: ['filmList', 'upcoming'],
-    queryFn: () => getFilmList({ status: 'upcoming', pageSize: 20 }),
+    queryFn: () => listFilm({ filmQueryRequest: { status: 'upcoming', pageSize: 20 } }),
     staleTime: 60000,
   });
 
-  const hotFilms = hotData?.list || [];
-  const upcomingFilms = upcomingData?.list || [];
+  const hotFilms = hotData?.records || [];
+  const upcomingFilms = upcomingData?.records || [];
 
   return (
     <div className={styles.page}>

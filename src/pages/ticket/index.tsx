@@ -5,10 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, SafeArea } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { getOrderDetail, type OrderVO } from '@/services/api/order';
+import { getOrderDetail } from '@/api/orderController';
 import styles from './index.module.less';
 
-function loadFromCache(oid: string): OrderVO | null {
+function loadFromCache(oid: string): API.OrderVO | null {
   try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
 
@@ -29,12 +29,12 @@ const TicketPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = orderId!; // 雪花ID, 不能用Number()
-  const [order, setOrder] = useState<OrderVO | null>(() => loadFromCache(oid));
+  const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!oid) return;
-    getOrderDetail(oid).then((o) => {
+    getOrderDetail({ id: Number(oid) }).then((o) => {
       setOrder(o);
       sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
     }).catch(() => {}).finally(() => setLoading(false));
@@ -61,7 +61,7 @@ const TicketPage: React.FC = () => {
       <div className={styles.ticketCard}>
         <div className={styles.qrSection}><FakeQR code={order.orderNo || '000000'} /></div>
         <div className={styles.codeSection}><div className={styles.codeLabel}>取票码</div>
-          <div className={styles.codeNum}>{order.orderNo?.slice(-6) || '000000'}</div>
+          <div className={styles.codeNum}>{(order.orderNo || '000000').slice(-6)}</div>
           <div className={styles.codeHint}>请在影院取票机输入此码</div>
         </div>
       </div>

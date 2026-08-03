@@ -8,7 +8,7 @@ import { useNavigate } from 'umi';
 import { NavBar, Button, Form, Input, TextArea, Toast, SafeArea, Avatar } from 'antd-mobile';
 import { LeftOutline, CameraOutline } from 'antd-mobile-icons';
 import { useUserStore } from '@/stores/useUserStore';
-import { updateMyProfile } from '@/services/api/user';
+import { updateMyProfile } from '@/api/userController';
 import styles from './index.module.less';
 
 const ProfileEditPage: React.FC = () => {
@@ -17,7 +17,6 @@ const ProfileEditPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // 头像: 本地预览(dataURL) vs 已保存的 URL
   const [previewUrl, setPreviewUrl] = useState(user?.userAvatar || '');
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -34,7 +33,6 @@ const ProfileEditPage: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // 前端校验
     if (file.size > 2 * 1024 * 1024) {
       Toast.show({ icon: 'fail', content: '头像不能超过 2MB' });
       return;
@@ -44,13 +42,11 @@ const ProfileEditPage: React.FC = () => {
       return;
     }
     setSelectedFile(file);
-    // 本地预览
     const reader = new FileReader();
     reader.onload = () => setPreviewUrl(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  /** 上传头像文件到后端 */
   const uploadAvatar = async (): Promise<string> => {
     if (!selectedFile) return user.userAvatar || '';
     setUploading(true);
@@ -65,7 +61,7 @@ const ProfileEditPage: React.FC = () => {
       if (!resp.ok) throw new Error('上传失败');
       const body = await resp.json();
       if (body.code !== 0) throw new Error(body.message || '上传失败');
-      return body.data as string; // 返回 /uploads/avatars/xxx.jpg
+      return body.data as string;
     } finally {
       setUploading(false);
     }
@@ -77,12 +73,10 @@ const ProfileEditPage: React.FC = () => {
   }) => {
     setSaving(true);
     try {
-      // 先上传头像（如果有选新文件）
       let avatarUrl = user.userAvatar || '';
       if (selectedFile) {
         avatarUrl = await uploadAvatar();
       }
-      // 再更新个人信息
       const updated = await updateMyProfile({
         userName: values.nickname || undefined,
         userAvatar: avatarUrl || undefined,
@@ -104,7 +98,6 @@ const ProfileEditPage: React.FC = () => {
         编辑资料
       </NavBar>
 
-      {/* 头像区域 — 可点击上传 */}
       <div className={styles.avatarSection} onClick={() => fileRef.current?.click()}>
         <div className={styles.avatarWrap}>
           <Avatar
@@ -131,7 +124,6 @@ const ProfileEditPage: React.FC = () => {
         />
       </div>
 
-      {/* 表单 */}
       <div className={styles.formCard}>
         <Form
           onFinish={handleSubmit}

@@ -5,10 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline, CheckCircleOutline } from 'antd-mobile-icons';
-import { getOrderDetail, type OrderVO } from '@/services/api/order';
+import { getOrderDetail } from '@/api/orderController';
 import styles from './index.module.less';
 
-function loadFromCache(oid: string): OrderVO | null {
+function loadFromCache(oid: string): API.OrderVO | null {
   try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
 
@@ -16,13 +16,13 @@ const PaymentPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = orderId!; // 雪花ID, 不能用Number()
-  const [order, setOrder] = useState<OrderVO | null>(() => loadFromCache(oid));
+  const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     if (!oid) return;
-    getOrderDetail(oid).then((o) => {
+    getOrderDetail({ id: Number(oid) }).then((o) => {
       setOrder(o);
       sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
     }).catch(() => {}).finally(() => setLoading(false));
@@ -33,7 +33,6 @@ const PaymentPage: React.FC = () => {
     setTimeout(() => {
       setPaying(false);
       if (success) {
-        // 模拟支付：不调后端(支付宝未配会报错)，仅本地标记
         if (order) {
           const updated = { ...order, status: 'paid' };
           sessionStorage.setItem(`order_${oid}`, JSON.stringify(updated));

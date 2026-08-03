@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { NavBar, Button, Toast, SafeArea, Mask } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { getOrderDetail, type OrderVO } from '@/services/api/order';
+import { getOrderDetail } from '@/api/orderController';
 import styles from './index.module.less';
 
 const LOCK_DURATION = 15 * 60;
@@ -21,7 +21,7 @@ const OrderConfirmPage: React.FC = () => {
   const oid = orderId!;  // 雪花ID: 19位超大数字,不能用Number()会截断
 
   // sessionStorage 读取（createOrder 时写入的）
-  const [order, setOrder] = useState<OrderVO | null>(() => {
+  const [order, setOrder] = useState<API.OrderVO | null>(() => {
     try { const raw = sessionStorage.getItem(`order_${oid}`); return raw ? JSON.parse(raw) : null; } catch { return null; }
   });
 
@@ -32,7 +32,7 @@ const OrderConfirmPage: React.FC = () => {
   // 后台用 API 刷新最新状态（静默，失败不影响）
   useEffect(() => {
     if (!oid) return;
-    getOrderDetail(oid).then((o) => {
+    getOrderDetail({ id: Number(oid) }).then((o) => {
       setOrder(o);
       sessionStorage.setItem(`order_${oid}`, JSON.stringify(o));
     }).catch(() => {});

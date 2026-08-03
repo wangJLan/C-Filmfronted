@@ -6,7 +6,7 @@ import { useNavigate } from 'umi';
 import { Button, NavBar, Tabs, Empty, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
-import { getOrderList, type OrderVO } from '@/services/api/order';
+import { listOrders } from '@/api/orderController';
 import { useUserStore } from '@/stores/useUserStore';
 import { useGuard } from '@/hooks/useGuard';
 import styles from './index.module.less';
@@ -26,7 +26,7 @@ const OrdersPage: React.FC = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders'],
-    queryFn: () => getOrderList({ pageNum: 1, pageSize: 50 }),
+    queryFn: () => listOrders({ pageNum: 1, pageSize: 50 }),
     enabled: isLoggedIn,
   });
 
@@ -56,10 +56,10 @@ const OrdersPage: React.FC = () => {
         : filtered.length === 0 ? <div className={styles.emptyWrap}><Empty description={tab === 'all' ? '暂无订单' : tab === 'pending' ? '暂无待支付订单' : tab === 'paid' ? '暂无已支付订单' : '暂无已完成订单'} />
           <Button color="primary" size="small" onClick={() => navigate('/film')} style={{ marginTop: 12, borderRadius: 16 }}>去逛逛</Button></div>
         : filtered.map(order => {
-          const st = STATUS_MAP[order.status];
+          const st = STATUS_MAP[order.status || ''];
           return (
             <div key={order.id} className={styles.card}>
-              <div className={styles.cardHead}><span className={styles.cinemaName}>{order.cinemaName}</span><span className={styles.statusTag} style={{ color: st.color }}>{st.label}</span></div>
+              <div className={styles.cardHead}><span className={styles.cinemaName}>{order.cinemaName}</span><span className={styles.statusTag} style={{ color: st?.color }}>{st?.label}</span></div>
               <div className={styles.cardBody} onClick={() => {
                 if (order.status === 'paid') navigate(`/ticket/${order.id}`);
                 else if (order.status === 'pending') navigate(`/order-confirm/${order.id}`);
