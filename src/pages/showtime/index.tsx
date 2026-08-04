@@ -93,7 +93,7 @@ interface EnrichedCinema {
 }
 
 // 根据 cinemaId 生成稳定的 Mock 补充数据
-function enrichCinema(id: number, name: string, address: string, tagsOrArr: string | string[], showtimes: API.ScheduleVO[]): EnrichedCinema {
+function enrichCinema(id: number, name: string, address: string, tags: string, showtimes: API.ScheduleVO[]): EnrichedCinema {
   const minPrice = showtimes.length > 0
     ? Math.min(...showtimes.map(s => Number(s.price)))
     : 30 + (id % 20);
@@ -107,7 +107,7 @@ function enrichCinema(id: number, name: string, address: string, tagsOrArr: stri
     address,
     distance: `${(1.5 + (id % 10) * 0.8).toFixed(1)}km`,
     minPrice,
-    tags: Array.isArray(tagsOrArr) ? tagsOrArr : (tagsOrArr ? tagsOrArr.split(',').filter(Boolean) : []),
+    tags: tags ? tags.split(',').filter(Boolean) : [],
     services: sortTags(['退票', '改签', '观影小食', ...(id % 3 === 0 ? ['影城卡'] : []), ...(id % 4 === 0 ? ['券包·4.5折起'] : [])]),
     halls: sortTags(showtimes.length > 0
       ? [...new Set(showtimes.map(s => s.hallType || ''))].filter(Boolean)
@@ -150,39 +150,46 @@ const ShowtimePage: React.FC = () => {
   });
 
   // 场次列表（真实数据）
-  const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
+  const { data: scheduleRaw, isLoading: scheduleLoading } = useQuery({
     queryKey: ['schedule', selectedFilmId],
     queryFn: () => selectedFilmId ? listSchedule({ filmId: selectedFilmId }) : Promise.resolve([]),
     enabled: !!selectedFilmId,
   });
 
-  // 电影院列表 — 从排片 ScheduleVO 中直接提取影院名和地址，不另调 API
-  const cinemasAggregated = useMemo(() => {
-    if (!scheduleData) return [];
-    const map = new Map<string, { id: number|string; name: string; address: string; tags: string[] }>();
-    scheduleData.forEach(s => {
-      const key = String(s.cinemaId || '');
-      if (!map.has(key)) {
-        map.set(key, {
-          id: s.cinemaId,
-          name: s.cinemaName || '',
-          address: s.cinemaAddress || '',
-          tags: s.hallType ? [s.hallType] : [],
-        });
-      } else {
-        const existing = map.get(key)!;
-        const hallType = s.hallType || '';
-        if (hallType && !existing.tags.includes(hallType)) {
-          existing.tags.push(hallType);
-        }
+  // scheduleRaw 可能被包裹为 {data: [...]}, 统一转数组
+  const scheduleList = useMemo(
+    () => (Array.isArray(scheduleRaw) ? scheduleRaw : []) as any[],
+    [scheduleRaw],
+  );
+
+  const cinemaIds = useMemo(() => [...new Set(scheduleList.map(s => s.cinemaId))], [scheduleList]);
+
+  // 影院详情（真实数据，按当前城市过滤）
+  const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
+    queryKey: ['cinemas', cinemaIds, cityName],
+    queryFn: async () => {
+      const results: { id: number; name: string; address: string; tags: string; city: string }[] = [];
+      for (const cId of cinemaIds.slice(0, 20)) {
+        try {
+          const c = await http.get(`/cinema/getInfo/${cId}`) as any;
+          results.push({
+            id: Number(c.id),
+            name: c.name || '',
+            address: c.address || '',
+            tags: c.tags || '',
+            city: c.city || '未知',
+          });
+        } catch { /* skip */ }
       }
-    });
-    return Array.from(map.values());
-  }, [scheduleData]);
+      return results;
+    },
+    enabled: cinemaIds.length > 0,
+  });
 
-  const cityFilteredCinemas = cinemasAggregated;
+  // 电影院列表 — 全部展示，不过滤城市
+  const cityFilteredCinemas = cinemasRaw;
 
-  const cinemasReady = !scheduleLoading;
+  const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
   // 当前选中影院（扩展 Mock 字段）
   const { data: cinema } = useQuery({
@@ -288,12 +295,12 @@ const ShowtimePage: React.FC = () => {
 
   // 合并真实场次 + Mock 补充字段的影院列表
   const enrichedCinemas = useMemo(() => {
-    if (!cityFilteredCinemas || !scheduleData) return [];
+    if (!cityFilteredCinemas || !scheduleList) return [];
     return cityFilteredCinemas.map(c => {
-      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
+      const cShowtimes = scheduleList.filter(s => String(s.cinemaId) === String(c.id));
       return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
     });
-  }, [cityFilteredCinemas, scheduleData]);
+  }, [cityFilteredCinemas, scheduleList]);
 
   // 筛选后的影院列表
   const filteredCinemas = useMemo(() => {
@@ -322,24 +329,24 @@ const ShowtimePage: React.FC = () => {
 
   // 当前日期+影院的场次
   const showtimes = useMemo(() => {
-    if (!scheduleData) return [];
+    if (!scheduleList) return [];
     const cid = selectedCinemaId;
     if (!cid) return [];
-    return scheduleData.filter(s =>
+    return scheduleList.filter(s =>
       String(s.cinemaId) === String(cid) &&
       s.showDate === dates[activeDateIdx] &&
       !isPast(s.showDate!, s.startTime!)
     );
-  }, [scheduleData, selectedCinemaId, dates, activeDateIdx]);
+  }, [scheduleList, selectedCinemaId, dates, activeDateIdx]);
 
   const dateCounts = useMemo(() => {
-    if (!scheduleData) return dates.map(() => 0);
+    if (!scheduleList) return dates.map(() => 0);
     const cid = selectedCinemaId;
     if (!cid) return dates.map(() => 0);
-    return dates.map(d => scheduleData.filter(s =>
+    return dates.map(d => scheduleList.filter(s =>
       String(s.cinemaId) === String(cid) && s.showDate === d && !isPast(s.showDate!, s.startTime!)
     ).length);
-  }, [scheduleData, selectedCinemaId, dates]);
+  }, [scheduleList, selectedCinemaId, dates]);
 
   const toggleArrayItem = (arr: string[], setArr: (v: string[]) => void, item: string) => {
     if (arr.includes(item)) {
@@ -418,7 +425,7 @@ const ShowtimePage: React.FC = () => {
 
         {/* 影厅快捷标签 — 从真实排片中提取 */}
         {(() => {
-          const hallTypes = [...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))];
+          const hallTypes = [...new Set((scheduleList || []).map(s => s.hallType || '').filter(Boolean))];
           if (hallTypes.length === 0) return null;
           return (
             <div className={styles.hallBar}>
@@ -485,7 +492,7 @@ const ShowtimePage: React.FC = () => {
           priceRange={priceRange}
           setPriceRange={setPriceRange}
           onClear={clearFilters}
-          hallTypes={[...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))]}
+          hallTypes={[...new Set((scheduleList || []).map(s => s.hallType || '').filter(Boolean))]}
         />
         <BrandPopup
           visible={brandPanelVisible}
@@ -508,14 +515,14 @@ const ShowtimePage: React.FC = () => {
 
   // ===== cinemaOnly 模式：先选影片 =====
   if (isCinemaOnly && !selectedFilmId) {
-    const filmIds = [...new Set((scheduleData || []).map(s => s.filmId))].filter(Boolean) as number[];
+    const filmIds = [...new Set((scheduleList || []).map(s => s.filmId))].filter(Boolean) as number[];
     return (
       <div className={styles.page}>
         <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选择影片</NavBar>
         <div className={styles.infoHead}>
           <div className={styles.cinemaNameText}>{cinema?.name}</div>
         </div>
-        {!scheduleData ? (
+        {!scheduleList ? (
           <div style={{ textAlign: 'center', padding: 40 }}><SpinLoading color="primary" /></div>
         ) : filmIds.length === 0 ? (
           <div className={styles.empty}>
@@ -525,7 +532,7 @@ const ShowtimePage: React.FC = () => {
         ) : (
           <div className={styles.filmList}>
             {filmIds.map(fid => {
-              const sch = scheduleData!.find(s => s.filmId === fid)!;
+              const sch = scheduleList!.find(s => s.filmId === fid)!;
               return (
                 <div key={fid} className={styles.filmCardRow} onClick={() => { setSelectedFilmId(fid); setActiveDateIdx(0); }}>
                   <img src={sch.filmPoster} alt={sch.filmName} className={styles.filmCardPoster} />
@@ -672,7 +679,7 @@ const ShowtimePage: React.FC = () => {
 
           {/* 场次列表 - 新版 */}
           <div className={styles.showtimeNewList}>
-            {!scheduleData ? (
+            {!scheduleList ? (
               <div style={{ textAlign: 'center', padding: 60 }}><SpinLoading color="primary" /></div>
             ) : showtimes.length === 0 ? (
               <div className={styles.empty}>
