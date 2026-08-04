@@ -24,6 +24,28 @@ import styles from './index.module.less';
 
 type TabKey = 'intro' | 'reviews' | 'news' | 'recommend';
 
+function getTagColor(tag: string): string {
+  const t = tag.toLowerCase();
+  // 红色：优惠/特权（放最前面）
+  if (/特权|专属|vip|影城卡|券|新人|限时|折扣|优惠/.test(tag)) return 'tagRed';
+  // 蓝色：退票改签（放红色后面）
+  if (/退票|改签/.test(tag)) return 'tagBlue';
+  // 灰色：影厅格式 + 其余（放最后）
+  return 'tagGray';
+}
+
+// 按颜色优先级排序：红色 > 蓝色 > 灰色
+function sortTags(tags: string[]): string[] {
+  const priority: Record<string, number> = {
+    tagRed: 0,
+    tagBlue: 1,
+    tagGray: 2,
+    tagOrange: 3,
+    tagGreen: 4,
+  };
+  return [...tags].sort((a, b) => priority[getTagColor(a)] - priority[getTagColor(b)]);
+}
+
 const DetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -121,8 +143,8 @@ const DetailPage: React.FC = () => {
             </div>
           )}
           <div className={styles.heroTags}>
-            {enriched.formatTags.map(tag => (
-              <span key={tag} className={styles.heroTag}>{tag}</span>
+            {sortTags(enriched.formatTags).map(tag => (
+              <span key={tag} className={`${styles.heroTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
             ))}
           </div>
           <div className={styles.heroMeta}>

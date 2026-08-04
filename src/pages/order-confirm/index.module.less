@@ -1,9 +1,12 @@
-/* ========== 订单确认页 ========== */
+/* ========== 订单确认页 — 淘票票风格 ========== */
 
 .page {
   min-height: 100vh;
   background: #f5f5f5;
-  padding-bottom: 80px;
+}
+
+.nav {
+  background: #fff;
 }
 
 .empty {
@@ -13,256 +16,135 @@
   color: #999;
 }
 
-/* ===== 倒计时横幅 ===== */
-.countdownBar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: linear-gradient(90deg, #FFF7E6, #FFFAF0);
-  border-bottom: 1px solid #FFE8B0;
-}
-
-.countdownWarn {
-  background: linear-gradient(90deg, #FFF0F0, #FFF5F5);
-  border-color: #FFD4D4;
-}
-
-.countdownIcon {
-  font-size: 16px;
-}
-
-.countdownLabel {
-  font-size: 12px;
-  color: #B8860B;
-  .countdownWarn & {
-    color: #D32F2F;
-  }
-}
-
-/* ===== 过期待释放状态 ===== */
+/* ===== 超时 ===== */
 .expiredContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 24px;
-  text-align: center;
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 80px; text-align: center;
+}
+.expiredIcon { font-size: 48px; margin-bottom: 16px; }
+.expiredTitle { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 8px; }
+.expiredDesc { font-size: 13px; color: #999; line-height: 1.6; margin-bottom: 24px; }
+.retryBtn { padding: 12px 40px; background: #f8289c; color: #fff; border-radius: 24px; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-block; }
+
+/* ========== 票务信息头部 ========== */
+.header {
+  background: #fff; margin: 10px; border-radius: 12px; padding: 16px;
 }
 
-.expiredIcon {
-  font-size: 64px;
-  margin-bottom: 16px;
+.countdownRow {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 14px;
 }
+.clockIcon { width: 24px; height: 24px; }
+.countdown { font-size: 18px; font-weight: 700; color: #f8289c; }
 
-.expiredTitle {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 8px;
-}
+.ticketInfo { display: flex; gap: 12px; }
 
-.expiredDesc {
-  font-size: 13px;
-  color: #999;
-  line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.retryBtn {
-  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
-  border-radius: 24px;
-  font-weight: 600;
-}
-
-/* ===== 影片信息卡片 ===== */
-.card {
-  margin: 12px 16px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.cardHead {
-  display: flex;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f5f5f5;
-}
-
+.posterCol { flex-shrink: 0; }
 .poster {
-  width: 60px;
-  height: 80px;
-  border-radius: 6px;
-  overflow: hidden;
-  flex-shrink: 0;
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  width: 72px; height: 96px; border-radius: 6px;
+  object-fit: cover; display: block;
+}
+.posterPlaceholder {
+  width: 72px; height: 96px; border-radius: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.headInfo {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
+.infoCol { flex: 1; min-width: 0; }
+.movieName { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 6px; }
+.infoLine { font-size: 12px; color: #666; line-height: 1.6; }
+
+.refundRow {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0f0f0;
+}
+.refundItem { display: flex; align-items: center; gap: 2px; font-size: 11px; color: #00b578; }
+.checkIcon { width: 14px; height: 14px; }
+.refundNotice {
+  display: flex; align-items: center; gap: 2px;
+  margin-left: auto; font-size: 11px; color: #959AA5; cursor: pointer;
+}
+.arrowIcon { width: 12px; height: 12px; }
+
+/* ========== 通用卡片 ========== */
+.card {
+  background: #fff; margin: 0 10px 10px; border-radius: 12px; padding: 14px 16px;
 }
 
-.filmTitle {
-  font-size: 17px;
-  font-weight: 700;
-  color: #1a1a1a;
+.cardHeader {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
 }
+.cardTitle { font-size: 15px; font-weight: 600; color: #111; }
+.cardMore { font-size: 12px; color: #959AA5; cursor: pointer; }
 
-.filmMeta {
-  font-size: 12px;
-  color: #999;
+/* ===== 优惠券区 ===== */
+.couponRow {
+  display: flex; align-items: center; justify-content: space-between; padding: 10px 0;
 }
+.couponLabel { font-size: 14px; color: #111; }
+.couponNone { font-size: 12px; color: #959AA5; }
 
-/* ===== 详情列表 ===== */
-.detailList {
-  padding-top: 10px;
+/* ===== 小食区 ===== */
+.snackItem {
+  position: relative; padding: 10px 0; border-bottom: 1px solid #f5f5f5;
 }
-
-.detailRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
+.snackTag {
+  position: absolute; top: 10px; left: 0;
+  background: #f8289c; color: #fff;
+  font-size: 10px; padding: 1px 6px; border-radius: 4px; z-index: 1;
 }
-
-.detailLabel {
-  font-size: 13px;
-  color: #999;
+.snackInner { display: flex; align-items: center; gap: 10px; padding-left: 36px; }
+.snackPoster { width: 56px; height: 56px; border-radius: 6px; flex-shrink: 0; background: #f0f0f0; }
+.snackInfo { flex: 1; min-width: 0; }
+.snackName { font-size: 13px; color: #111; line-height: 1.4; margin-bottom: 4px; }
+.snackPriceRow { display: flex; align-items: baseline; gap: 8px; }
+.snackPrice { font-size: 17px; font-weight: 700; color: #f8289c; }
+.yen { font-size: 12px; }
+.yenSmall { font-size: 12px; }
+.snackOrig { font-size: 11px; color: #959AA5; }
+.addBtn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid #f8289c; color: #f8289c;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; flex-shrink: 0; line-height: 1;
 }
-
-.detailVal {
-  font-size: 13px;
-  color: #1a1a1a;
-  font-weight: 500;
+.snackTotal {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 4px; padding-top: 10px; font-size: 13px; color: #666;
 }
+.snackTotalPrice { font-size: 16px; font-weight: 600; color: #f8289c; }
 
-.detailValSeats {
-  font-size: 13px;
-  color: #FF5A00;
-  font-weight: 600;
+/* ===== 手机号区 ===== */
+.phoneRow { display: flex; align-items: center; gap: 10px; }
+.phoneIcon {
+  width: 40px; height: 40px; border-radius: 8px;
+  background: #1677ff;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
+.phoneInfo { flex: 1; }
+.phoneNum { font-size: 15px; font-weight: 600; color: #111; }
+.phoneHint { font-size: 11px; color: #959AA5; margin-top: 2px; }
 
-/* ===== 价格汇总 ===== */
-.priceCard {
-  margin: 0 16px 12px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+/* ===== 购票须知 ===== */
+.noticeTitle { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 8px; }
+.noticeDesc { font-size: 11px; color: #959AA5; line-height: 1.8; }
+
+/* ===== 底部垫片 ===== */
+.bottomSpacer { height: 80px; }
+
+/* ========== 底部付款栏 ========== */
+.footerBar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: #fff; box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
 }
-
-.priceRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  font-size: 13px;
-  color: #666;
-}
-
-.noCoupon {
-  color: #ccc;
-}
-
-.priceTotal {
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid #f0f0f0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.totalNum {
-  font-size: 22px;
-  color: #FF5A00;
-  font-weight: 700;
-}
-
-/* ===== 底部操作栏 ===== */
-.bottomBar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
-  z-index: 10;
-}
-
-.bottomInner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-}
-
-.cancelBtn {
-  flex-shrink: 0;
-  color: #999;
-  font-size: 14px;
-}
-
+.footerInner { display: flex; align-items: center; padding: 10px 16px; gap: 12px; }
+.priceCol { flex: 1; }
+.totalRow { display: flex; align-items: baseline; gap: 4px; }
+.totalLabel { font-size: 13px; color: #666; }
+.totalPrice { font-size: 22px; font-weight: 700; color: #f8289c; }
+.detailBtn { display: flex; align-items: center; gap: 2px; font-size: 11px; color: #f8289c; cursor: pointer; margin-top: 2px; }
 .payBtn {
-  flex: 1;
-  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
-  border-radius: 24px;
-  font-weight: 700;
-  font-size: 16px;
-  height: 46px;
-}
-
-/* ===== 取消确认弹窗 ===== */
-.modalWrap {
-  position: fixed;
-  inset: 0;
-  z-index: 1001;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal {
-  width: 280px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px 20px 16px;
-  text-align: center;
-}
-
-.modalTitle {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 8px;
-}
-
-.modalDesc {
-  font-size: 13px;
-  color: #999;
-  margin-bottom: 20px;
-}
-
-.modalActions {
-  display: flex;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-}
-
-.modalActions :global(.adm-button) {
-  flex: 1;
-  font-size: 14px;
-}
-
-.modalConfirm {
-  color: #FF4D4F !important;
-  font-weight: 600;
+  flex-shrink: 0; padding: 12px 36px;
+  background: #f8289c; color: #fff;
+  font-size: 16px; font-weight: 600; border-radius: 24px; cursor: pointer;
+  &:active { opacity: 0.85; }
 }

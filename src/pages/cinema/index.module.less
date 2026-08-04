@@ -39,7 +39,7 @@
 
 .card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   background: #fff;
   border-radius: 12px;
   padding: 16px;
@@ -55,47 +55,122 @@
   min-width: 0;
 }
 
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
 .name {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+  margin-left: 8px;
+  color: var(--primary-color);
+}
+
+.newUserTag {
+  font-size: 10px;
+  color: var(--primary-color);
+  margin-right: 2px;
+}
+
+.priceSymbol {
+  font-size: 12px;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.priceNum {
+  font-size: 18px;
+  color: var(--primary-color);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.priceUnit {
+  font-size: 12px;
+  color: var(--primary-color);
+  margin-left: 1px;
+}
+
+.addressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 6px;
 }
 
 .address {
   font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .tags {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .distance {
   font-size: 12px;
-  color: var(--primary-color);
-  font-weight: 500;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .featureTag {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  background: #fff;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  color: var(--text-muted);
+  white-space: nowrap;
+  line-height: 1.4;
 }
 
-.arrow {
-  font-size: 20px;
-  color: #ccc;
-  margin-left: 8px;
+/* 标签颜色变体 - 描边风格 */
+.tagRed {
+  color: #e4393c;
+  border-color: #e4393c;
+}
+
+.tagOrange {
+  color: #fa8c16;
+  border-color: #fa8c16;
+}
+
+.tagGreen {
+  color: #52c41a;
+  border-color: #52c41a;
+}
+
+.tagBlue {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.tagGray {
+  color: #999;
+  border-color: #d9d9d9;
 }

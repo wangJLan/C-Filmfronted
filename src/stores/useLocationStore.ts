@@ -157,12 +157,24 @@ export const useLocationStore = create<LocationState>()((set) => ({
       }
     } catch (e: any) { console.warn('[定位] GPS 失败，降级到 IP:', e.message || e); }
 
-    // 第2步：IP 定位
-    const ip = await tryIpLocate();
-    if (ip) {
-      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
-      saveCache(ip.city, ip.lat, ip.lng);
-      console.log('[定位] init 完成(IP) —', ip.city);
+    // 第2步：IP 定位（已有非默认缓存时不覆盖）
+    if (!cache || cache.city === '北京') {
+      const ip = await tryIpLocate();
+      if (ip) {
+        // 已有缓存且不是"北京"，IP 定位结果不覆盖
+        if (cache && cache.city !== '北京') {
+          console.log('[定位] 保留缓存:', cache.city, '跳过IP:', ip.city);
+          set({ loading: false, located: true });
+          return;
+        }
+        set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+        saveCache(ip.city, ip.lat, ip.lng);
+        console.log('[定位] init 完成(IP) —', ip.city);
+        return;
+      }
+    } else {
+      console.log('[定位] 已有缓存:', cache.city, ', 跳过IP');
+      set({ loading: false, located: true });
       return;
     }
 

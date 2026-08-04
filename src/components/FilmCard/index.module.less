@@ -78,11 +78,44 @@
 }
 
 .heroTag {
-  font-size: 10px;
-  padding: 2px 6px;
+  font-size: 11px;
+  padding: 3px 10px;
   background: #f5f5f5;
   color: var(--text-secondary);
-  border-radius: 3px;
+  border-radius: 6px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* 标签颜色变体 */
+.tagRed {
+  background: #fff1f0;
+  color: #ff4d4f;
+  border: 1px solid #ffa39e;
+}
+
+.tagOrange {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.tagGreen {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.tagBlue {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.tagGray {
+  background: #f5f5f5;
+  color: #8c8c8c;
+  border: 1px solid #d9d9d9;
 }
 
 .heroMeta {
@@ -106,121 +139,244 @@
   cursor: pointer;
 }
 
-/* ===== List 紧凑卡片模式（列表页用） ===== */
+/* ===== List 宽卡片模式（影片列表页用—淘票票风格） ===== */
 .cardList {
   display: flex;
-  gap: 12px;
+  gap: 0;
   background: #fff;
   border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 14px 12px;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform .15s;
+  margin-bottom: 1px;
 
-  &:active {
-    transform: scale(0.99);
-  }
+  &:active { transform: scale(.99); }
 }
 
 .listPoster {
+  position: relative;
   flex-shrink: 0;
-  width: 70px;
-  height: 96px;
-  border-radius: 6px;
+  width: 80px;
+  height: 108px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-right: 12px;
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.listPosterTag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(0,0,0,.75);
+  color: #fff;
+  border-radius: 3px;
+  z-index: 2;
+  font-weight: 500;
 }
 
 .listInfo {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-}
-
-.listTitleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  overflow: hidden;
 }
 
 .listTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.listRating {
+.listDesc {
   display: flex;
   align-items: center;
-  gap: 2px;
-  color: var(--primary-color);
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.listStar {
+  gap: 4px;
   font-size: 12px;
-  color: var(--primary-color);
 }
 
-.listRanking {
-  display: inline-flex;
+.listDescLabel { color: #999; }
+
+.listDescHighlight {
+  color: #FFB800;
+  font-weight: 700;
+  font-size: 14px;
+  margin-left: 2px;
+}
+
+.listDescSplit { color: #e0e0e0; margin: 0 2px; }
+
+.listDescNormal { color: #999; }
+
+.listDirector, .listActors {
+  font-size: 11px;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.listBottom {
+  display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  background: #fff6f0;
-  border-radius: 10px;
-  font-size: 10px;
-  color: var(--primary-color);
-  width: fit-content;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .listTags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  flex: 1;
 }
 
 .listTag {
   font-size: 10px;
-  padding: 1px 5px;
-  background: #f5f5f5;
-  color: var(--text-secondary);
-  border-radius: 2px;
-}
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  border: 1px solid;
 
-.listMeta {
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.3;
-}
-
-.listRight {
-  display: flex;
-  align-items: flex-end;
-  flex-shrink: 0;
+  &.tagRed { color: #FF5A00; border-color: rgba(255,90,0,.4); background: #FFF7F2; }
+  &.tagBlue { color: #1677ff; border-color: rgba(22,119,255,.4); background: #F0F7FF; }
+  &.tagGray { color: #666; border-color: #e0e0e0; background: #fff; }
+  &.tagGreen { color: #00b578; border-color: rgba(0,181,120,.4); background: #F0FFF8; }
 }
 
 .listBuyBtn {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 14px;
+  flex-shrink: 0;
+  padding: 6px 18px;
   background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
   color: #fff;
-  border-radius: 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active { opacity: .85; }
+}
+
+
+/* ===== Vertical 竖排卡片模式（首页用） ===== */
+.cardVertical {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .15s;
+  flex-shrink: 0;
+  width: 110px;
+
+  &:active { transform: scale(.98); }
+}
+
+.verticalPoster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3/4;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+/* ===== 标签区（海报左上角） ===== */
+.verticalTagList {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 2;
+}
+
+.verticalTagItem {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: 500;
   white-space: nowrap;
+
+  &.tagGray { background: rgba(0, 0, 0, .75); color: #fff; }
+  &.tagRed { background: #FF5A00; color: #fff; }
+  &.tagBlue { background: #1677ff; color: #fff; }
+  &.tagGreen { background: #00b578; color: #fff; }
+}
+
+/* ===== 评分区（海报左下角） ===== */
+.verticalScore {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.verticalScoreLabel {
+  font-size: 10px;
+  color: rgba(255,255,255,.8);
+  font-weight: 500;
+}
+
+.verticalScoreNum {
+  font-size: 14px;
+  font-weight: 700;
+  color: #FFB800;
+}
+
+/* ===== 标题和购票按钮 ===== */
+.verticalTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  padding: 8px 8px 0;
+}
+
+.verticalDate {
+  font-size: 11px;
+  color: #999;
+  padding: 2px 8px 0;
+  white-space: nowrap;
+}
+
+.verticalBtn {
+  width: calc(100% - 16px);
+  margin: 10px auto 12px;
+  padding: 7px 0;
+  text-align: center;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active { opacity: .85; }
+}
+
+.verticalBtnBuy {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: #fff;
+}
+
+.verticalBtnWant {
+  background: linear-gradient(135deg, #FFB800, #FF9500);
+  color: #fff;
 }

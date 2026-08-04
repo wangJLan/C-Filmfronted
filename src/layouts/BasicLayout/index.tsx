@@ -19,7 +19,7 @@ const BasicLayout: React.FC = () => {
   const navigate = useNavigate();
 
   // 子页面不显示 TabBar
-  const hideRoutes = ['/detail', '/orders', '/wallet', '/coupons', '/want-to-see', '/watched', '/settings', '/showtime', '/seat', '/order-confirm', '/payment', '/ticket', '/profile-edit', '/forgot-password', '/city-picker'];
+  const hideRoutes = ['/detail', '/orders', '/wallet', '/coupons', '/want-to-see', '/watched', '/settings', '/showtime', '/seat', '/order-confirm', '/payment', '/ticket', '/profile-edit', '/forgot-password', '/city-picker', '/cinema-detail', '/cinema-service-detail', '/cinema-feedback', '/cinema-price-info'];
   const hideTabBar = hideRoutes.some((r) => location.pathname.startsWith(r));
 
   return (
