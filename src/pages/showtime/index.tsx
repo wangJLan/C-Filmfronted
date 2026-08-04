@@ -231,7 +231,8 @@ const ShowtimePage: React.FC = () => {
       const films: any[] = [];
       for (const fid of filmIds) {
         try {
-          const f = await getFilm({ id: fid });
+          const f: any = await getFilm({ id: fid });
+          if (f.status && f.status !== 'hot') continue; // 只展示热映状态
           films.push({
             id: f.id,
             name: f.name || '',
@@ -244,7 +245,6 @@ const ShowtimePage: React.FC = () => {
           });
         } catch { /* skip */ }
       }
-      // 将用户之前选中的电影放到第一个位置
       if (selectedFilmId) {
         films.sort((a, b) => a.id === selectedFilmId ? -1 : b.id === selectedFilmId ? 1 : 0);
       }
