@@ -192,9 +192,6 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
       </div>
     );
   }
-      </div>
-    );
-  }
 
   // list 模式：紧凑版卡片
   return (
