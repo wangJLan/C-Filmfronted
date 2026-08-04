@@ -21,7 +21,7 @@ interface FilmCardProps {
     type?: string;
     releaseDate?: string;
   };
-  variant?: 'list' | 'hero';
+  variant?: 'list' | 'hero' | 'vertical';
   onSelect?: (id: number) => void;
 }
 
@@ -140,6 +140,27 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
               <span>看过</span>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // vertical 模式：淘票票风格竖排卡片（首页用）
+  if (variant === 'vertical') {
+    return (
+      <div className={styles.cardVertical} onClick={handleClick}>
+        <div className={styles.verticalPoster}>
+          <img src={enriched.posterUrl} alt={enriched.name} />
+          {enriched.rating > 0 && (
+            <div className={styles.verticalScore}>
+              <StarFill className={styles.verticalStar} />
+              <span>{enriched.rating.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+        <span className={styles.verticalTitle}>{enriched.name}</span>
+        <div className={styles.verticalBuy} onClick={(e) => { e.stopPropagation(); guard(() => navigate(`/showtime/film/${enriched.id}`)); }}>
+          <span>购票</span>
         </div>
       </div>
     );

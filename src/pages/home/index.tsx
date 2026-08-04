@@ -105,7 +105,7 @@ const HomePage: React.FC = () => {
             <div style={{ padding: 30, textAlign: 'center', color: '#999', fontSize: 13 }}>暂无热映影片</div>
           ) : (
             hotFilms.map((film) => (
-              <FilmCard key={film.id} film={film} variant="list" />
+              <FilmCard key={film.id} film={film} variant="vertical" />
             ))
           )}
         </div>
@@ -124,7 +124,7 @@ const HomePage: React.FC = () => {
             <div style={{ padding: 30, textAlign: 'center', color: '#999', fontSize: 13 }}>暂无即将上映影片</div>
           ) : (
             upcomingFilms.map((film) => (
-              <FilmCard key={film.id} film={film} variant="list" />
+              <FilmCard key={film.id} film={film} variant="vertical" />
             ))
           )}
         </div>
