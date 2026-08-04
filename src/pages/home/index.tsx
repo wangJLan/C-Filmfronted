@@ -104,7 +104,7 @@ const HomePage: React.FC = () => {
           ) : hotFilms.length === 0 ? (
             <div style={{ padding: 30, textAlign: 'center', color: '#999', fontSize: 13 }}>暂无热映影片</div>
           ) : (
-            <>
+            <div className={styles.filmCardScroll}>
               {hotFilms.map((film) => (
                 <FilmCard key={film.id} film={film} variant="vertical" />
               ))}
@@ -112,7 +112,7 @@ const HomePage: React.FC = () => {
                 <div className={styles.moreCardTitle}>更多</div>
                 <div className={styles.moreCardSub}>热映影片</div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -129,7 +129,7 @@ const HomePage: React.FC = () => {
           ) : upcomingFilms.length === 0 ? (
             <div style={{ padding: 30, textAlign: 'center', color: '#999', fontSize: 13 }}>暂无即将上映影片</div>
           ) : (
-            <>
+            <div className={styles.filmCardScroll}>
               {upcomingFilms.map((film) => (
                 <FilmCard key={film.id} film={film} variant="vertical" />
               ))}
@@ -137,7 +137,7 @@ const HomePage: React.FC = () => {
                 <div className={styles.moreCardTitle}>更多</div>
                 <div className={styles.moreCardSub}>即将上映</div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

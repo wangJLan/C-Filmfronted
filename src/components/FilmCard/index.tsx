@@ -20,6 +20,8 @@ interface FilmCardProps {
     duration?: number;
     type?: string;
     releaseDate?: string;
+    director?: string;
+    actors?: string;
   };
   variant?: 'list' | 'hero' | 'vertical';
   /** 竖排卡片模式: 'hot'=热映(购票) | 'upcoming'=即将上映(想看) */
@@ -193,48 +195,57 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
     );
   }
 
-  // list 模式：紧凑版卡片
+  // list 模式：淘票票风格宽卡片（左海报 + 右完整信息）
+  const formatTag = enriched.formatTags.length > 0 ? enriched.formatTags[0] : '';
   return (
     <div className={styles.cardList} onClick={handleClick}>
       <div className={styles.listPoster}>
+        {formatTag && (
+          <div className={styles.listPosterTag}>{formatTag}</div>
+        )}
         <img src={enriched.posterUrl} alt={enriched.name} />
       </div>
       <div className={styles.listInfo}>
-        <div className={styles.listTitleRow}>
-          <h3 className={styles.listTitle}>{enriched.name}</h3>
-          {enriched.rating > 0 && (
-            <div className={styles.listRating}>
-              <StarFill className={styles.listStar} />
-              <span>{enriched.rating.toFixed(1)}</span>
-            </div>
+        <h3 className={styles.listTitle}>{enriched.name}</h3>
+        <div className={styles.listDesc}>
+          {enriched.rating > 0 ? (
+            <>
+              <span className={styles.listDescLabel}>评分</span>
+              <span className={styles.listDescHighlight}>{enriched.rating.toFixed(1)}</span>
+            </>
+          ) : (
+            <>
+              <span className={styles.listDescHighlight}>暂无评分</span>
+            </>
+          )}
+          {enriched.duration > 0 && (
+            <>
+              <span className={styles.listDescSplit}>|</span>
+              <span className={styles.listDescNormal}>{enriched.duration}分钟</span>
+            </>
           )}
         </div>
-        {enriched.ranking && (
-          <div className={styles.listRanking}>
-            <EyeOutline fontSize={10} />
-            <span>{enriched.ranking}</span>
-          </div>
+        {film.director && (
+          <div className={styles.listDirector}>导演：{film.director}</div>
         )}
-        <div className={styles.listTags}>
-          {sortTags([...enriched.formatTags.slice(0, 2), ...(enriched.type ? [enriched.type] : [])]).map(tag => (
-            <span key={tag} className={`${styles.listTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
-          ))}
-        </div>
-        <div className={styles.listMeta}>
-          {enriched.releaseDate ? enriched.releaseDate.replace(/-/g, '.') : ''}
-          {' · '}
-          {enriched.duration}分钟
-        </div>
-      </div>
-      <div className={styles.listRight}>
-        <div
-          className={styles.listBuyBtn}
-          onClick={(e) => {
-            e.stopPropagation();
-            guard(() => navigate(`/showtime/film/${enriched.id}`));
-          }}
-        >
-          购票
+        {film.actors && (
+          <div className={styles.listActors}>演员：{film.actors.split(',').slice(0, 4).join(', ')}</div>
+        )}
+        <div className={styles.listBottom}>
+          <div className={styles.listTags}>
+            {sortTags([...enriched.formatTags.slice(0, 2)]).map(tag => (
+              <span key={tag} className={`${styles.listTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
+            ))}
+          </div>
+          <div
+            className={styles.listBuyBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              guard(() => navigate(`/showtime/film/${enriched.id}`));
+            }}
+          >
+            购票
+          </div>
         </div>
       </div>
     </div>
