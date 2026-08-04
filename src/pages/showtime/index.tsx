@@ -127,6 +127,7 @@ const ShowtimePage: React.FC = () => {
   const guard = useGuard();
   const triggerAi = useAiStore((s) => s.triggerAi);
   const locationStore = useLocationStore();
+  const cityName = locationStore.city || '全城';
 
   const isCinemaOnly = location.pathname.includes('/showtime/cinema/');
   const isFilmOnly = location.pathname.includes('/showtime/film/');
@@ -151,9 +152,14 @@ const ShowtimePage: React.FC = () => {
 
   // 场次列表（真实数据）
   const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
-    queryKey: ['schedule', selectedFilmId],
-    queryFn: () => selectedFilmId ? listSchedule({ filmId: selectedFilmId }) : Promise.resolve([]),
-    enabled: !!selectedFilmId,
+    queryKey: ['schedule', selectedFilmId, selectedCinemaId],
+    queryFn: () => (selectedFilmId || selectedCinemaId)
+      ? listSchedule({
+          filmId: selectedFilmId || undefined,
+          cinemaId: selectedCinemaId || undefined,
+        })
+      : Promise.resolve([]),
+    enabled: !!selectedFilmId || !!selectedCinemaId,
   });
 
   const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
@@ -279,8 +285,6 @@ const ShowtimePage: React.FC = () => {
   const [sortPanelVisible, setSortPanelVisible] = useState(false);
   const [sortType, setSortType] = useState<SortType>('composite');
   const [currentSort, setCurrentSort] = useState('综合排序');
-
-  const cityName = locationStore.city || '全城';
 
   const isPast = (showDate: string, startTime: string) => {
     const dt = `${showDate}T${startTime}`;
