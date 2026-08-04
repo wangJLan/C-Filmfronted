@@ -180,16 +180,8 @@ const ShowtimePage: React.FC = () => {
     enabled: cinemaIds.length > 0,
   });
 
-  // 按当前城市筛选影院
-  const cityFilteredCinemas = useMemo(() => {
-    if (!cinemasRaw) return [];
-    const cn = cityName || '';
-    if (!cn || cn === '全城' || cn === '北京') return cinemasRaw;
-    return cinemasRaw.filter(c => {
-      try { return cn.includes(c.city || '') || (c.city || '').includes(cn); }
-      catch { return true; } // 防崩溃兜底
-    });
-  }, [cinemasRaw, cityName]);
+  // 电影院列表 — 全部展示，不过滤城市
+  const cityFilteredCinemas = cinemasRaw;
 
   const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
