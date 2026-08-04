@@ -684,6 +684,8 @@ const ShowtimePage: React.FC = () => {
                       });
                       // 把当前影院+日期的场次列表写入 sessionStorage，供选座页底部卡片展示
                       sessionStorage.setItem('seat_schedules', JSON.stringify(showtimes));
+                      // 把影院 tags 带上，供退改签判断
+                      if (cinema?.tags) sessionStorage.setItem('seat_cinemaTags', JSON.stringify(cinema.tags));
                       navigate(`/seat/${item.id}?${params.toString()}`);
                     }); }}
                   >

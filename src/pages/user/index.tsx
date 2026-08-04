@@ -11,10 +11,10 @@ import {
 import styles from './index.module.less';
 
 const orderGrid = [
-  { icon: <BillOutline fontSize={24} />, label: '待付款' },
-  { icon: <CheckCircleOutline fontSize={24} />, label: '已完成' },
-  { icon: <StarOutline fontSize={24} />, label: '待评价' },
-  { icon: <ExclamationCircleOutline fontSize={24} />, label: '退改' },
+  { icon: <BillOutline fontSize={24} />, label: '待付款', tab: 'pending' },
+  { icon: <CheckCircleOutline fontSize={24} />, label: '已完成', tab: 'completed' },
+  { icon: <StarOutline fontSize={24} />, label: '待评价', tab: 'completed' },
+  { icon: <ExclamationCircleOutline fontSize={24} />, label: '退改', tab: 'cancelled' },
 ];
 
 const functionList = [
@@ -369,7 +369,7 @@ const UserPage: React.FC = () => {
           </div>
           <div className={styles.orderGrid}>
             {orderGrid.map((item, idx) => (
-              <div key={idx} className={styles.orderItem} onClick={() => navigate('/orders')}>
+              <div key={idx} className={styles.orderItem} onClick={() => navigate(`/orders?tab=${item.tab}`)}>
                 <span className={styles.orderIcon}>{item.icon}</span>
                 <span className={styles.orderLabel}>{item.label}</span>
               </div>
