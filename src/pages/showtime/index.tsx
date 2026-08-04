@@ -150,19 +150,13 @@ const ShowtimePage: React.FC = () => {
   });
 
   // 场次列表（真实数据）
-  const { data: scheduleRaw, isLoading: scheduleLoading } = useQuery({
+  const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
     queryKey: ['schedule', selectedFilmId],
     queryFn: () => selectedFilmId ? listSchedule({ filmId: selectedFilmId }) : Promise.resolve([]),
     enabled: !!selectedFilmId,
   });
 
-  // scheduleRaw 可能被包裹为 {data: [...]}, 统一转数组
-  const scheduleList = useMemo(
-    () => (Array.isArray(scheduleRaw) ? scheduleRaw : []) as any[],
-    [scheduleRaw],
-  );
-
-  const cinemaIds = useMemo(() => [...new Set(scheduleList.map(s => s.cinemaId))], [scheduleList]);
+  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
 
   // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
@@ -186,8 +180,16 @@ const ShowtimePage: React.FC = () => {
     enabled: cinemaIds.length > 0,
   });
 
-  // 电影院列表 — 全部展示，不过滤城市
-  const cityFilteredCinemas = cinemasRaw;
+  // 按当前城市筛选影院
+  const cityFilteredCinemas = useMemo(() => {
+    if (!cinemasRaw) return [];
+    const cn = cityName || '';
+    if (!cn || cn === '全城' || cn === '北京') return cinemasRaw;
+    return cinemasRaw.filter(c => {
+      try { return cn.includes(c.city || '') || (c.city || '').includes(cn); }
+      catch { return true; } // 防崩溃兜底
+    });
+  }, [cinemasRaw, cityName]);
 
   const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
@@ -287,12 +289,12 @@ const ShowtimePage: React.FC = () => {
 
   // 合并真实场次 + Mock 补充字段的影院列表
   const enrichedCinemas = useMemo(() => {
-    if (!cityFilteredCinemas || !scheduleList) return [];
+    if (!cityFilteredCinemas || !scheduleData) return [];
     return cityFilteredCinemas.map(c => {
-      const cShowtimes = scheduleList.filter(s => String(s.cinemaId) === String(c.id));
+      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
       return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
     });
-  }, [cityFilteredCinemas, scheduleList]);
+  }, [cityFilteredCinemas, scheduleData]);
 
   // 筛选后的影院列表
   const filteredCinemas = useMemo(() => {
@@ -321,24 +323,24 @@ const ShowtimePage: React.FC = () => {
 
   // 当前日期+影院的场次
   const showtimes = useMemo(() => {
-    if (!scheduleList) return [];
+    if (!scheduleData) return [];
     const cid = selectedCinemaId;
     if (!cid) return [];
-    return scheduleList.filter(s =>
+    return scheduleData.filter(s =>
       String(s.cinemaId) === String(cid) &&
       s.showDate === dates[activeDateIdx] &&
       !isPast(s.showDate!, s.startTime!)
     );
-  }, [scheduleList, selectedCinemaId, dates, activeDateIdx]);
+  }, [scheduleData, selectedCinemaId, dates, activeDateIdx]);
 
   const dateCounts = useMemo(() => {
-    if (!scheduleList) return dates.map(() => 0);
+    if (!scheduleData) return dates.map(() => 0);
     const cid = selectedCinemaId;
     if (!cid) return dates.map(() => 0);
-    return dates.map(d => scheduleList.filter(s =>
+    return dates.map(d => scheduleData.filter(s =>
       String(s.cinemaId) === String(cid) && s.showDate === d && !isPast(s.showDate!, s.startTime!)
     ).length);
-  }, [scheduleList, selectedCinemaId, dates]);
+  }, [scheduleData, selectedCinemaId, dates]);
 
   const toggleArrayItem = (arr: string[], setArr: (v: string[]) => void, item: string) => {
     if (arr.includes(item)) {
@@ -364,6 +366,13 @@ const ShowtimePage: React.FC = () => {
     triggerAi(`我在看${parts.join(' ')}，帮我推荐合适场次`);
     Toast.show({ content: '已转交 AI 助手' });
   };
+
+  // ===== cinemaOnly：自动选中第一部影片，跳过选片页 =====
+  useEffect(() => {
+    if (isCinemaOnly && cinemaFilms && cinemaFilms.length > 0 && !selectedFilmId) {
+      setSelectedFilmId(cinemaFilms[0].id);
+    }
+  }, [cinemaFilms, isCinemaOnly, selectedFilmId]);
 
   // ===== filmOnly 模式：先选影院 =====
   if (isFilmOnly && !selectedCinemaId) {
@@ -417,7 +426,7 @@ const ShowtimePage: React.FC = () => {
 
         {/* 影厅快捷标签 — 从真实排片中提取 */}
         {(() => {
-          const hallTypes = [...new Set((scheduleList || []).map(s => s.hallType || '').filter(Boolean))];
+          const hallTypes = [...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))];
           if (hallTypes.length === 0) return null;
           return (
             <div className={styles.hallBar}>
@@ -484,7 +493,7 @@ const ShowtimePage: React.FC = () => {
           priceRange={priceRange}
           setPriceRange={setPriceRange}
           onClear={clearFilters}
-          hallTypes={[...new Set((scheduleList || []).map(s => s.hallType || '').filter(Boolean))]}
+          hallTypes={[...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))]}
         />
         <BrandPopup
           visible={brandPanelVisible}
@@ -505,39 +514,12 @@ const ShowtimePage: React.FC = () => {
     );
   }
 
-  // ===== cinemaOnly 模式：先选影片 =====
+  // cinemaOnly 模式下没影片或还在加载 → 显示 loading
   if (isCinemaOnly && !selectedFilmId) {
-    const filmIds = [...new Set((scheduleList || []).map(s => s.filmId))].filter(Boolean) as number[];
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选择影片</NavBar>
-        <div className={styles.infoHead}>
-          <div className={styles.cinemaNameText}>{cinema?.name}</div>
-        </div>
-        {!scheduleList ? (
-          <div style={{ textAlign: 'center', padding: 40 }}><SpinLoading color="primary" /></div>
-        ) : filmIds.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>📭</div>
-            <div className={styles.emptyText}>该影院暂无排片</div>
-          </div>
-        ) : (
-          <div className={styles.filmList}>
-            {filmIds.map(fid => {
-              const sch = scheduleList!.find(s => s.filmId === fid)!;
-              return (
-                <div key={fid} className={styles.filmCardRow} onClick={() => { setSelectedFilmId(fid); setActiveDateIdx(0); }}>
-                  <img src={sch.filmPoster} alt={sch.filmName} className={styles.filmCardPoster} />
-                  <div className={styles.filmCardInfo}>
-                    <div className={styles.filmCardTitle}>{sch.filmName}</div>
-                    <div className={styles.filmCardMeta}>⭐ {sch.filmRating} · {sch.filmType}</div>
-                    <div className={styles.filmCardPick}>选场次 ›</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+        <div style={{ textAlign: 'center', padding: 80 }}><SpinLoading color="primary" /></div>
         <SafeArea position="bottom" />
       </div>
     );
@@ -671,7 +653,7 @@ const ShowtimePage: React.FC = () => {
 
           {/* 场次列表 - 新版 */}
           <div className={styles.showtimeNewList}>
-            {!scheduleList ? (
+            {!scheduleData ? (
               <div style={{ textAlign: 'center', padding: 60 }}><SpinLoading color="primary" /></div>
             ) : showtimes.length === 0 ? (
               <div className={styles.empty}>
@@ -698,7 +680,10 @@ const ShowtimePage: React.FC = () => {
                         hallType: item.hallType || '',
                         hallName: item.hallName || '',
                         date: dates[activeDateIdx],
+                        filmId: String(selectedFilmId || ''),
                       });
+                      // 把当前影院+日期的场次列表写入 sessionStorage，供选座页底部卡片展示
+                      sessionStorage.setItem('seat_schedules', JSON.stringify(showtimes));
                       navigate(`/seat/${item.id}?${params.toString()}`);
                     }); }}
                   >

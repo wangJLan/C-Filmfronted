@@ -603,6 +603,8 @@ declare namespace API {
     paidAt?: string;
     expireAt?: string;
     createTime?: string;
+    /** 影片海报（通过场次-影片链路获取） */
+    posterUrl?: string;
     seatLabels?: string[];
   };
 

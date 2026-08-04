@@ -1,8 +1,6 @@
 /* ==================== 悬浮按钮 ==================== */
 .floatBtn {
   position: fixed;
-  right: 16px;
-  bottom: 100px;
   z-index: 200;
   width: 52px;
   height: 52px;
@@ -12,11 +10,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  animation: floatBounce 2s ease-in-out infinite;
+  cursor: grab;
+  transition: transform 0.2s, opacity 0.3s;
+  user-select: none;
+  touch-action: none;
 
-  &:active { transform: scale(0.9); }
+  &:active { cursor: grabbing; transform: scale(1.06); }
 }
 .floatBtnHidden { opacity: 0; pointer-events: none; transform: scale(0); }
 .floatIcon { font-size: 26px; position: relative; z-index: 1; }
