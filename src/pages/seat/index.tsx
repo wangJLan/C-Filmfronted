@@ -138,6 +138,10 @@ const SeatPage: React.FC = () => {
     try {
       const order = await createOrder({ scheduleId: sid, seatIds: Array.from(selectedIds) });
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
+      sessionStorage.setItem(`order_${order.id}_filmType`, filmTypeVal);
+      // 传递影院 tags 供退改签判断
+      const cinemaTags = sessionStorage.getItem('seat_cinemaTags');
+      if (cinemaTags) sessionStorage.setItem(`order_${order.id}_cinemaTags`, cinemaTags);
       Toast.show({ icon: 'success', content: '下单成功！' });
       navigate(`/order-confirm/${order.id}`, { replace: true });
     } catch (e: any) {

@@ -1258,7 +1258,7 @@ const AiChat: React.FC = () => {
         onMouseUp={onDragEnd}
         onMouseLeave={() => { if (dragState.current.dragging) onDragEnd(); }}
         onTouchStart={(e) => { const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }}
-        onTouchMove={(e) => { if (dragState.current.dragging) { e.preventDefault(); const t = e.touches[0]; onDragMove(t.clientX, t.clientY); } }}
+        onTouchMove={(e) => { if (dragState.current.dragging) { const t = e.touches[0]; onDragMove(t.clientX, t.clientY); } }}
         onTouchEnd={onDragEnd}
       >
         <div className={styles.floatIcon}>🤖</div>

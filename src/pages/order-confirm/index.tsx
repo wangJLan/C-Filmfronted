@@ -165,20 +165,6 @@ const OrderConfirmPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ===== 手机号区 ===== */}
-      <div className={styles.card}>
-        <div className={styles.phoneRow}>
-          <div className={styles.phoneIcon}>
-            <svg viewBox="0 0 96 96" fill="#fff" width="20" height="20"><path d="M70 8c6.1 0 11 4.9 11 11v58c0 6.1-4.9 11-11 11H26c-6.1 0-11-4.9-11-11V19c0-6.1 4.9-11 11-11h44zM56 73H40c-1.7 0-3 1.3-3 3s1.3 3 3 3h16c1.7 0 3-1.3 3-3s-1.3-3-3-3zm14-59H26c-2.8 0-5 2.2-5 5v45h54V19c0-2.8-2.2-5-5-5z"/></svg>
-          </div>
-          <div className={styles.phoneInfo}>
-            <div className={styles.phoneNum}>134****1989</div>
-            <div className={styles.phoneHint}>手机号仅用于生成订单</div>
-          </div>
-          <svg className={styles.arrowIcon} viewBox="0 0 96 96" fill="#959AA5"><path d="M55.1 48 32.3 26.9c-1.6-1.5-1.7-4-.2-5.7 1.5-1.6 4-1.7 5.7-.2l26 24c1.7 1.6 1.7 4.3 0 5.9l-26 24c-1.6 1.5-4.2 1.4-5.7-.2-1.5-1.6-1.4-4.2.2-5.7l22.8-21z"/></svg>
-        </div>
-      </div>
-
       {/* ===== 购票须知 ===== */}
       <div className={styles.card}>
         <div className={styles.noticeTitle}>购票须知</div>

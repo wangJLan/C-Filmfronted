@@ -1,11 +1,12 @@
 /**
- * 收银台 — 真实支付宝沙箱支付
+ * 收银台 — 支付宝沙箱支付
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'umi';
-import { NavBar, Button, Toast, SafeArea } from 'antd-mobile';
+import { NavBar, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { getOrderDetail, payOrder } from '@/api/orderController';
+import { getOrderDetail } from '@/api/orderController';
+import http from '@/services/request';
 import styles from './index.module.less';
 
 function loadFromCache(oid: string): API.OrderVO | null {
@@ -16,80 +17,37 @@ const PaymentPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = orderId!;
-
   const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [polling, setPolling] = useState(false);
 
-  // 页面加载 → 获取订单详情 + 自动触发支付
+  const handleCancel = useCallback(() => navigate(`/ticket/${oid}`, { replace: true }), [oid, navigate]);
+
   useEffect(() => {
     if (!oid) return;
     getOrderDetail({ id: oid }).then((o: any) => {
-      const vo: API.OrderVO = o?.data ?? o;
+      const vo = o?.data ?? o;
       setOrder(vo);
       sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo));
     }).catch(() => {}).finally(() => setLoading(false));
   }, [oid]);
 
-  /** 调后端拿支付表单 → 打开支付宝沙箱 */
-  const handleAlipay = useCallback(async () => {
+  /** 模拟支付 — 跳过支付宝沙箱，直接标记已支付 */
+  const handleMockPay = useCallback(async () => {
     if (paying) return;
     setPaying(true);
     try {
-      const raw = await payOrder({ orderId: oid } as any) as any;
-      const result = raw?.data ?? raw;
-      const payForm = result?.payForm;
-      if (!payForm) throw new Error('未获取到支付表单');
-      const w = window.open('about:blank', '_blank');
-      if (w) {
-        w.document.write(payForm);
-        w.document.close();
-      } else {
-        Toast.show({ content: '弹窗被拦截，请允许本站弹窗后重试' });
-      }
+      await http.post('/order/mock-pay', { orderId: oid });
+      Toast.show({ icon: 'success', content: '支付成功！' });
+      navigate(`/payment-success/${oid}`, { replace: true });
     } catch (e: any) {
-      Toast.show({ icon: 'fail', content: e.message || '生成支付页面失败' });
+      Toast.show({ icon: 'fail', content: e.message || '支付失败' });
     } finally { setPaying(false); }
   }, [oid, paying]);
 
-  /** 轮询订单状态 */
-  const checkPayStatus = useCallback(async () => {
-    setPolling(true);
-    try {
-      const raw = await getOrderDetail({ id: oid }) as any;
-      const latest = raw?.data ?? raw;
-      setOrder(latest);
-      sessionStorage.setItem(`order_${oid}`, JSON.stringify(latest));
-      if (latest?.status === 'paid') {
-        Toast.show({ icon: 'success', content: '支付成功！🎉' });
-        navigate(`/ticket/${oid}`, { replace: true });
-        return;
-      }
-      Toast.show({ content: '订单尚未支付，请在支付宝窗口完成支付后重试' });
-    } catch (e: any) {
-      Toast.show({ icon: 'fail', content: e.message || '查询失败' });
-    } finally { setPolling(false); }
-  }, [oid]);
-
-  // 未支付 → 自动触发支付宝
-  useEffect(() => {
-    if (order && order.status === 'pending' && !loading) {
-      handleAlipay();
-    }
-  }, [order?.status, loading]);
-
-  // 已支付 → 直跳电子票
-  useEffect(() => {
-    if (order && order.status === 'paid') {
-      Toast.show({ icon: 'success', content: '订单已支付' });
-      navigate(`/ticket/${oid}`, { replace: true });
-    }
-  }, [order?.status]);
-
   if (loading) {
     return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
-      <div style={{ textAlign: 'center', padding: 80, color: '#999' }}>加载中…</div></div>;
+      <div className={styles.loading}>加载中…</div></div>;
   }
   if (!order) {
     return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
@@ -98,35 +56,58 @@ const PaymentPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
-      <div className={styles.noticeBar}>
-        <span className={styles.noticeIcon}>⚠️</span>
-        <span className={styles.noticeText}>此为<strong>支付宝沙箱环境</strong>，不会产生真实扣款</span>
-      </div>
-      <div className={styles.amountCard}><div className={styles.amountLabel}>应付金额</div>
-        <div className={styles.amountNum}><span className={styles.amountSymbol}>¥</span>{order.totalPrice}</div>
-      </div>
-      <div className={styles.methodCard}>
-        <div className={styles.methodTitle}>支付方式</div>
-        <div className={`${styles.methodItem} ${styles.methodActive}`}>
-          <span className={styles.methodIcon}>💳</span>
-          <div className={styles.methodInfo}>
-            <div className={styles.methodName}>支付宝（沙箱）</div>
-            <div className={styles.methodDesc}>将跳转支付宝沙箱收银台完成支付</div>
-          </div>
+      <NavBar onBack={() => navigate(`/ticket/${oid}`)} back={<LeftOutline />} className={styles.nav}>收银台</NavBar>
+
+      {/* ===== 金额卡片 ===== */}
+      <div className={styles.amountCard}>
+        <div className={styles.amountLabel}>应付金额</div>
+        <div className={styles.amountNum}><span className={styles.amountSymbol}>¥</span>{order.totalPrice || 0}</div>
+        <div className={styles.orderBrief}>
+          <span>{order.filmName}</span>
+          <span className={styles.dot}>·</span>
+          <span>{order.count}张</span>
+          <span className={styles.dot}>·</span>
+          <span>{order.seatLabels?.join('、')}</span>
+        </div>
+        <div className={styles.cinemaRow}>
+          <svg className={styles.cIcon} viewBox="0 0 96 96" fill="#959AA5" width="14" height="14"><path d="M48 91C42.6 91 9 65.1 9 43.7S26.5 5 48 5s39 17.3 39 38.7S53.4 91 48 91zm0-35c6.6 0 12-5.4 12-12s-5.4-12-12-12-12 5.4-12 12 5.4 12 12 12z"/></svg>
+          <span>{order.cinemaName}</span>
         </div>
       </div>
-      <div className={styles.payActions}>
-        <Button block className={styles.paySuccessBtn} loading={paying} onClick={handleAlipay}>
-          {paying ? '正在生成支付页面…' : '前往支付宝支付'}
-        </Button>
-        <Button block className={styles.checkPayBtn} loading={polling} onClick={checkPayStatus}>
-          {polling ? '查询中…' : '已完成支付'}
-        </Button>
-        <Button block fill="none" onClick={() => navigate(`/order-confirm/${oid}`)} style={{ marginTop: 8 }}>返回订单确认</Button>
+
+      {/* ===== 支付方式 ===== */}
+      <div className={styles.methodCard}>
+        <div className={styles.methodTitle}>选择支付方式</div>
+
+        <div className={styles.methodList}>
+          <div className={`${styles.methodItem} ${styles.methodActive}`}>
+            <div className={styles.methodLeft}>
+              <div className={styles.alipayLogo}>支</div>
+              <div className={styles.methodInfo}>
+                <div className={styles.methodName}>支付宝</div>
+                <div className={styles.methodDesc}>推荐安装支付宝的用户使用</div>
+              </div>
+            </div>
+            <div className={styles.radioOn}>
+              <div className={styles.radioDot} />
+            </div>
+          </div>
+
+        </div>
       </div>
-      <div className={styles.footerHint}>支付完成后点击「已完成支付」验证，自动跳转电子票</div>
-      <SafeArea position="bottom" />
+
+      {/* ===== 底部按钮 ===== */}
+      <div className={styles.bottomBar}>
+        <div className={styles.bottomInner}>
+          <div className={styles.bottomLeft} onClick={handleCancel}>
+            <span className={styles.cancelLabel}>取消订单</span>
+          </div>
+          <button className={styles.payBtn} onClick={handleMockPay} disabled={paying}>
+            {paying ? '请稍候…' : `确认支付 ¥${order.totalPrice || 0}`}
+          </button>
+        </div>
+        <SafeArea position="bottom" />
+      </div>
     </div>
   );
 };

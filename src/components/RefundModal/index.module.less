@@ -1,0 +1,118 @@
+.panel {
+  padding: 20px 16px 12px;
+}
+
+.titleRow {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 18px; font-weight: 700; color: #111;
+}
+
+.closeBtn {
+  font-size: 18px; color: #999; cursor: pointer; padding: 4px;
+}
+
+/* ========== 规则区域 ========== */
+.rules {
+  background: #f8f8f8; border-radius: 12px; padding: 14px;
+  margin-bottom: 14px;
+}
+
+.ruleTitle {
+  font-size: 13px; font-weight: 600; color: #111; margin-bottom: 10px;
+}
+
+.ruleItem {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: #666; line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.ruleDot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #ddd; margin-top: 6px; flex-shrink: 0;
+}
+
+.ruleActive {
+  color: #111;
+  .ruleDot { background: #FF5A00; }
+}
+
+.ruleDisabled {
+  color: #ccc;
+  .ruleDot { background: #ddd; }
+}
+
+.ruleNote {
+  font-size: 10px; color: #bbb; line-height: 1.7;
+  margin-top: 4px; padding-top: 8px; border-top: 1px solid #eee;
+}
+
+/* ========== 当前状态 ========== */
+.statusRow {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+
+.statusLabel { font-size: 13px; color: #666; }
+.statusVal { font-size: 14px; font-weight: 600; color: #00b578; }
+.statusDanger { color: #f8289c; }
+
+/* ========== 费用明细 ========== */
+.feeDetail {
+  background: #fff; border: 1px solid #f0f0f0; border-radius: 10px;
+  padding: 12px; margin-bottom: 16px;
+}
+
+.feeRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; font-size: 13px; color: #666;
+}
+
+.feeDeduct {
+  color: #f8289c;
+}
+
+.feeTotal {
+  padding-top: 8px; margin-top: 4px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 15px; font-weight: 600; color: #111;
+}
+
+.feeRefund {
+  font-size: 20px; font-weight: 700; color: #00b578;
+}
+
+/* ========== 不可退票 ========== */
+.cantRefund {
+  text-align: center;
+  padding: 16px;
+  background: #fff5f5;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #f8289c;
+  margin-bottom: 16px;
+}
+
+/* ========== 按钮 ========== */
+.actions {
+  display: flex; gap: 10px;
+}
+
+.actionCancel {
+  flex: 1; height: 46px; border-radius: 23px;
+  border: 1px solid #e0e0e0; font-size: 15px; color: #666;
+}
+
+.actionConfirm {
+  flex: 1; height: 46px; border-radius: 23px;
+  background: linear-gradient(135deg, #FF5A00 0%, #FF8C42 100%);
+  color: #fff; font-size: 15px; font-weight: 600; border: none;
+
+  &:disabled {
+    background: #ddd; color: #999;
+  }
+}
