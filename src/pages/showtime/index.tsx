@@ -224,31 +224,26 @@ const ShowtimePage: React.FC = () => {
   const { data: cinemaFilms } = useQuery({
     queryKey: ['cinemaFilms', selectedCinemaId],
     queryFn: async () => {
+      // 1. 从 schedule 表取该影院的所有排片 filmId
       const all: any[] = await listAll1();
       const cinemaSchedules = all.filter(s => String(s.cinemaId) === String(selectedCinemaId));
       if (cinemaSchedules.length === 0) return [];
-      const filmIds = [...new Set(cinemaSchedules.map(s => s.filmId))].filter(Boolean) as number[];
-      const films: any[] = [];
-      for (const fid of filmIds) {
-        try {
-          const f: any = await getFilm({ id: fid });
-          if (f.status && f.status !== 'hot') continue; // 只展示热映状态
-          films.push({
-            id: f.id,
-            name: f.name || '',
-            posterUrl: f.posterUrl || '',
-            rating: f.rating ? Number(f.rating) : undefined,
-            type: f.type || '',
-            duration: f.duration,
-            actors: f.actors || '',
-            director: f.director || '',
-          });
-        } catch { /* skip */ }
-      }
-      if (selectedFilmId) {
-        films.sort((a, b) => a.id === selectedFilmId ? -1 : b.id === selectedFilmId ? 1 : 0);
-      }
-      return films;
+      const scheduleFilmIds = new Set(cinemaSchedules.map(s => Number(s.filmId)).filter(Boolean));
+
+      // 2. 从 film 表取所有 status=hot 的影片
+      const hotRes: any = await listFilm({ filmQueryRequest: { status: 'hot', pageSize: 200 } });
+      const hotFilms = (hotRes?.records || []).filter((f: any) => scheduleFilmIds.has(Number(f.id)));
+
+      return hotFilms.map((f: any) => ({
+        id: f.id,
+        name: f.name || '',
+        posterUrl: f.posterUrl || '',
+        rating: f.rating ? Number(f.rating) : undefined,
+        type: f.type || '',
+        duration: f.duration,
+        actors: f.actors || '',
+        director: f.director || '',
+      }));
     },
     enabled: !!selectedCinemaId && (isFilmOnly || isCinemaOnly),
   });
@@ -278,28 +273,10 @@ const ShowtimePage: React.FC = () => {
     }, 50);
   };
 
-  // 用于展示的影片列表（数据库优先，无数据用虚拟数据）
+  // 影院正在热映的影片（全从 schedule 表真实数据聚合）
   const displayFilms = useMemo(() => {
-    if (cinemaFilms && cinemaFilms.length > 0) return cinemaFilms;
-    // fallback：虚拟数据
-    const mocks: any[] = [];
-    if (film) {
-      mocks.push({ id: film.id, name: film.name, posterUrl: film.posterUrl, rating: film.rating, type: film.type, duration: film.duration, actors: film.actors || '', director: film.director || '' });
-    }
-    const extraMocks = [
-      { id: 300002, name: '蜘蛛侠：纵横宇宙', posterUrl: 'https://picsum.photos/seed/film1/300/400', rating: 9.6, type: '动作/科幻', duration: 140, actors: '沙梅克·摩尔、海莉·斯坦菲尔德', director: '乔伊姆·多斯·桑托斯' },
-      { id: 300003, name: '功夫女足', posterUrl: 'https://picsum.photos/seed/film2/300/400', rating: 9.1, type: '喜剧/运动', duration: 120, actors: '张雨绮、沈腾、艾伦', director: '周星驰' },
-      { id: 300004, name: '痴迷', posterUrl: 'https://picsum.photos/seed/film3/300/400', rating: 8.7, type: '悬疑/犯罪', duration: 132, actors: '黄渤、周冬雨、王传君', director: '陈正道' },
-      { id: 300005, name: '流浪地球3', posterUrl: 'https://picsum.photos/seed/film4/300/400', rating: 8.5, type: '科幻/冒险', duration: 150, actors: '吴京、刘德华、李雪健', director: '郭帆' },
-    ];
-    extraMocks.forEach(m => {
-      if (!mocks.find(x => x.id === m.id)) mocks.push(m);
-    });
-    if (selectedFilmId) {
-      mocks.sort((a, b) => a.id === selectedFilmId ? -1 : b.id === selectedFilmId ? 1 : 0);
-    }
-    return mocks;
-  }, [cinemaFilms, film, selectedFilmId]);
+    return cinemaFilms && cinemaFilms.length > 0 ? cinemaFilms : [];
+  }, [cinemaFilms]);
 
   // 初始化影片列表：第一个影片居中
   useEffect(() => {
