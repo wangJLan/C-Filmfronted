@@ -1,6 +1,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button, TextArea, Toast, SafeArea, SpinLoading, Input } from 'antd-mobile';
-import { CloseOutline, LeftOutline, MessageOutline, AddOutline } from 'antd-mobile-icons';
+import {
+  AddOutline,
+  CalendarOutline,
+  CheckCircleFill,
+  ClockCircleOutline,
+  CloseOutline,
+  LeftOutline,
+  LocationOutline,
+  MessageOutline,
+  MovieOutline,
+  ReceiptOutline,
+  RightOutline,
+} from 'antd-mobile-icons';
+import { useNavigate } from 'umi';
 import { useAiStore } from '@/stores/useAiStore';
 import { useUserStore } from '@/stores/useUserStore';
 import request from '@/libs/request';
@@ -21,7 +34,7 @@ interface Message {
   role: 'user' | 'assistant' | 'tool' | 'system';
   content: string;
   /** 当前正在执行的工具列表（展示在气泡内） */
-  activeTools: string[];
+  activeTools: { key: string; label: string }[];
   /** 是否正在流式输出（展示 ▍ 光标） */
   streaming: boolean;
   /** card 类型数据（type=card 时） */
@@ -41,6 +54,26 @@ interface SSEPayload {
   toolName?: string;
   cardType?: string;
   data?: any;
+}
+
+interface OrderConfirmCardData {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  orderId?: string | number;
+  orderNo?: string;
+  filmName?: string;
+  cinemaName?: string;
+  hallName?: string;
+  showTime?: string;
+  scheduleTime?: string;
+  seatLabels?: string[];
+  count?: number;
+  totalPrice?: number | string;
+  expireInMinutes?: number;
+  remainingMinutes?: number;
+  status?: string;
+  createTime?: string;
 }
 
 // ==================== API 封装 ====================
@@ -81,35 +114,522 @@ function formatTime(timeStr?: string): string {
   return d.format('YYYY-MM-DD');
 }
 
-// ==================== 推荐卡片 ====================
-const RecommendationCard: React.FC<{ data: any }> = ({ data }) => {
+function isRecord(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseCardEnvelope(value: unknown): SSECardData | null {
+  if (!isRecord(value) || value.type !== 'card' || typeof value.cardType !== 'string') return null;
+  return { cardType: value.cardType, data: value.data };
+}
+
+function tryParseCardJson(raw: string): SSECardData | null {
+  try {
+    return parseCardEnvelope(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+/** 兼容旧回复：模型可能把卡片协议放进 JSON 代码块并作为普通文本输出。 */
+function extractCardFromText(content: string): { card: SSECardData; text: string } | null {
+  const fencePattern = /`{2,3}(?:json)?\s*([\s\S]*?)\s*`{2,3}/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = fencePattern.exec(content)) !== null) {
+    const card = tryParseCardJson(match[1].trim());
+    if (card) {
+      const text = `${content.slice(0, match.index)}${content.slice(match.index + match[0].length)}`.trim();
+      return { card, text };
+    }
+  }
+
+  const trimmed = content.trim();
+  const unfenced = trimmed
+    .replace(/^`{2,3}(?:json)?\s*/i, '')
+    .replace(/\s*`{2,3}$/i, '')
+    .trim();
+  const wholeCard = tryParseCardJson(unfenced);
+  if (wholeCard) return { card: wholeCard, text: '' };
+
+  const firstBrace = content.indexOf('{');
+  const lastBrace = content.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    const embeddedCard = tryParseCardJson(content.slice(firstBrace, lastBrace + 1));
+    if (embeddedCard) {
+      return {
+        card: embeddedCard,
+        text: `${content.slice(0, firstBrace)}${content.slice(lastBrace + 1)}`.trim(),
+      };
+    }
+  }
+
+  return null;
+}
+
+function isPendingCardText(content: string): boolean {
+  const trimmed = content.trimStart();
+  const fenceMatch = trimmed.match(/^`{2,3}(?:json)?\s*/i);
+  if (fenceMatch) {
+    const body = trimmed.slice(fenceMatch[0].length);
+    return body.length < 80 || /"type"\s*:\s*"card"/i.test(body);
+  }
+  return /^\{\s*"type"\s*:\s*"card"/i.test(trimmed);
+}
+
+function formatOrderTime(value?: string): { date: string; time: string } {
+  if (!value) return { date: '场次时间待确认', time: '' };
+  const parsed = dayjs(value);
+  if (!parsed.isValid()) return { date: value, time: '' };
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  return { date: `${parsed.format('M月D日')} ${weekdays[parsed.day()]}`, time: parsed.format('HH:mm') };
+}
+
+function formatPrice(value?: number | string): string {
+  const price = Number(value);
+  if (!Number.isFinite(price)) return '--';
+  return price.toFixed(2);
+}
+
+function formatCountdown(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const restSeconds = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(restSeconds).padStart(2, '0')}`;
+}
+
+// ==================== 卡片组件 ====================
+
+type CardNavigate = (path: string) => void;
+
+function routeId(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const id = String(value).trim();
+  return id ? encodeURIComponent(id) : null;
+}
+
+function getItemRoute(item: any): string | undefined {
+  const scheduleId = routeId(item?.scheduleId ?? item?.showtimeId);
+  if (scheduleId) return `/seat/${scheduleId}`;
+  const filmId = routeId(item?.filmId);
+  if (filmId) return `/detail/${filmId}`;
+  const cinemaId = routeId(item?.cinemaId);
+  if (cinemaId) return `/showtime/cinema/${cinemaId}`;
+  return undefined;
+}
+
+function getScheduleSelectionRoute(item: any): string | undefined {
+  const filmId = routeId(item?.filmId);
+  const cinemaId = routeId(item?.cinemaId);
+  if (filmId && cinemaId) return `/showtime/${filmId}/${cinemaId}`;
+  if (filmId) return `/showtime/film/${filmId}`;
+  if (cinemaId) return `/showtime/cinema/${cinemaId}`;
+  return undefined;
+}
+
+const CardSurface: React.FC<{
+  children: React.ReactNode;
+  path?: string;
+  ariaLabel: string;
+  onNavigate?: CardNavigate;
+  className?: string;
+}> = ({ children, path, ariaLabel, onNavigate, className = '' }) => {
+  const classes = `${styles.cardItem} ${path && onNavigate ? styles.cardItemButton : ''} ${className}`.trim();
+  if (!path || !onNavigate) return <div className={classes}>{children}</div>;
+
+  return (
+    <button type="button" className={classes} aria-label={ariaLabel} onClick={() => onNavigate(path)}>
+      {children}
+      <RightOutline className={styles.cardChevron} aria-hidden="true" />
+    </button>
+  );
+};
+
+const FilmPoster: React.FC<{ src?: string; filmName?: string }> = ({ src, filmName }) => {
+  const [failed, setFailed] = useState(!src);
+
+  useEffect(() => setFailed(!src), [src]);
+
+  const alt = `${filmName || '影片'}海报`;
+  if (failed) {
+    return (
+      <span className={styles.filmPosterFallback} role="img" aria-label={`${alt}暂不可用`}>
+        <MovieOutline />
+      </span>
+    );
+  }
+
+  return (
+    <span className={styles.filmPoster}>
+      <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />
+    </span>
+  );
+};
+
+/** 推荐卡片（兼容旧格式） */
+const RecommendationCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
   const alternatives: any[] = data?.alternatives || [];
   if (alternatives.length === 0) return null;
   return (
     <div className={styles.cardWrap}>
       <div className={styles.cardReason}>{data?.reason || '为您找到以下备选方案：'}</div>
-      {alternatives.map((item: any, idx: number) => (
-        <div key={idx} className={styles.cardItem}>
+      {alternatives.map((item: any, idx: number) => {
+        const path = getItemRoute(item);
+        return (
+        <CardSurface
+          key={item.scheduleId ?? item.filmId ?? item.cinemaId ?? idx}
+          path={path}
+          ariaLabel={`打开${item.filmName || item.cinemaName || '推荐内容'}`}
+          onNavigate={onNavigate}
+        >
           <div className={styles.cardHeader}>
             <span className={styles.cardFilmName}>{item.filmName}</span>
-            <span className={styles.cardRating}>⭐{item.rating}</span>
+            {item.rating != null && <span className={styles.cardRating}>{item.rating} 分</span>}
           </div>
-          <div className={styles.cardMeta}>
-            {item.cinemaName} · {item.date} {item.time}
-          </div>
+          <div className={styles.cardMeta}>{item.cinemaName} · {item.date} {item.time}</div>
           <div className={styles.cardFooter}>
             <span className={styles.cardHall}>{item.hall}</span>
             <span className={styles.cardPrice}>¥{item.price}</span>
             <span className={styles.cardSeats}>余{item.availableSeats}座</span>
           </div>
-        </div>
-      ))}
+        </CardSurface>
+        );
+      })}
     </div>
   );
 };
 
+/** 影片列表卡片 */
+const FilmListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
+  const films: any[] = data?.films || [];
+  if (films.length === 0) return <div className={styles.cardWrap}><div className={styles.cardReason}>暂无影片</div></div>;
+  return (
+    <div className={styles.cardWrap}>
+      <div className={styles.cardReason}>为您找到 {films.length} 部影片</div>
+      {films.map((f: any, i: number) => {
+        const path = getItemRoute(f);
+        return (
+        <CardSurface
+          key={f.filmId ?? i}
+          path={path}
+          ariaLabel={`查看影片${f.name || ''}详情`}
+          onNavigate={onNavigate}
+          className={styles.filmCardItem}
+        >
+          <FilmPoster src={f.posterUrl} filmName={f.name} />
+          <div className={styles.filmCardContent}>
+            <div className={styles.cardHeader}>
+              <span className={styles.cardFilmName}>{f.name}</span>
+              {f.rating != null && <span className={styles.cardRating}>{f.rating} 分</span>}
+            </div>
+            <div className={styles.cardMeta}>{[f.type, f.duration ? `${f.duration}分钟` : ''].filter(Boolean).join(' · ')}</div>
+            <div className={styles.cardFooter}>
+              {f.director && <span className={styles.cardHall}>{f.director}</span>}
+              {f.releaseDate && <span className={styles.cardSeats}>上映 {f.releaseDate}</span>}
+            </div>
+          </div>
+        </CardSurface>
+        );
+      })}
+    </div>
+  );
+};
+
+/** 影院列表卡片 */
+const CinemaListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
+  const cinemas: any[] = data?.cinemas || [];
+  if (cinemas.length === 0) return <div className={styles.cardWrap}><div className={styles.cardReason}>暂无影院</div></div>;
+  return (
+    <div className={styles.cardWrap}>
+      <div className={styles.cardReason}>为您找到 {cinemas.length} 家影院</div>
+      {cinemas.map((c: any, i: number) => {
+        const path = getItemRoute(c);
+        return (
+        <CardSurface
+          key={c.cinemaId ?? i}
+          path={path}
+          ariaLabel={`查看影院${c.name || ''}场次`}
+          onNavigate={onNavigate}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardFilmName}>{c.name}</span>
+          </div>
+          <div className={styles.cardMeta}>{c.address}</div>
+        </CardSurface>
+        );
+      })}
+    </div>
+  );
+};
+
+/** 场次列表卡片 */
+const ScheduleListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
+  const schedules: any[] = data?.schedules || data?.sessions || [];
+  if (schedules.length === 0) {
+    return <div className={styles.cardWrap}><div className={styles.cardReason}>暂无场次</div></div>;
+  }
+  return (
+    <div className={styles.cardWrap}>
+      <div className={styles.cardReason}>可选场次</div>
+      {schedules.map((s: any, i: number) => {
+        const path = getItemRoute(s);
+        return (
+        <CardSurface
+          key={s.scheduleId ?? i}
+          path={path}
+          ariaLabel={`选择${s.showDate || ''} ${s.startTime || ''}场次`}
+          onNavigate={onNavigate}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardFilmName}>{s.hallName}</span>
+            <span className={styles.cardPrice}>¥{s.price}</span>
+          </div>
+          <div className={styles.cardMeta}>{s.showDate} {s.startTime}{(s.version || s.hallType) ? ` · ${s.version || s.hallType}` : ''}</div>
+          <div className={styles.cardFooter}>
+            {s.availableSeats != null && <span className={styles.cardSeats}>余{s.availableSeats}座</span>}
+          </div>
+        </CardSurface>
+        );
+      })}
+    </div>
+  );
+};
+
+function normalizeSeatRows(data: any): any[][] {
+  if (Array.isArray(data?.seatGrid)) {
+    return data.seatGrid
+      .filter(Array.isArray)
+      .map((row: any[]) => row.filter(isRecord))
+      .filter((row: any[]) => row.length > 0);
+  }
+
+  const legacySeats: any[] = Array.isArray(data?.seats) ? data.seats.filter(isRecord) : [];
+  const rows = new Map<string, any[]>();
+  legacySeats.forEach((seat) => {
+    const row = String(seat.rowNum ?? seat.row ?? '?');
+    if (!rows.has(row)) rows.set(row, []);
+    rows.get(row)!.push(seat);
+  });
+  return Array.from(rows.values()).map((row) => row.sort(
+    (a, b) => Number(a.colNum ?? a.col ?? 0) - Number(b.colNum ?? b.col ?? 0),
+  ));
+}
+
+/** 座位图卡片 */
+const SeatMapCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
+  const rows = normalizeSeatRows(data);
+  if (rows.length === 0) {
+    return <div className={styles.cardWrap}><div className={styles.cardReason}>暂无座位信息</div></div>;
+  }
+
+  const scheduleId = routeId(data?.scheduleId ?? data?.showtimeId);
+  const path = scheduleId ? `/seat/${scheduleId}` : getScheduleSelectionRoute(data);
+
+  return (
+    <div className={styles.cardWrap}>
+      <div className={styles.cardReason}>{data?.hallName ? `${data.hallName}座位图` : '座位图'} · 绿色可选</div>
+      <CardSurface path={path} ariaLabel="打开选座页面" onNavigate={onNavigate} className={styles.seatMapSurface}>
+        <div className={styles.seatMapSummary}>
+          <span>{data?.availableCount != null ? `可选 ${data.availableCount} 座` : '查看实时座位'}</span>
+          {path && <span>点击选座</span>}
+        </div>
+        <div className={styles.seatGridViewport}>
+          <div className={styles.seatGrid}>
+            {rows.map((rowSeats, rowIndex) => {
+              const rowNumber = rowSeats.find((seat) => seat?.rowNum != null || seat?.row != null)?.rowNum
+                ?? rowSeats.find((seat) => seat?.rowNum != null || seat?.row != null)?.row
+                ?? rowIndex + 1;
+              return (
+              <div key={String(rowNumber)} className={styles.seatRow}>
+                <span className={styles.seatRowLabel}>{rowNumber}排</span>
+                {rowSeats.map((s: any, i: number) => {
+                  const status = s.status || 'sold';
+                  const seatClass = status === 'aisle'
+                    ? styles.seatAisle
+                    : status === 'available'
+                      ? styles.seatFree
+                      : status === 'locked'
+                        ? styles.seatLocked
+                        : styles.seatSold;
+                  return (
+                    <span
+                      key={s.seatId ?? `${rowNumber}-${s.colNum ?? s.col ?? i}`}
+                      className={`${styles.seat} ${seatClass}`}
+                      aria-hidden="true"
+                    >
+                      {status === 'aisle' ? '' : s.colNum ?? s.col ?? i + 1}
+                    </span>
+                  );
+                })}
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      </CardSurface>
+    </div>
+  );
+};
+
+/** 订单确认卡片（兼容 order_confirm 与旧 order_detail） */
+const OrderConfirmCard: React.FC<{
+  data: OrderConfirmCardData;
+  onOpenOrder?: (data: OrderConfirmCardData) => void;
+}> = ({ data, onOpenOrder }) => {
+  const expiryMinutes = Math.max(0, Number(data?.expireInMinutes ?? data?.remainingMinutes ?? 15) || 15);
+  const [remainingSeconds, setRemainingSeconds] = useState(Math.round(expiryMinutes * 60));
+
+  useEffect(() => {
+    setRemainingSeconds(Math.round(expiryMinutes * 60));
+    const timer = window.setInterval(() => {
+      setRemainingSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [data?.orderId, expiryMinutes]);
+
+  if (data?.success === false) {
+    return (
+      <div className={styles.cardError} role="alert">
+        {data?.error || data?.message || '订单创建失败，请重新选择座位'}
+      </div>
+    );
+  }
+
+  const showTime = formatOrderTime(data?.showTime || data?.scheduleTime);
+  const seats = Array.isArray(data?.seatLabels) ? data.seatLabels : [];
+  const ticketCount = data?.count ?? seats.length;
+  const expired = remainingSeconds <= 0;
+
+  return (
+    <section className={styles.orderCard} aria-label={`${data?.filmName || '电影票'}订单确认`}>
+      <header className={styles.orderCardHeader}>
+        <div className={styles.orderStatus}>
+          <span className={styles.orderStatusIcon}><CheckCircleFill /></span>
+          <div>
+            <div className={styles.orderStatusTitle}>订单已生成</div>
+            {data?.orderNo && <div className={styles.orderNo}>订单号 {data.orderNo}</div>}
+          </div>
+        </div>
+        <span className={styles.orderPending}>待支付</span>
+      </header>
+
+      <div className={styles.orderCardBody}>
+        <div className={styles.orderFilmRow}>
+          <span className={styles.orderFilmIcon}><MovieOutline /></span>
+          <div className={styles.orderFilmInfo}>
+            <h3>{data?.filmName || '电影票订单'}</h3>
+            <p>{data?.cinemaName || '影院信息待确认'}</p>
+          </div>
+          <div className={styles.orderPrice}><span>¥</span>{formatPrice(data?.totalPrice)}</div>
+        </div>
+
+        <div className={styles.orderDivider} />
+
+        <div className={styles.orderDetails}>
+          <div className={styles.orderDetailRow}>
+            <CalendarOutline />
+            <span>{showTime.date}</span>
+            {showTime.time && <strong>{showTime.time}</strong>}
+          </div>
+          <div className={styles.orderDetailRow}>
+            <LocationOutline />
+            <span>{data?.hallName || '影厅待确认'}</span>
+          </div>
+        </div>
+
+        {seats.length > 0 && (
+          <div className={styles.orderSeats}>
+            <span className={styles.orderSeatsLabel}>座位</span>
+            <div className={styles.orderSeatList}>
+              {seats.map((seat) => <span key={seat} className={styles.orderSeat}>{seat}</span>)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={`${styles.orderCountdown} ${expired ? styles.orderCountdownExpired : ''}`}>
+        <ClockCircleOutline />
+        <span>{expired ? '订单已超时，座位将自动释放' : '请在倒计时内完成支付'}</span>
+        {!expired && <strong aria-label={`剩余 ${formatCountdown(remainingSeconds)}`}>{formatCountdown(remainingSeconds)}</strong>}
+      </div>
+
+      <footer className={styles.orderCardFooter}>
+        <div className={styles.orderSummary}>
+          <span>共 {ticketCount} 张</span>
+          <strong>合计 ¥{formatPrice(data?.totalPrice)}</strong>
+        </div>
+        {data?.orderId && (
+          <button
+            type="button"
+            className={styles.orderAction}
+            onClick={() => onOpenOrder?.(data)}
+            disabled={expired}
+          >
+            <ReceiptOutline />
+            <span>查看订单</span>
+            <RightOutline />
+          </button>
+        )}
+      </footer>
+    </section>
+  );
+};
+
+/** 支付卡片——独立接口取支付宝页面，新窗口打开，不经过 SSE 传大段 HTML */
+const PaymentCard: React.FC<{ data: any }> = ({ data }) => {
+  if (!data?.success) {
+    return <div className={styles.cardError}>{data?.message || '支付异常'}</div>;
+  }
+
+  const orderId = data.orderId;
+  const payUrl = orderId ? `/api/movie-agent/pay-form?orderId=${orderId}` : null;
+
+  const handlePay = () => {
+    if (payUrl) {
+      window.open(payUrl, '_blank', 'width=420,height=600');
+    }
+  };
+
+  return (
+    <div className={styles.cardWrap}>
+      <div className={styles.cardReason}>确认支付</div>
+      <div className={styles.cardItem}>
+        <div className={styles.cardHeader}><span className={styles.cardFilmName}>{data.filmName}</span><span className={styles.cardPrice}>¥{data.totalPrice}</span></div>
+        <div className={styles.cardMeta}>{data.cinemaName} · {data.scheduleTime}</div>
+        <div className={styles.cardFooter}><span className={styles.cardSeats}>{data.seatLabels?.join('、')}</span></div>
+
+        <div className={styles.payActionWrap}>
+          <button type="button" className={styles.payBtn} onClick={handlePay} disabled={!payUrl}>
+            支付宝支付 ¥{data.totalPrice}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** 卡片路由 */
+const ToolResultCard: React.FC<{
+  cardType: string;
+  data: any;
+  onOpenOrder?: (data: OrderConfirmCardData) => void;
+  onNavigate?: CardNavigate;
+}> = ({ cardType, data, onOpenOrder, onNavigate }) => {
+  switch (cardType) {
+    case 'film_list':       return <FilmListCard data={data} onNavigate={onNavigate} />;
+    case 'cinema_list':     return <CinemaListCard data={data} onNavigate={onNavigate} />;
+    case 'schedule_list':   return <ScheduleListCard data={data} onNavigate={onNavigate} />;
+    case 'seat_map':        return <SeatMapCard data={data} onNavigate={onNavigate} />;
+    case 'order_confirm':
+    case 'order_detail':    return <OrderConfirmCard data={data} onOpenOrder={onOpenOrder} />;
+    case 'payment_form':    return <PaymentCard data={data} />;
+    case 'recommendation':  return <RecommendationCard data={data} onNavigate={onNavigate} />;
+    default:                return null;
+  }
+};
+
 // ==================== 组件 ====================
 const AiChat: React.FC = () => {
+  const navigate = useNavigate();
   // —— 面板 & 视图 ——
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
@@ -151,13 +671,18 @@ const AiChat: React.FC = () => {
     try {
       const history = await fetchChatHistory(sid);
       if (history && history.length > 0) {
-        const msgs: Message[] = history.map((h, i) => ({
-          id: i + 1,
-          role: h.messageType === 'user' ? 'user' : 'assistant',
-          content: h.message || '',
-          activeTools: [],
-          streaming: false,
-        }));
+        const msgs: Message[] = history.map((h, i) => {
+          const role = h.messageType === 'user' ? 'user' : 'assistant';
+          const parsedCard = role === 'assistant' ? extractCardFromText(h.message || '') : null;
+          return {
+            id: i + 1,
+            role,
+            content: parsedCard?.text ?? h.message ?? '',
+            activeTools: [],
+            streaming: false,
+            cardData: parsedCard?.card,
+          };
+        });
         setMessages(msgs);
       } else {
         setMessages([{
@@ -294,7 +819,7 @@ const AiChat: React.FC = () => {
     const url = `http://localhost:8123/api/movie-agent/smart-stream?${params.toString()}`;
 
     let fullText = '';
-    let activeToolList: string[] = [];
+    let activeToolList: { key: string; label: string }[] = [];
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -312,7 +837,7 @@ const AiChat: React.FC = () => {
       let buf = '';
       let currentEvent = '';
 
-      while (true) {
+      for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -352,10 +877,14 @@ const AiChat: React.FC = () => {
             try {
               const payload: SSEPayload = JSON.parse(raw);
 
-              // —— 工具调用 ——
+              // —— 工具调用（按 toolName 去重，避免同一工具重复显示） ——
               if (payload.type === 'tool_start') {
                 const toolLabel = payload.d || payload.toolName || '处理中';
-                activeToolList = [...activeToolList, toolLabel];
+                const toolKey = payload.toolName || toolLabel;
+                // 只保留不重复的工具名，同一个工具只显示一次
+                if (!activeToolList.find(t => t.key === toolKey)) {
+                  activeToolList = [...activeToolList, { key: toolKey, label: toolLabel }];
+                }
                 updateAssistant({ activeTools: activeToolList, loading: false, streaming: false });
                 continue;
               }
@@ -373,7 +902,24 @@ const AiChat: React.FC = () => {
               // —— 文本块 ——
               if (activeToolList.length > 0) activeToolList = [];
               fullText += payload.d || '';
-              updateAssistant({ content: fullText, activeTools: [], loading: false, streaming: true, cardData: undefined });
+              const parsedCard = extractCardFromText(fullText);
+              if (parsedCard) {
+                fullText = parsedCard.text;
+                updateAssistant({
+                  content: parsedCard.text,
+                  cardData: parsedCard.card,
+                  activeTools: [],
+                  loading: false,
+                  streaming: true,
+                });
+              } else {
+                updateAssistant({
+                  content: isPendingCardText(fullText) ? '' : fullText,
+                  activeTools: [],
+                  loading: false,
+                  streaming: true,
+                });
+              }
             } catch { /* JSON parse error */ }
           }
         }
@@ -446,6 +992,52 @@ const AiChat: React.FC = () => {
     }
   }, [open, sessionId, loadingHistory]);
 
+  // ==================== 停止生成 ====================
+  const handleStop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setSending(false);
+    setMessages((prev) => {
+      const copy = [...prev];
+      for (let i = copy.length - 1; i >= 0; i--) {
+        if (copy[i].role === 'assistant') {
+          copy[i] = { ...copy[i], streaming: false, loading: false };
+          break;
+        }
+      }
+      return copy;
+    });
+  };
+
+  const handleOpenOrder = useCallback((data: OrderConfirmCardData) => {
+    const orderId = String(data?.orderId ?? '').trim();
+    if (!orderId) {
+      Toast.show({ icon: 'fail', content: '订单编号缺失，暂时无法打开' });
+      return;
+    }
+
+    const cachedOrder = {
+      ...data,
+      id: orderId,
+      scheduleTime: data.scheduleTime || data.showTime,
+      status: data.status || 'pending',
+      createTime: data.createTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    };
+
+    try {
+      sessionStorage.setItem(`order_${orderId}`, JSON.stringify(cachedOrder));
+    } catch {
+      // sessionStorage 不可用时仍允许订单页通过接口加载。
+    }
+    setOpen(false);
+    navigate(`/order-confirm/${encodeURIComponent(orderId)}`);
+  }, [navigate]);
+
+  const handleCardNavigate = useCallback((path: string) => {
+    setOpen(false);
+    navigate(path);
+  }, [navigate]);
+
   // ==================== 快捷发送 ====================
   const handleSend = () => {
     const text = input.trim();
@@ -492,21 +1084,22 @@ const AiChat: React.FC = () => {
     if (msg.role === 'assistant') {
       const hasTools = msg.activeTools.length > 0;
       const hasText = !!msg.content;
-      const showLoading = msg.loading && !hasText && !hasTools;
+      const hasCard = !!msg.cardData?.cardType;
+      const showLoading = msg.loading && !hasText && !hasTools && !hasCard;
       return (
         <div className={styles.msgRow} key={msg.id}>
           <div className={styles.avatar}>🤖</div>
-          <div className={`${styles.bubble} ${styles.bubbleAi}`}>
+          <div className={`${styles.bubble} ${styles.bubbleAi} ${hasCard ? styles.bubbleWithCard : ''}`}>
             {/* 初始 loading：三个点 */}
             {showLoading && (
               <span className={styles.typingDots}><i /><i /><i /></span>
             )}
 
             {/* 工具调用提示（参照 movie-chat-test.html 的 ⏳） */}
-            {hasTools && msg.activeTools.map((toolLabel, idx) => (
-              <div key={idx} className={styles.toolHint}>
+            {hasTools && msg.activeTools.map((tool) => (
+              <div key={tool.key} className={styles.toolHint}>
                 <span className={styles.toolSpinner} />
-                <span>⏳ {toolLabel}</span>
+                <span>⏳ {tool.label}</span>
               </div>
             ))}
 
@@ -518,13 +1111,18 @@ const AiChat: React.FC = () => {
               </div>
             )}
 
-            {/* 推荐卡片 */}
-            {msg.cardData?.cardType === 'recommendation' && (
-              <RecommendationCard data={msg.cardData.data} />
+            {/* 工具结果卡片 */}
+            {msg.cardData?.cardType && (
+              <ToolResultCard
+                cardType={msg.cardData.cardType}
+                data={msg.cardData.data}
+                onOpenOrder={handleOpenOrder}
+                onNavigate={handleCardNavigate}
+              />
             )}
 
             {/* 空状态兜底 */}
-            {!showLoading && !hasTools && !hasText && (
+            {!showLoading && !hasTools && !hasText && !hasCard && (
               <span className={styles.typingDots}><i /><i /><i /></span>
             )}
           </div>
@@ -688,14 +1286,19 @@ const AiChat: React.FC = () => {
                       }
                     }}
                   />
-                  <Button
-                    className={styles.sendBtn}
-                    onClick={handleSend}
-                    disabled={!input.trim() || sending || !sessionId}
-                    loading={sending}
-                  >
-                    发送
-                  </Button>
+                  {sending ? (
+                    <Button className={styles.stopBtn} onClick={handleStop}>
+                      停止
+                    </Button>
+                  ) : (
+                    <Button
+                      className={styles.sendBtn}
+                      onClick={handleSend}
+                      disabled={!input.trim() || !sessionId}
+                    >
+                      发送
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
