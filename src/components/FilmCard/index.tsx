@@ -147,14 +147,27 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
 
   // vertical 模式：淘票票风格竖排卡片（首页用）
   if (variant === 'vertical') {
+    // 顶部标签：想看/已看过/影片类型
+    const topTags: string[] = [];
+    if (isWanted) topTags.push('已想看');
+    if (enriched.formatTags.length > 0) topTags.push(enriched.formatTags[0]);
+    else if (enriched.type) topTags.push(enriched.type);
+
     return (
       <div className={styles.cardVertical} onClick={handleClick}>
         <div className={styles.verticalPoster}>
+          {topTags.length > 0 && (
+            <div className={styles.verticalTagList}>
+              {topTags.slice(0, 2).map(tag => (
+                <span key={tag} className={`${styles.verticalTagItem} ${styles[getTagColor(tag)]}`}>{tag}</span>
+              ))}
+            </div>
+          )}
           <img src={enriched.posterUrl} alt={enriched.name} />
           {enriched.rating > 0 && (
             <div className={styles.verticalScore}>
-              <StarFill className={styles.verticalStar} />
-              <span>{enriched.rating.toFixed(1)}</span>
+              <span className={styles.verticalScoreLabel}>评分</span>
+              <span className={styles.verticalScoreNum}>{enriched.rating.toFixed(1)}</span>
             </div>
           )}
         </div>

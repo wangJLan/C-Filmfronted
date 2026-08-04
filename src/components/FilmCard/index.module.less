@@ -260,17 +260,14 @@
   white-space: nowrap;
 }
 
-/* ===== Vertical ���ſ�Ƭģʽ����ҳ�ã� ===== */
+/* ===== Vertical 竖排卡片模式（首页用） ===== */
 .cardVertical {
   display: flex;
   flex-direction: column;
-  align-items: center;
   background: #fff;
   border-radius: 12px;
-  padding: 12px;
   cursor: pointer;
   transition: transform .15s;
-  box-shadow: 0 2px 8px rgba(0,0,0,.04);
 
   &:active { transform: scale(.98); }
 }
@@ -279,53 +276,82 @@
   position: relative;
   width: 100%;
   aspect-ratio: 3/4;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   overflow: hidden;
-  margin-bottom: 8px;
 
   img { width: 100%; height: 100%; object-fit: cover; }
 }
 
-.verticalScore {
+/* ===== 标签区（海报左上角） ===== */
+.verticalTagList {
   position: absolute;
   top: 6px;
-  right: 6px;
+  left: 6px;
   display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 8px;
-  background: rgba(0,0,0,.6);
-  border-radius: 10px;
-  font-size: 12px;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 2;
+}
+
+.verticalTagItem {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &.tagGray { background: rgba(0, 0, 0, .75); color: #fff; }
+  &.tagRed { background: #FF5A00; color: #fff; }
+  &.tagBlue { background: #1677ff; color: #fff; }
+  &.tagGreen { background: #00b578; color: #fff; }
+}
+
+/* ===== 评分区（海报左下角） ===== */
+.verticalScore {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.verticalScoreLabel {
+  font-size: 10px;
+  color: rgba(255,255,255,.8);
+  font-weight: 500;
+}
+
+.verticalScoreNum {
+  font-size: 14px;
   font-weight: 700;
   color: #FFB800;
 }
 
-.verticalStar { font-size: 10px; color: #FFB800; }
-
+/* ===== 标题和购票按钮 ===== */
 .verticalTitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #1a1a1a;
-  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-  margin-bottom: 10px;
+  padding: 8px 8px 0;
 }
 
 .verticalBuy {
-  width: 100%;
-  padding: 8px 0;
+  width: calc(100% - 16px);
+  margin: 10px auto 12px;
+  padding: 7px 0;
   text-align: center;
   background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
   color: #fff;
-  border-radius: 20px;
-  font-size: 13px;
+  border-radius: 16px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: auto;
 
   &:active { opacity: .85; }
 }
