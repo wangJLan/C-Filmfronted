@@ -213,21 +213,13 @@ const ShowtimePage: React.FC = () => {
     enabled: !!selectedCinemaId,
   });
 
-  // 影院全部排片（用于展示影院所有影片）
+  // 影院当前热映影片（后端新接口 GET /api/schedule/cinema-films）
   const { data: cinemaFilms } = useQuery({
     queryKey: ['cinemaFilms', selectedCinemaId],
     queryFn: async () => {
-      // 1. 从 schedule 表取该影院的所有排片 filmId
-      const all: any[] = await listAll1();
-      const cinemaSchedules = all.filter(s => String(s.cinemaId) === String(selectedCinemaId));
-      if (cinemaSchedules.length === 0) return [];
-      const scheduleFilmIds = new Set(cinemaSchedules.map(s => Number(s.filmId)).filter(Boolean));
-
-      // 2. 从 film 表取所有 status=hot 的影片
-      const hotRes: any = await listFilm({ filmQueryRequest: { status: 'hot', pageSize: 200 } });
-      const hotFilms = (hotRes?.records || []).filter((f: any) => scheduleFilmIds.has(Number(f.id)));
-
-      return hotFilms.map((f: any) => ({
+      const resp: any = await http.get(`/schedule/cinema-films?cinemaId=${selectedCinemaId}`);
+      const arr = Array.isArray(resp) ? resp : (resp?.data ?? []);
+      return arr.map((f: any) => ({
         id: f.id,
         name: f.name || '',
         posterUrl: f.posterUrl || '',
