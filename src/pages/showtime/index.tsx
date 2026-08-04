@@ -507,39 +507,19 @@ const ShowtimePage: React.FC = () => {
     );
   }
 
-  // ===== cinemaOnly 模式：先选影片 =====
+  // ===== cinemaOnly：自动选中第一部影片，跳过选片页 =====
+  useEffect(() => {
+    if (isCinemaOnly && cinemaFilms && cinemaFilms.length > 0 && !selectedFilmId) {
+      setSelectedFilmId(cinemaFilms[0].id);
+    }
+  }, [cinemaFilms, isCinemaOnly, selectedFilmId]);
+
+  // cinemaOnly 模式下没影片或还在加载 → 显示 loading
   if (isCinemaOnly && !selectedFilmId) {
-    const filmIds = [...new Set((scheduleData || []).map(s => s.filmId))].filter(Boolean) as number[];
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选择影片</NavBar>
-        <div className={styles.infoHead}>
-          <div className={styles.cinemaNameText}>{cinema?.name}</div>
-        </div>
-        {!scheduleData ? (
-          <div style={{ textAlign: 'center', padding: 40 }}><SpinLoading color="primary" /></div>
-        ) : filmIds.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>📭</div>
-            <div className={styles.emptyText}>该影院暂无排片</div>
-          </div>
-        ) : (
-          <div className={styles.filmList}>
-            {filmIds.map(fid => {
-              const sch = scheduleData!.find(s => s.filmId === fid)!;
-              return (
-                <div key={fid} className={styles.filmCardRow} onClick={() => { setSelectedFilmId(fid); setActiveDateIdx(0); }}>
-                  <img src={sch.filmPoster} alt={sch.filmName} className={styles.filmCardPoster} />
-                  <div className={styles.filmCardInfo}>
-                    <div className={styles.filmCardTitle}>{sch.filmName}</div>
-                    <div className={styles.filmCardMeta}>⭐ {sch.filmRating} · {sch.filmType}</div>
-                    <div className={styles.filmCardPick}>选场次 ›</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+        <div style={{ textAlign: 'center', padding: 80 }}><SpinLoading color="primary" /></div>
         <SafeArea position="bottom" />
       </div>
     );
