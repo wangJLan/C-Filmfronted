@@ -367,6 +367,13 @@ const ShowtimePage: React.FC = () => {
     Toast.show({ content: '已转交 AI 助手' });
   };
 
+  // ===== cinemaOnly：自动选中第一部影片，跳过选片页 =====
+  useEffect(() => {
+    if (isCinemaOnly && cinemaFilms && cinemaFilms.length > 0 && !selectedFilmId) {
+      setSelectedFilmId(cinemaFilms[0].id);
+    }
+  }, [cinemaFilms, isCinemaOnly, selectedFilmId]);
+
   // ===== filmOnly 模式：先选影院 =====
   if (isFilmOnly && !selectedCinemaId) {
     return (
@@ -506,13 +513,6 @@ const ShowtimePage: React.FC = () => {
       </div>
     );
   }
-
-  // ===== cinemaOnly：自动选中第一部影片，跳过选片页 =====
-  useEffect(() => {
-    if (isCinemaOnly && cinemaFilms && cinemaFilms.length > 0 && !selectedFilmId) {
-      setSelectedFilmId(cinemaFilms[0].id);
-    }
-  }, [cinemaFilms, isCinemaOnly, selectedFilmId]);
 
   // cinemaOnly 模式下没影片或还在加载 → 显示 loading
   if (isCinemaOnly && !selectedFilmId) {
@@ -680,7 +680,10 @@ const ShowtimePage: React.FC = () => {
                         hallType: item.hallType || '',
                         hallName: item.hallName || '',
                         date: dates[activeDateIdx],
+                        filmId: String(selectedFilmId || ''),
                       });
+                      // 把当前影院+日期的场次列表写入 sessionStorage，供选座页底部卡片展示
+                      sessionStorage.setItem('seat_schedules', JSON.stringify(showtimes));
                       navigate(`/seat/${item.id}?${params.toString()}`);
                     }); }}
                   >

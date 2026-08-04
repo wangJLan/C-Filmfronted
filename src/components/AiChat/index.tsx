@@ -126,6 +126,48 @@ const AiChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const handleOpenRef = useRef<() => void>(() => {});
+
+  // —— 悬浮按钮拖拽 ——
+  const [floatPos, setFloatPos] = useState({ x: window.innerWidth - 68, y: window.innerHeight - 210 });
+  const dragState = useRef({ dragging: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
+  const hasDragged = useRef(false);
+
+  const onDragStart = useCallback((clientX: number, clientY: number) => {
+    dragState.current.dragging = true;
+    dragState.current.startX = clientX;
+    dragState.current.startY = clientY;
+    dragState.current.startLeft = floatPos.x;
+    dragState.current.startTop = floatPos.y;
+    hasDragged.current = false;
+  }, [floatPos]);
+
+  const onDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!dragState.current.dragging) return;
+    const dx = clientX - dragState.current.startX;
+    const dy = clientY - dragState.current.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const newX = Math.min(Math.max(dragState.current.startLeft + dx, 0), w - 52);
+    const newY = Math.min(Math.max(dragState.current.startTop + dy, 0), h - 52);
+    setFloatPos({ x: newX, y: newY });
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    dragState.current.dragging = false;
+    if (!hasDragged.current) {
+      // 没有拖拽，是点击 → 打开面板
+      handleOpenRef.current();
+    } else {
+      const w = window.innerWidth;
+      const mid = w / 2;
+      setFloatPos((prev) => ({
+        x: prev.x < mid ? 0 : w - 52,
+        y: prev.y,
+      }));
+    }
+  }, []);
 
   // —— Refs ——
   const listRef = useRef<HTMLDivElement>(null);
@@ -416,7 +458,6 @@ const AiChat: React.FC = () => {
   // ==================== 外部触发 ====================
   const sendRef = useRef(send);
   sendRef.current = send;
-  const handleOpenRef = useRef(handleOpen);
   handleOpenRef.current = handleOpen;
 
   const pendingTriggerRef = useRef<string | null>(null);
@@ -610,10 +651,17 @@ const AiChat: React.FC = () => {
   // ==================== 主渲染 ====================
   return (
     <>
-      {/* ===== 悬浮按钮 ===== */}
+      {/* ===== 可拖拽悬浮按钮 ===== */}
       <div
         className={`${styles.floatBtn} ${open ? styles.floatBtnHidden : ''}`}
-        onClick={handleOpen}
+        style={{ left: floatPos.x, top: floatPos.y }}
+        onMouseDown={(e) => { e.preventDefault(); onDragStart(e.clientX, e.clientY); }}
+        onMouseMove={(e) => { if (dragState.current.dragging) { e.preventDefault(); onDragMove(e.clientX, e.clientY); } }}
+        onMouseUp={onDragEnd}
+        onMouseLeave={() => { if (dragState.current.dragging) onDragEnd(); }}
+        onTouchStart={(e) => { const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }}
+        onTouchMove={(e) => { if (dragState.current.dragging) { e.preventDefault(); const t = e.touches[0]; onDragMove(t.clientX, t.clientY); } }}
+        onTouchEnd={onDragEnd}
       >
         <div className={styles.floatIcon}>🤖</div>
         <div className={styles.floatPulse} />
