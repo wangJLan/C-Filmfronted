@@ -22,6 +22,8 @@ interface FilmCardProps {
     releaseDate?: string;
   };
   variant?: 'list' | 'hero' | 'vertical';
+  /** 竖排卡片模式: 'hot'=热映(购票) | 'upcoming'=即将上映(想看) */
+  mode?: 'hot' | 'upcoming';
   onSelect?: (id: number) => void;
 }
 
@@ -147,34 +149,49 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
 
   // vertical 模式：淘票票风格竖排卡片（首页用）
   if (variant === 'vertical') {
-    // 顶部标签：想看/已看过/影片类型
+    const isUpcoming = onSelect === undefined ? (enriched.rating <= 0) : false;
+    // 顶部标签
     const topTags: string[] = [];
     if (isWanted) topTags.push('已想看');
-    if (enriched.formatTags.length > 0) topTags.push(enriched.formatTags[0]);
-    else if (enriched.type) topTags.push(enriched.type);
+    const formatTags = enriched.formatTags.length > 0 ? enriched.formatTags : (enriched.type ? [enriched.type] : []);
+    if (formatTags.length > 0) topTags.push(formatTags[0]);
 
     return (
       <div className={styles.cardVertical} onClick={handleClick}>
         <div className={styles.verticalPoster}>
           {topTags.length > 0 && (
             <div className={styles.verticalTagList}>
-              {topTags.slice(0, 2).map(tag => (
+              {topTags.map(tag => (
                 <span key={tag} className={`${styles.verticalTagItem} ${styles[getTagColor(tag)]}`}>{tag}</span>
               ))}
             </div>
           )}
           <img src={enriched.posterUrl} alt={enriched.name} />
-          {enriched.rating > 0 && (
-            <div className={styles.verticalScore}>
-              <span className={styles.verticalScoreLabel}>评分</span>
-              <span className={styles.verticalScoreNum}>{enriched.rating.toFixed(1)}</span>
-            </div>
-          )}
+          <div className={styles.verticalScore}>
+            {enriched.rating > 0 ? (
+              <>
+                <span className={styles.verticalScoreLabel}>评分</span>
+                <span className={styles.verticalScoreNum}>{enriched.rating.toFixed(1)}</span>
+              </>
+            ) : (
+              <>
+                <span className={styles.verticalScoreNum}>--</span>
+                <span className={styles.verticalScoreLabel}>人想看</span>
+              </>
+            )}
+          </div>
         </div>
         <span className={styles.verticalTitle}>{enriched.name}</span>
-        <div className={styles.verticalBuy} onClick={(e) => { e.stopPropagation(); guard(() => navigate(`/showtime/film/${enriched.id}`)); }}>
-          <span>购票</span>
+        {enriched.rating <= 0 && <span className={styles.verticalDate}>{enriched.releaseDate}上映</span>}
+        <div
+          className={`${styles.verticalBtn} ${enriched.rating > 0 ? styles.verticalBtnBuy : styles.verticalBtnWant}`}
+          onClick={(e) => { e.stopPropagation(); guard(() => navigate(`/detail/${enriched.id}`)); }}
+        >
+          <span>{enriched.rating > 0 ? '购票' : '想看'}</span>
         </div>
+      </div>
+    );
+  }
       </div>
     );
   }

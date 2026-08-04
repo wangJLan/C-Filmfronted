@@ -341,17 +341,32 @@
   padding: 8px 8px 0;
 }
 
-.verticalBuy {
+.verticalDate {
+  font-size: 11px;
+  color: #999;
+  padding: 2px 8px 0;
+  white-space: nowrap;
+}
+
+.verticalBtn {
   width: calc(100% - 16px);
   margin: 10px auto 12px;
   padding: 7px 0;
   text-align: center;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-  color: #fff;
   border-radius: 16px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 
   &:active { opacity: .85; }
+}
+
+.verticalBtnBuy {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: #fff;
+}
+
+.verticalBtnWant {
+  background: linear-gradient(135deg, #FFB800, #FF9500);
+  color: #fff;
 }
