@@ -156,34 +156,33 @@ const ShowtimePage: React.FC = () => {
     enabled: !!selectedFilmId,
   });
 
-  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))], [scheduleData]);
-
-  // 影院详情（真实数据，按当前城市过滤）
-  const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
-    queryKey: ['cinemas', cinemaIds, cityName],
-    queryFn: async () => {
-      const results: { id: number; name: string; address: string; tags: string; city: string }[] = [];
-      for (const cId of cinemaIds.slice(0, 20)) {
-        try {
-          const c = await http.get(`/cinema/getInfo/${cId}`) as any;
-          results.push({
-            id: Number(c.id),
-            name: c.name || '',
-            address: c.address || '',
-            tags: c.tags || '',
-            city: c.city || '未知',
-          });
-        } catch { /* skip */ }
+  // 电影院列表 — 从排片 ScheduleVO 中直接提取影院名和地址，不另调 API
+  const cinemasAggregated = useMemo(() => {
+    if (!scheduleData) return [];
+    const map = new Map<string, { id: number|string; name: string; address: string; tags: string[] }>();
+    scheduleData.forEach(s => {
+      const key = String(s.cinemaId || '');
+      if (!map.has(key)) {
+        map.set(key, {
+          id: s.cinemaId,
+          name: s.cinemaName || '',
+          address: s.cinemaAddress || '',
+          tags: s.hallType ? [s.hallType] : [],
+        });
+      } else {
+        const existing = map.get(key)!;
+        const hallType = s.hallType || '';
+        if (hallType && !existing.tags.includes(hallType)) {
+          existing.tags.push(hallType);
+        }
       }
-      return results;
-    },
-    enabled: cinemaIds.length > 0,
-  });
+    });
+    return Array.from(map.values());
+  }, [scheduleData]);
 
-  // 电影院列表 — 全部展示，不过滤城市
-  const cityFilteredCinemas = cinemasRaw;
+  const cityFilteredCinemas = cinemasAggregated;
 
-  const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
+  const cinemasReady = !scheduleLoading;
 
   // 当前选中影院（扩展 Mock 字段）
   const { data: cinema } = useQuery({
