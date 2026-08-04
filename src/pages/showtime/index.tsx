@@ -76,13 +76,6 @@ const MOCK_SNACKS = [
 ];
 
 // 新人价 / 原价 辅助函数
-function calcNewPrice(basePrice: number): number {
-  return Math.max(19, basePrice - 7);
-}
-
-function calcOriginPrice(basePrice: number): number {
-  return basePrice + 15;
-}
 
 // 为数据库影院补充的 Mock 字段
 interface EnrichedCinema {
@@ -468,7 +461,7 @@ const ShowtimePage: React.FC = () => {
                   <div className={styles.cinemaHeader}>
                     <div className={styles.cinemaTitle}>{c.name}</div>
                     <div className={styles.cinemaPrice}>
-                      新人<span className={styles.priceSymbol}>¥</span>
+                      <span className={styles.priceSymbol}>¥</span>
                       <span className={styles.priceValue}>{c.minPrice}</span>
                       <span className={styles.priceSuffix}>起</span>
                     </div>
@@ -698,9 +691,7 @@ const ShowtimePage: React.FC = () => {
             ) : (
               showtimes.map(item => {
                 const isSoldOut = item.status === 'soldOut';
-                const basePrice = Number(item.price);
-                const newPrice = calcNewPrice(basePrice);
-                const originPrice = calcOriginPrice(basePrice);
+                const realPrice = Number(item.price);
                 const endTime = String(item.endTime || '').substring(0, 5);
                 const hallType = item.hallType || '2D';
                 return (
@@ -736,10 +727,8 @@ const ShowtimePage: React.FC = () => {
                       {!isSoldOut ? (
                         <>
                           <div className={styles.newPriceRow}>
-                            <span className={styles.newPriceLabel}>新人价</span>
-                            <span className={styles.newPriceValue}>¥{newPrice}</span>
+                            <span className={styles.newPriceValue}>¥{realPrice}</span>
                           </div>
-                          <div className={styles.originPrice}>影城专享 ¥{originPrice}起</div>
                           <div className={styles.buyNewBtn}>购票</div>
                         </>
                       ) : (
