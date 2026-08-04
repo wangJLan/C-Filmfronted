@@ -156,7 +156,7 @@ const ShowtimePage: React.FC = () => {
     enabled: !!selectedFilmId,
   });
 
-  const cinemaIds: number[] = useMemo(() => [...new Set((scheduleData || []).map(s => Number(s.cinemaId)))].filter(id => id > 0), [scheduleData]);
+  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))], [scheduleData]);
 
   // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
