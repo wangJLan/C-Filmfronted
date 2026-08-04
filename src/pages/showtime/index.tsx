@@ -93,7 +93,7 @@ interface EnrichedCinema {
 }
 
 // 根据 cinemaId 生成稳定的 Mock 补充数据
-function enrichCinema(id: number, name: string, address: string, tags: string, showtimes: API.ScheduleVO[]): EnrichedCinema {
+function enrichCinema(id: number, name: string, address: string, tagsOrArr: string | string[], showtimes: API.ScheduleVO[]): EnrichedCinema {
   const minPrice = showtimes.length > 0
     ? Math.min(...showtimes.map(s => Number(s.price)))
     : 30 + (id % 20);
@@ -107,7 +107,7 @@ function enrichCinema(id: number, name: string, address: string, tags: string, s
     address,
     distance: `${(1.5 + (id % 10) * 0.8).toFixed(1)}km`,
     minPrice,
-    tags: tags ? tags.split(',').filter(Boolean) : [],
+    tags: Array.isArray(tagsOrArr) ? tagsOrArr : (tagsOrArr ? tagsOrArr.split(',').filter(Boolean) : []),
     services: sortTags(['退票', '改签', '观影小食', ...(id % 3 === 0 ? ['影城卡'] : []), ...(id % 4 === 0 ? ['券包·4.5折起'] : [])]),
     halls: sortTags(showtimes.length > 0
       ? [...new Set(showtimes.map(s => s.hallType || ''))].filter(Boolean)
