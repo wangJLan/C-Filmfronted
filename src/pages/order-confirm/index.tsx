@@ -3,9 +3,9 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'umi';
-import { NavBar, SafeArea } from 'antd-mobile';
+import { NavBar, SafeArea, Toast } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { getOrderDetail } from '@/api/orderController';
+import { getOrderDetail, cancelOrder } from '@/api/orderController';
 import styles from './index.module.less';
 
 const LOCK_DURATION = 15 * 60;
@@ -14,6 +14,12 @@ function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function formatPrice(value?: number | string): string {
+  const price = Number(value);
+  if (!Number.isFinite(price)) return '--';
+  return price.toFixed(2);
 }
 
 function loadFromCache(oid: string): API.OrderVO | null {
@@ -26,42 +32,96 @@ const OrderConfirmPage: React.FC = () => {
   const oid = orderId!;
 
   const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
+  const [loading, setLoading] = useState(!order);
   const [remainSec, setRemainSec] = useState(LOCK_DURATION);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!oid) return;
-    getOrderDetail({ id: oid }).then((o: any) => {
+    setLoading(true);
+    getOrderDetail({ id: Number(oid) }).then((o: any) => {
       const vo = o?.data ?? o;
       setOrder(vo);
-      sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo));
-    }).catch(() => {});
+      try { sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo)); } catch {}
+    }).catch((err: any) => {
+      console.error('[OrderConfirm] 加载订单失败:', err);
+      if (!order) {
+        Toast.show({ icon: 'fail', content: '订单加载失败，请返回重试' });
+      }
+    }).finally(() => {
+      setLoading(false);
+    });
   }, [oid]);
 
   useEffect(() => {
-    const created = order?.createTime ? new Date(order.createTime).getTime() : Date.now();
-    const remaining = Math.max(0, LOCK_DURATION - Math.floor((Date.now() - created) / 1000));
+    if (!order) return;
+    // 优先使用 createTime，否则从 expireAt 反推，最后回退到当前时间
+    let created: number;
+    if (order.createTime) {
+      created = new Date(order.createTime).getTime();
+    } else if (order.expireAt) {
+      created = new Date(order.expireAt).getTime() - LOCK_DURATION * 1000;
+    } else {
+      created = Date.now();
+    }
+    const validCreated = Number.isNaN(created) ? Date.now() : created;
+    const remaining = Math.max(0, LOCK_DURATION - Math.floor((Date.now() - validCreated) / 1000));
     setRemainSec(remaining);
     if (remaining <= 0) return;
     const timer = setInterval(() => {
       setRemainSec(prev => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; });
     }, 1000);
     return () => clearInterval(timer);
-  }, [order?.createTime]);
+  }, [order?.createTime, order?.expireAt]);
 
   const scheduleTime = useMemo(() => {
     if (!order) return '';
-    const time = order.scheduleTime || '';
-    return time;
+    return order.scheduleTime || '';
   }, [order]);
 
+  const handlePay = () => {
+    sessionStorage.setItem(`order_${oid}`, JSON.stringify(order));
+    navigate(`/payment/${oid}`);
+  };
+
+  const handleCancelOrder = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      const numericId = Number(oid);
+      await cancelOrder({ id: numericId });
+      Toast.show({ icon: 'success', content: '订单已取消' });
+      sessionStorage.removeItem(`order_${oid}`);
+      navigate('/', { replace: true });
+    } catch (err: any) {
+      Toast.show({ icon: 'fail', content: err?.message || '取消订单失败' });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单详情</NavBar>
+        <div className={styles.empty}>加载中...</div>
+      </div>
+    );
+  }
+
   if (!order) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />} /><div className={styles.empty}>订单数据丢失</div></div>;
+    return (
+      <div className={styles.page}>
+        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
+        <div className={styles.empty}>订单数据丢失</div>
+      </div>
+    );
   }
 
   if (remainSec <= 0 || order.status === 'cancelled') {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate('/')} back={<LeftOutline />} />
+        <NavBar onBack={() => navigate('/')} back={<LeftOutline />}>订单确认</NavBar>
         <div className={styles.expiredContainer}>
           <div className={styles.expiredIcon}>⏰</div>
           <div className={styles.expiredTitle}>订单已超时</div>
@@ -72,9 +132,11 @@ const OrderConfirmPage: React.FC = () => {
     );
   }
 
+  const totalPrice = order.totalPrice;
+
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav} />
+      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>订单确认</NavBar>
 
       {/* ===== 票务信息头部 ===== */}
       <div className={styles.header}>
@@ -96,7 +158,7 @@ const OrderConfirmPage: React.FC = () => {
             <div className={styles.infoLine}>{scheduleTime}</div>
             <div className={styles.infoLine}>{order.hallName || ''} {order.seatLabels?.join(' ')}</div>
             <div className={styles.infoLine}>{order.cinemaName || ''}</div>
-            <div className={styles.infoLine}>共{order.count || 0}张 原价 ¥{order.totalPrice || 0}</div>
+            <div className={styles.infoLine}>共{order.count || 0}张 原价 ¥{formatPrice(totalPrice)}</div>
           </div>
         </div>
 
@@ -189,6 +251,16 @@ const OrderConfirmPage: React.FC = () => {
         </div>
       </div>
 
+      {/* ===== 取消订单按钮 ===== */}
+      <div className={styles.card}>
+        <div
+          className={styles.cancelBtn}
+          onClick={handleCancelOrder}
+        >
+          {cancelling ? '取消中...' : '取消订单'}
+        </div>
+      </div>
+
       <div className={styles.bottomSpacer} />
 
       {/* ===== 底部付款栏 ===== */}
@@ -198,20 +270,14 @@ const OrderConfirmPage: React.FC = () => {
           <div className={styles.priceCol}>
             <div className={styles.totalRow}>
               <span className={styles.totalLabel}>合计：</span>
-              <span className={styles.totalPrice}><span className={styles.yen}>¥</span>{order.totalPrice || 0}</span>
+              <span className={styles.totalPrice}><span className={styles.yen}>¥</span>{formatPrice(totalPrice)}</span>
             </div>
             <div className={styles.detailBtn}>
               <span>查看明细</span>
               <svg viewBox="0 0 96 96" fill="#f8289c" width="12" height="12"><path d="M50 37.9c-.1-.2-.3-.3-.5-.5-1.1-.8-2.6-.6-3.4.5L32.5 55.2c-.3.4-.5.9-.5 1.4 0 1.3 1.1 2.4 2.5 2.4h27.1c.5 0 1.1-.2 1.5-.5 1.1-.8 1.3-2.3.5-3.3L50 37.9z"/></svg>
             </div>
           </div>
-          <div
-            className={styles.payBtn}
-            onClick={() => {
-              sessionStorage.setItem(`order_${oid}`, JSON.stringify(order));
-              navigate(`/payment/${oid}`);
-            }}
-          >
+          <div className={styles.payBtn} onClick={handlePay}>
             立即付款
           </div>
         </div>

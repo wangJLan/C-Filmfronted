@@ -62,6 +62,9 @@ interface OrderConfirmCardData {
   message?: string;
   orderId?: string | number;
   orderNo?: string;
+  filmId?: string | number;
+  cinemaId?: string | number;
+  scheduleId?: string | number;
   filmName?: string;
   cinemaName?: string;
   hallName?: string;
@@ -72,6 +75,7 @@ interface OrderConfirmCardData {
   totalPrice?: number | string;
   expireInMinutes?: number;
   remainingMinutes?: number;
+  expireAt?: string;
   status?: string;
   createTime?: string;
 }
@@ -274,6 +278,7 @@ const RecommendationCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = (
       <div className={styles.cardReason}>{data?.reason || '为您找到以下备选方案：'}</div>
       {alternatives.map((item: any, idx: number) => {
         const path = getItemRoute(item);
+        const hasSchedule = !!(item.scheduleId || item.showtimeId);
         return (
         <CardSurface
           key={item.scheduleId ?? item.filmId ?? item.cinemaId ?? idx}
@@ -291,6 +296,17 @@ const RecommendationCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = (
             <span className={styles.cardPrice}>¥{item.price}</span>
             <span className={styles.cardSeats}>余{item.availableSeats}座</span>
           </div>
+          {path && onNavigate && (
+            <div className={styles.cardActionRow}>
+              <button
+                type="button"
+                className={styles.cardActionBtn}
+                onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
+              >
+                {hasSchedule ? '选座购票' : '查看详情'}
+              </button>
+            </div>
+          )}
         </CardSurface>
         );
       })}
@@ -326,6 +342,17 @@ const FilmListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data
               {f.director && <span className={styles.cardHall}>{f.director}</span>}
               {f.releaseDate && <span className={styles.cardSeats}>上映 {f.releaseDate}</span>}
             </div>
+            {path && onNavigate && (
+              <div className={styles.cardActionRow}>
+                <button
+                  type="button"
+                  className={styles.cardActionBtn}
+                  onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
+                >
+                  查看详情
+                </button>
+              </div>
+            )}
           </div>
         </CardSurface>
         );
@@ -354,6 +381,17 @@ const CinemaListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ da
             <span className={styles.cardFilmName}>{c.name}</span>
           </div>
           <div className={styles.cardMeta}>{c.address}</div>
+          {path && onNavigate && (
+            <div className={styles.cardActionRow}>
+              <button
+                type="button"
+                className={styles.cardActionBtn}
+                onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
+              >
+                查看场次
+              </button>
+            </div>
+          )}
         </CardSurface>
         );
       })}
@@ -387,6 +425,17 @@ const ScheduleListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ 
           <div className={styles.cardFooter}>
             {s.availableSeats != null && <span className={styles.cardSeats}>余{s.availableSeats}座</span>}
           </div>
+          {path && onNavigate && (
+            <div className={styles.cardActionRow}>
+              <button
+                type="button"
+                className={styles.cardActionBtn}
+                onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
+              >
+                选座购票
+              </button>
+            </div>
+          )}
         </CardSurface>
         );
       })}
@@ -430,7 +479,6 @@ const SeatMapCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data,
       <CardSurface path={path} ariaLabel="打开选座页面" onNavigate={onNavigate} className={styles.seatMapSurface}>
         <div className={styles.seatMapSummary}>
           <span>{data?.availableCount != null ? `可选 ${data.availableCount} 座` : '查看实时座位'}</span>
-          {path && <span>点击选座</span>}
         </div>
         <div className={styles.seatGridViewport}>
           <div className={styles.seatGrid}>
@@ -465,6 +513,17 @@ const SeatMapCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data,
             })}
           </div>
         </div>
+        {path && onNavigate && (
+          <div className={styles.cardActionRow}>
+            <button
+              type="button"
+              className={styles.cardActionBtn}
+              onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
+            >
+              去选座
+            </button>
+          </div>
+        )}
       </CardSurface>
     </div>
   );
@@ -474,7 +533,8 @@ const SeatMapCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data,
 const OrderConfirmCard: React.FC<{
   data: OrderConfirmCardData;
   onOpenOrder?: (data: OrderConfirmCardData) => void;
-}> = ({ data, onOpenOrder }) => {
+  onNavigate?: CardNavigate;
+}> = ({ data, onOpenOrder, onNavigate }) => {
   const expiryMinutes = Math.max(0, Number(data?.expireInMinutes ?? data?.remainingMinutes ?? 15) || 15);
   const [remainingSeconds, setRemainingSeconds] = useState(Math.round(expiryMinutes * 60));
 
@@ -487,9 +547,37 @@ const OrderConfirmCard: React.FC<{
   }, [data?.orderId, expiryMinutes]);
 
   if (data?.success === false) {
+    const errorMsg = data?.error || data?.message || '订单创建失败，请重新选择座位';
+    const filmId = routeId(data?.filmId as any);
+    const cinemaId = routeId(data?.cinemaId as any);
+    const scheduleId = routeId(data?.scheduleId as any);
+    // 根据错误类型和已有信息生成跳转路径，兜底也有按钮
+    let actionPath: string;
+    let actionLabel: string;
+    if (errorMsg.includes('场次')) {
+      if (filmId && cinemaId) { actionPath = `/showtime/${filmId}/${cinemaId}`; actionLabel = '去选场次'; }
+      else if (filmId) { actionPath = `/showtime/film/${filmId}`; actionLabel = '去选场次'; }
+      else { actionPath = '/'; actionLabel = '去选电影'; }
+    } else if (errorMsg.includes('座位')) {
+      if (scheduleId) { actionPath = `/seat/${scheduleId}`; actionLabel = '去选座位'; }
+      else { actionPath = '/'; actionLabel = '去选场次'; }
+    } else {
+      actionPath = '/'; actionLabel = '重新开始';
+    }
     return (
       <div className={styles.cardError} role="alert">
-        {data?.error || data?.message || '订单创建失败，请重新选择座位'}
+        <div className={styles.cardErrorText}>{errorMsg}</div>
+        <div className={styles.cardErrorActions}>
+          <button className={styles.cardActionBtn} onClick={() => onNavigate?.(actionPath)}>
+            {actionLabel}
+          </button>
+          <button className={styles.cardActionBtnSecondary} onClick={() => {
+            const input = document.querySelector('textarea') as HTMLTextAreaElement;
+            if (input) { input.focus(); }
+          }}>
+            在对话中描述需求
+          </button>
+        </div>
       </div>
     );
   }
@@ -574,18 +662,18 @@ const OrderConfirmCard: React.FC<{
   );
 };
 
-/** 支付卡片——独立接口取支付宝页面，新窗口打开，不经过 SSE 传大段 HTML */
-const PaymentCard: React.FC<{ data: any }> = ({ data }) => {
+/** 支付卡片 */
+const PaymentCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
   if (!data?.success) {
     return <div className={styles.cardError}>{data?.message || '支付异常'}</div>;
   }
 
   const orderId = data.orderId;
-  const payUrl = orderId ? `/api/movie-agent/pay-form?orderId=${orderId}` : null;
+  const disabled = !orderId;
 
   const handlePay = () => {
-    if (payUrl) {
-      window.open(payUrl, '_blank', 'width=420,height=600');
+    if (orderId) {
+      onNavigate?.(`/payment/${encodeURIComponent(String(orderId))}`);
     }
   };
 
@@ -598,12 +686,132 @@ const PaymentCard: React.FC<{ data: any }> = ({ data }) => {
         <div className={styles.cardFooter}><span className={styles.cardSeats}>{data.seatLabels?.join('、')}</span></div>
 
         <div className={styles.payActionWrap}>
-          <button type="button" className={styles.payBtn} onClick={handlePay} disabled={!payUrl}>
-            支付宝支付 ¥{data.totalPrice}
+          <button type="button" className={styles.payBtn} onClick={handlePay} disabled={disabled}>
+            立即支付 ¥{data.totalPrice}
           </button>
         </div>
       </div>
     </div>
+  );
+};
+
+/** 座位替代方案卡片 —— 锁座失败时展示可选替代座位 */
+const SeatAlternativesCard: React.FC<{ data: any }> = ({ data }) => {
+  const conflictSeats: any[] = data?.conflictSeats || [];
+  const alternatives: any[] = data?.alternatives || [];
+  const conflictLabels = conflictSeats.map((s: any) => s.seatLabel).filter(Boolean).join('、');
+
+  // 按排分组
+  const grouped: Record<string, any[]> = {};
+  alternatives.forEach((s: any) => {
+    const row = String(s.seatLabel || '').match(/(\d+)排/)?.[1] || '?';
+    if (!grouped[row]) grouped[row] = [];
+    grouped[row].push(s);
+  });
+
+  const handleSelect = (seatLabel: string, seatId: number) => {
+    const triggerMsg = `选 ${seatLabel}`;
+    useAiStore.getState().triggerAi(triggerMsg);
+  };
+
+  if (alternatives.length === 0) {
+    return (
+      <div className={styles.cardWrap}>
+        <div className={styles.cardReason}>{data?.message || '座位已被占用'}</div>
+        {conflictLabels && (
+          <div className={styles.cardMeta}>冲突座位：{conflictLabels}</div>
+        )}
+        <div className={styles.cardMeta}>该场次暂无可用替代座位，建议更换场次</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.cardWrap}>
+      <div className={styles.cardReason}>
+        {data?.message || `${conflictLabels || '所选座位'} 已被占用，为您推荐替代方案：`}
+      </div>
+      <div className={styles.altList}>
+        {Object.entries(grouped).map(([row, rowSeats], gi) => {
+          // 每排取连续2个座位作为方案
+          const plans: { label: string; seats: any[] }[] = [];
+          for (let i = 0; i < rowSeats.length - 1; i++) {
+            plans.push({
+              label: `${String.fromCharCode(65 + plans.length)}`,
+              seats: [rowSeats[i], rowSeats[i + 1]],
+            });
+            if (plans.length >= 3) break; // 最多3个方案
+          }
+          if (plans.length === 0 && rowSeats.length === 1) {
+            plans.push({ label: `${String.fromCharCode(65)}`, seats: [rowSeats[0]] });
+          }
+
+          return (
+            <div key={row} className={styles.altGroup}>
+              <div className={styles.altGroupTitle}>{row}排可选方案</div>
+              {plans.map((plan) => (
+                <button
+                  key={plan.label}
+                  type="button"
+                  className={styles.altPlanCard}
+                  onClick={() => {
+                    const labels = plan.seats.map((s: any) => s.seatLabel).join(' + ');
+                    const ids = plan.seats.map((s: any) => s.seatId);
+                    useAiStore.getState().triggerAi(`帮我选 ${labels}`);
+                  }}
+                >
+                  <span className={styles.altPlanBadge}>方案{plan.label}</span>
+                  <span className={styles.altPlanSeats}>
+                    {plan.seats.map((s: any) => s.seatLabel).join(' + ')}
+                  </span>
+                  <span className={styles.altPlanZone}>
+                    {plan.seats[0]?.zone === 'vip' ? 'VIP区' : '普通区'}
+                  </span>
+                  <RightOutline className={styles.altPlanArrow} />
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <div className={styles.cardMeta} style={{ marginTop: 8 }}>点击方案即可快速选择，也可以告诉我其他偏好～</div>
+    </div>
+  );
+};
+
+/** 座位锁定确认卡片 */
+const SeatsConfirmedCard: React.FC<{ data: any }> = ({ data }) => {
+  const lockedSeats: string[] = data?.lockedSeats || [];
+  const totalPrice = data?.totalPrice;
+  const count = data?.count || lockedSeats.length;
+
+  return (
+    <section className={styles.seatsConfirmedCard}>
+      <div className={styles.seatsConfirmedHeader}>
+        <CheckCircleFill className={styles.seatsConfirmedIcon} />
+        <span>座位已锁定</span>
+      </div>
+      <div className={styles.seatsConfirmedBody}>
+        <div className={styles.seatsConfirmedRow}>
+          <span className={styles.seatsConfirmedLabel}>座位</span>
+          <div className={styles.orderSeatList}>
+            {lockedSeats.map((s) => (
+              <span key={s} className={styles.orderSeat}>{s}</span>
+            ))}
+          </div>
+        </div>
+        <div className={styles.seatsConfirmedRow}>
+          <span className={styles.seatsConfirmedLabel}>数量</span>
+          <span>{count} 张</span>
+        </div>
+        {totalPrice != null && (
+          <div className={styles.seatsConfirmedRow}>
+            <span className={styles.seatsConfirmedLabel}>票价</span>
+            <strong>¥{formatPrice(totalPrice)}</strong>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 
@@ -615,15 +823,17 @@ const ToolResultCard: React.FC<{
   onNavigate?: CardNavigate;
 }> = ({ cardType, data, onOpenOrder, onNavigate }) => {
   switch (cardType) {
-    case 'film_list':       return <FilmListCard data={data} onNavigate={onNavigate} />;
-    case 'cinema_list':     return <CinemaListCard data={data} onNavigate={onNavigate} />;
-    case 'schedule_list':   return <ScheduleListCard data={data} onNavigate={onNavigate} />;
-    case 'seat_map':        return <SeatMapCard data={data} onNavigate={onNavigate} />;
+    case 'film_list':         return <FilmListCard data={data} onNavigate={onNavigate} />;
+    case 'cinema_list':       return <CinemaListCard data={data} onNavigate={onNavigate} />;
+    case 'schedule_list':     return <ScheduleListCard data={data} onNavigate={onNavigate} />;
+    case 'seat_map':          return <SeatMapCard data={data} onNavigate={onNavigate} />;
+    case 'seat_alternatives': return <SeatAlternativesCard data={data} />;
+    case 'seats_confirmed':   return <SeatsConfirmedCard data={data} />;
     case 'order_confirm':
-    case 'order_detail':    return <OrderConfirmCard data={data} onOpenOrder={onOpenOrder} />;
-    case 'payment_form':    return <PaymentCard data={data} />;
-    case 'recommendation':  return <RecommendationCard data={data} onNavigate={onNavigate} />;
-    default:                return null;
+    case 'order_detail':      return <OrderConfirmCard data={data} onOpenOrder={onOpenOrder} onNavigate={onNavigate} />;
+    case 'payment_form':      return <PaymentCard data={data} onNavigate={onNavigate} />;
+    case 'recommendation':    return <RecommendationCard data={data} onNavigate={onNavigate} />;
+    default:                  return null;
   }
 };
 
@@ -1006,13 +1216,28 @@ const AiChat: React.FC = () => {
   sendRef.current = send;
   handleOpenRef.current = handleOpen;
 
+  // Refs to track current state for the subscription callback (which runs in a stale closure)
+  const openRef = useRef(open);
+  openRef.current = open;
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
+  const loadingHistoryRef = useRef(loadingHistory);
+  loadingHistoryRef.current = loadingHistory;
+
   const pendingTriggerRef = useRef<string | null>(null);
   useEffect(() => {
     const unsub = useAiStore.subscribe((state) => {
       if (state.pendingMessage) {
-        pendingTriggerRef.current = state.pendingMessage;
+        const msg = state.pendingMessage;
         useAiStore.getState().consumeMessage();
-        handleOpenRef.current();
+        // 如果面板已打开且会话就绪 → 直接发送
+        if (openRef.current && sessionIdRef.current && !loadingHistoryRef.current) {
+          setTimeout(() => sendRef.current?.(msg), 300);
+        } else {
+          // 面板未打开 → 先打开面板
+          pendingTriggerRef.current = msg;
+          handleOpenRef.current();
+        }
       }
     });
     return unsub;
@@ -1057,18 +1282,38 @@ const AiChat: React.FC = () => {
       return;
     }
 
+    // 从 expireAt 反推 createTime
+    let createTime: string | undefined = data.createTime;
+    if (!createTime && data.expireAt) {
+      const expireDate = dayjs(data.expireAt);
+      if (expireDate.isValid()) {
+        createTime = expireDate.subtract(data.expireInMinutes ?? data.remainingMinutes ?? 15, 'minute').format('YYYY-MM-DD HH:mm:ss');
+      }
+    }
+    if (!createTime) {
+      createTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    }
+
+    // 构建 OrderVO 兼容结构（字段名和类型与后端 OrderVO 对齐）
     const cachedOrder = {
-      ...data,
-      id: orderId,
-      scheduleTime: data.scheduleTime || data.showTime,
-      status: data.status || 'pending',
-      createTime: data.createTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      id: Number(orderId),
+      orderNo: data.orderNo || '',
+      filmName: data.filmName || '',
+      cinemaName: data.cinemaName || '',
+      hallName: data.hallName || '',
+      scheduleTime: data.scheduleTime || data.showTime || '',
+      seatLabels: Array.isArray(data.seatLabels) ? data.seatLabels : [],
+      count: Number(data.count) || 0,
+      totalPrice: Number(data.totalPrice) || 0,
+      expireAt: data.expireAt || '',
+      createTime,
+      status: 'pending',
     };
 
     try {
       sessionStorage.setItem(`order_${orderId}`, JSON.stringify(cachedOrder));
     } catch {
-      // sessionStorage 不可用时仍允许订单页通过接口加载。
+      // sessionStorage 不可用时仍允许订单页通过接口加载
     }
     setOpen(false);
     navigate(`/order-confirm/${encodeURIComponent(orderId)}`);

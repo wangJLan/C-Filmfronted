@@ -11,6 +11,7 @@ import { createOrder } from '@/api/orderController';
 import { listSchedule } from '@/api/scheduleController';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
+import { useAiStore } from '@/stores/useAiStore';
 import styles from './index.module.less';
 
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -39,6 +40,7 @@ const SeatPage: React.FC = () => {
   const navigate = useNavigate();
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
+  const userId = useUserStore((s) => s.user?.id);
   const sid = Number(showtimeId);
 
   const { filmName, filmDuration, filmType, startTime, endTime, hallType, hallName, date } =
@@ -138,6 +140,14 @@ const SeatPage: React.FC = () => {
     try {
       const order = await createOrder({ scheduleId: sid, seatIds: Array.from(selectedIds) });
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
+      // ★ 同步通知 AI：标记座位已锁定 & 订单已创建，AI 面板下次打开时自动感知
+      const seatLabels = Array.from(selectedIds).map(id => {
+        const s = seats.find(x => x.id === id);
+        return s?.seatLabel || '';
+      }).filter(Boolean).join('、');
+      try {
+        await fetch(`/api/movie-agent/sync-state?userId=${userId}&scheduleId=${sid}&orderId=${order.id}&seatLabels=${encodeURIComponent(seatLabels)}`, { method: 'POST' });
+      } catch { /* 非关键路径，失败不影响下单 */ }
       Toast.show({ icon: 'success', content: '下单成功！' });
       navigate(`/order-confirm/${order.id}`, { replace: true });
     } catch (e: any) {

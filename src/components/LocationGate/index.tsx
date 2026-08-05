@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button, SpinLoading } from 'antd-mobile';
 import { useLocationStore } from '@/stores/useLocationStore';
+import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
 
 const GATE_KEY = 'location_gate_v2';
@@ -24,6 +25,9 @@ const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     localStorage.removeItem('location_gate_passed');
+
+    // 全局初始化用户信息（任何页面打开都会触发，不依赖进入"我的"页面）
+    useUserStore.getState().init();
 
     if (hasCache) {
       init(); // 有缓存 → GPS → IP 静默定位
