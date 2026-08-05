@@ -1,13 +1,22 @@
 /**
- * 退票申请页 — 淘票票风格
+ * 退票申请页
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { NavBar, Toast, SafeArea, Popup } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { calcRefund } from '@/components/RefundModal';
+import { getOrderDetail } from '@/api/orderController';
 import http from '@/services/request';
 import styles from './index.module.less';
+
+const REASONS = [
+  '买错时间了',
+  '买错影院了',
+  '买错影片了',
+  '临时有事去不了',
+  '想换别的场次',
+  '其他原因',
+];
 
 function parseShowTime(scheduleTime?: string): Date | null {
   if (!scheduleTime) return null;
@@ -18,15 +27,6 @@ function diffMinutes(showTime: Date | null): number {
   if (!showTime) return Infinity;
   return Math.round((showTime.getTime() - Date.now()) / 60_000);
 }
-
-const REASONS = [
-  '买错时间了',
-  '买错影院了',
-  '买错影片了',
-  '临时有事去不了',
-  '想换别的场次',
-  '其他原因',
-];
 
 const RefundApplyPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -39,23 +39,34 @@ const RefundApplyPage: React.FC = () => {
   const [advice, setAdvice] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // 从缓存拿订单数据
-  const order: API.OrderVO | null = useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem(`order_${oid}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+  const [order, setOrder] = useState<API.OrderVO | null>(null);
+  useEffect(() => {
+    getOrderDetail({ id: oid }).then((o: any) => {
+      const vo = o?.data ?? o;
+      setOrder(vo);
+    }).catch(() => {});
   }, [oid]);
+
+  const count = order?.count || 1;
+  const totalPrice = order?.totalPrice || 0;
 
   const showTime = useMemo(() => parseShowTime(order?.scheduleTime), [order?.scheduleTime]);
   const minutes = useMemo(() => diffMinutes(showTime), [showTime]);
-  const count = order?.count || 1;
-  const totalPrice = order?.totalPrice || 0;
-  const refund = useMemo(() => calcRefund(minutes, count), [minutes, count]);
+
+  const cantRefundReason = useMemo(() => {
+    if (!order) return null;
+    if (order.status === 'expired') return '电影已结束，无法退票';
+    if (order.status === 'refunded') return '订单已退款';
+    if (order.status !== 'paid') return '订单状态不支持退票';
+    if (minutes < 1) return '距开场不足1分钟，不支持退票';
+    return null;
+  }, [order, minutes]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      sessionStorage.setItem(`order_${oid}_refundAmount`, String(totalPrice));
+      sessionStorage.setItem(`order_${oid}_refundFee`, '0');
       await http.post(`/order/refund/${oid}`);
       Toast.show({ icon: 'success', content: '退票申请已提交' });
       navigate(`/ticket/${oid}`, { replace: true });
@@ -73,17 +84,31 @@ const RefundApplyPage: React.FC = () => {
     <div className={styles.page}>
       <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>退票</NavBar>
 
+      {cantRefundReason && (
+        <div style={{
+          margin: '12px 16px',
+          padding: '12px 16px',
+          borderRadius: 8,
+          background: '#FFF3E0',
+          color: '#E65100',
+          fontSize: 14,
+          textAlign: 'center',
+        }}>
+          {cantRefundReason}
+        </div>
+      )}
+
       {/* ===== 退款金额 ===== */}
       <div className={styles.refundCard}>
         <div className={styles.refundTitle}>
           <span className={styles.refundLabel}>退款金额</span>
           <span className={styles.refundMoney}>
             <span className={styles.yen}>¥</span>
-            {(totalPrice - refund.totalFee).toFixed(2)}
+            {totalPrice.toFixed(2)}
           </span>
         </div>
         <div className={styles.refundMsg}>
-          （实付金额{totalPrice.toFixed(1)}元，收取{refund.totalFee.toFixed(1)}元退票费）
+          全额退款，不收取服务费
         </div>
         <div className={styles.refundMsg}>预计3个工作日内原路退回。</div>
       </div>
@@ -146,14 +171,16 @@ const RefundApplyPage: React.FC = () => {
       {/* ===== 底部确认 ===== */}
       <div className={styles.bottomBar}>
         <div
-          className={`${styles.confirmBtn} ${!reason ? styles.confirmDisabled : ''}`}
-          onClick={reason ? () => setShowConfirm(true) : undefined}
+          className={`${styles.confirmBtn} ${(!reason || cantRefundReason) ? styles.confirmDisabled : ''}`}
+          onClick={(reason && !cantRefundReason) ? () => setShowConfirm(true) : undefined}
         >
-          {reason ? '确认退票' : '选择退款原因进入下一步'}
+          {cantRefundReason ? cantRefundReason : (reason ? '确认退票' : '选择退款原因进入下一步')}
         </div>
-        <div className={styles.confirmHint}>
-          本月还可快速自助退票<b>2</b>次，发起退票后不可撤销
-        </div>
+        {!cantRefundReason && (
+          <div className={styles.confirmHint}>
+            发起退票后不可撤销
+          </div>
+        )}
         <SafeArea position="bottom" />
       </div>
 
@@ -168,7 +195,6 @@ const RefundApplyPage: React.FC = () => {
         }}
       >
         <div className={styles.confirmPanel}>
-          {/* 标题 */}
           <div className={styles.confirmHeader}>
             <span className={styles.confirmTitle}>正在退订{count}张电影票</span>
             <span className={styles.confirmClose} onClick={() => setShowConfirm(false)}>
@@ -178,24 +204,19 @@ const RefundApplyPage: React.FC = () => {
             </span>
           </div>
 
-          {/* 可用次数 */}
           <div className={styles.confirmTimes}>
-            <span>你本月还可快速自助退票<b>2</b>次</span>
+            <span>退票不收取服务费，全额原路退回</span>
           </div>
 
-          {/* 退票费规则 */}
           <div className={styles.confirmRules}>
-            <div className={styles.confirmRulesTitle}>退票费</div>
+            <div className={styles.confirmRulesTitle}>退款明细</div>
             <div className={styles.confirmRulesContent}>
-              1. 电影开场前24小时（含）以上，收取退票服务费<b>8.0元/张</b>。<br />
-              2. 电影开场前4小时（含）至24小时，收取退票服务费<b>10.0元/张</b>。<br />
-              3. 电影开场前1小时（含）至4小时，收取退票服务费<b>12.0元/张</b>。<br />
-              4. 电影开场前1分钟（含）至1小时，收取退票服务费<b>14.0元/张</b>。<br />
-              5. 电影开场前1分钟内<b>不允许退票</b>。
+              退款金额：<b>¥{totalPrice.toFixed(2)}</b>（{count}张 × ¥{(totalPrice / count).toFixed(2)}）<br />
+              退款方式：原路退回<br />
+              预计到账：3个工作日内
             </div>
           </div>
 
-          {/* 确认按钮 */}
           <div className={styles.confirmFooter}>
             <button
               className={styles.confirmPayBtn}

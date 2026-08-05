@@ -30,8 +30,7 @@ const RefundProgressPage: React.FC = () => {
 
   const count = order.count || 1;
   const totalPrice = order.totalPrice || 0;
-  const refundAmount = order.refundAmount || 0;
-  const fee = totalPrice - refundAmount;
+  const refundAmount = order.refundAmount || totalPrice;
   const refundTime = order.refundTime ? new Date(order.refundTime) : new Date();
   const createdTime = order.createTime ? new Date(order.createTime) : refundTime;
 
@@ -56,10 +55,6 @@ const RefundProgressPage: React.FC = () => {
               <div className={styles.cardRow}>
                 <span className={styles.cardKey}>退款金额</span>
                 <span className={styles.cardValPrimary}>{refundAmount}元</span>
-              </div>
-              <div className={styles.cardRow}>
-                <span className={styles.cardKey}>服务费</span>
-                <span className={styles.cardVal}>{fee}元(影院收取)</span>
               </div>
               <div className={styles.cardRow}>
                 <span className={styles.cardKey}>订单编号</span>

@@ -56,13 +56,15 @@
   opacity: 0.5;
 }
 
-/* ===== 二维码水印 ===== */
+/* ===== 二维码水印（鲜艳红色印章） ===== */
 .qrStamp {
-  position: absolute; right: 8px; bottom: 8px;
-  opacity: 0.5; pointer-events: none;
+  position: absolute; right: 10px; bottom: 10px;
+  opacity: 1; pointer-events: none;
+  transform: rotate(-12deg);
+  filter: drop-shadow(0 4px 8px rgba(255, 77, 79, 0.35));
 }
 .qrStamp svg {
-  fill: var(--status-bg, #343b80);
+  fill: #ff4d4f;
 }
 
 /* ========== 卡片 ========== */
