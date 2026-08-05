@@ -24,6 +24,7 @@ import {
 interface UserState {
   user: API.LoginUserVO | null;
   isLoggedIn: boolean;
+  initialized: boolean;
   loading: boolean;
   lastError: string | null;
 
@@ -52,19 +53,20 @@ interface UserState {
 export const useUserStore = create<UserState>()((set, get) => ({
   user: null,
   isLoggedIn: false,
+  initialized: false,
   loading: false,
   lastError: null,
 
   // ==================== 生命周期 ====================
 
   init: async () => {
-    if (get().isLoggedIn) return;
+    if (get().initialized) return;
     set({ loading: true, lastError: null });
     try {
       const user = await getLoginUser();
-      set({ user, isLoggedIn: true, loading: false });
+      set({ user, isLoggedIn: true, initialized: true, loading: false });
     } catch {
-      set({ user: null, isLoggedIn: false, loading: false });
+      set({ user: null, isLoggedIn: false, initialized: true, loading: false });
     }
   },
 
