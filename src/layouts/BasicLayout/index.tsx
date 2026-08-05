@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'umi';
-import { TabBar } from 'antd-mobile';
+import { TabBar, SpinLoading } from 'antd-mobile';
 import { AppOutline, UnorderedListOutline, ContentOutline, CompassOutline, UserOutline } from 'antd-mobile-icons';
+import { useUserStore } from '@/stores/useUserStore';
 import AiChat from '@/components/AiChat';
 import LoginModal from '@/components/LoginModal';
 import styles from './index.module.less';
@@ -17,6 +18,20 @@ const tabs = [
 const BasicLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const initialized = useUserStore((s) => s.initialized);
+  const init = useUserStore((s) => s.init);
+
+  // 全局初始化：页面刷新后检查 Session 登录状态
+  useEffect(() => { init(); }, []);
+
+  // 鉴权检查未完成前不渲染子页面，避免"未登录→已登录"闪烁
+  if (!initialized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <SpinLoading color="primary" />
+      </div>
+    );
+  }
 
   // 子页面不显示 TabBar
   const hideRoutes = ['/detail', '/orders', '/wallet', '/coupons', '/want-to-see', '/watched', '/settings', '/showtime', '/seat', '/order-confirm', '/payment', '/ticket', '/profile-edit', '/forgot-password', '/city-picker', '/cinema-detail', '/cinema-service-detail', '/cinema-feedback', '/cinema-price-info', '/payment-success', '/refund-apply', '/refund-progress', '/refund-detail'];

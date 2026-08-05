@@ -8,7 +8,7 @@
  */
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'umi';
-import { NavBar, Popup, Slider, SpinLoading, SafeArea, Toast } from 'antd-mobile';
+import { NavBar, Popup, SpinLoading, SafeArea, Toast } from 'antd-mobile';
 import {
   LeftOutline,
   SearchOutline,
@@ -22,10 +22,7 @@ import http from '@/services/request';
 import { useAiStore } from '@/stores/useAiStore';
 import { useGuard } from '@/hooks/useGuard';
 import { useLocationStore } from '@/stores/useLocationStore';
-import {
-  MOCK_BRANDS,
-  MOCK_REGIONS,
-} from '@/mock/home';
+import { MOCK_BRANDS } from '@/mock/home';
 import dayjs from 'dayjs';
 import styles from './index.module.less';
 
@@ -35,20 +32,27 @@ function getTagColor(tag: string): string {
   if (/特权|专属|vip|影城卡|券|新人|限时|折扣|优惠/.test(tag)) return 'tagRed';
   // 蓝色：退票改签（放红色后面）
   if (/退票|改签/.test(tag)) return 'tagBlue';
+  // 绿色：停车
+  if (/停车/.test(tag)) return 'tagGreen';
   // 灰色：影厅格式 + 其余（放最后）
   return 'tagGray';
 }
 
-// 按颜色优先级排序：红色 > 蓝色 > 灰色
-function sortTags(tags: string[]): string[] {
-  const priority: Record<string, number> = {
-    tagRed: 0,
-    tagBlue: 1,
-    tagGray: 2,
-    tagOrange: 3,
-    tagGreen: 4,
+/** 品牌 → 影院名称精确匹配（品牌全名，防止 "万达" 误匹配非万达影院） */
+function matchBrand(cinemaName: string, brand: string): boolean {
+  if (!cinemaName || !brand) return false;
+  const name = cinemaName.trim();
+  const BRAND_KEYWORDS: Record<string, string> = {
+    '万达影城': '万达影城',
+    '奥斯卡影城': '奥斯卡影城',
+    '横店影城': '横店影城',
+    '卢米埃影城': '卢米埃影城',
+    '沃美影城': '沃美影城',
+    '新华国际影城': '新华国际影城',
+    '耀莱影城': '耀莱影城',
   };
-  return [...tags].sort((a, b) => priority[getTagColor(a)] - priority[getTagColor(b)]);
+  const keyword = BRAND_KEYWORDS[brand.trim()];
+  return keyword ? name.includes(keyword) : false;
 }
 
 const WEEKDAY_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -75,44 +79,59 @@ const MOCK_SNACKS = [
   { id: 3, emoji: '🌭', name: '85oz抱抱爆米花+22oz可口可乐3瓶/500ml茶派3瓶(3选1)', desc: '', price: 39, tag: '多人餐' },
 ];
 
-// 新人价 / 原价 辅助函数
+function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
-// 为数据库影院补充的 Mock 字段
 interface EnrichedCinema {
   id: number;
   name: string;
   address: string;
   distance: string;
+  distNum: number;
   minPrice: number;
   tags: string[];
-  services: string[];
   halls: string[];
-  region: string;
   showtimeCount: number;
   showtimes: API.ScheduleVO[];
 }
 
-// 根据 cinemaId 生成稳定的 Mock 补充数据
-function enrichCinema(id: number, name: string, address: string, tags: string, showtimes: API.ScheduleVO[]): EnrichedCinema {
+function enrichCinema(c: any, showtimes: API.ScheduleVO[], userLat: number, userLng: number): EnrichedCinema {
+  const id = Number(c.id);
   const minPrice = showtimes.length > 0
     ? Math.min(...showtimes.map(s => Number(s.price)))
-    : 30 + (id % 20);
+    : (c.basePrice ?? 30);
 
-  const brandMatch = MOCK_BRANDS.find(b => name.includes(b.replace('影城', '')));
-  const regionMatch = MOCK_REGIONS[id % MOCK_REGIONS.length];
+  const dist = (c.longitude != null && c.latitude != null && userLat && userLng)
+    ? calcDistance(userLat, userLng, Number(c.latitude), Number(c.longitude))
+    : null;
+  const distance = dist != null
+    ? dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
+    : '';
+  const distNum = dist ?? 999;
+
+  const tags: string[] = c.tags ? c.tags.split(',').filter(Boolean) : [];
+  const halls = showtimes.length > 0
+    ? [...new Set(showtimes.map(s => s.hallType || ''))].filter(Boolean)
+    : [];
 
   return {
     id,
-    name,
-    address,
-    distance: `${(1.5 + (id % 10) * 0.8).toFixed(1)}km`,
+    name: c.name || '',
+    address: c.address || '',
+    distance,
+    distNum,
     minPrice,
-    tags: tags ? tags.split(',').filter(Boolean) : [],
-    services: sortTags(['退票', '改签', '观影小食', ...(id % 3 === 0 ? ['影城卡'] : []), ...(id % 4 === 0 ? ['券包·4.5折起'] : [])]),
-    halls: sortTags(showtimes.length > 0
-      ? [...new Set(showtimes.map(s => s.hallType || ''))].filter(Boolean)
-      : ['可停车']),
-    region: regionMatch?.name || '未知',
+    tags,
+    halls,
     showtimeCount: showtimes.length,
     showtimes,
   };
@@ -128,6 +147,8 @@ const ShowtimePage: React.FC = () => {
   const triggerAi = useAiStore((s) => s.triggerAi);
   const locationStore = useLocationStore();
   const cityName = locationStore.city || '全城';
+  const userLat = locationStore.lat;
+  const userLng = locationStore.lng;
 
   const isCinemaOnly = location.pathname.includes('/showtime/cinema/');
   const isFilmOnly = location.pathname.includes('/showtime/film/');
@@ -162,13 +183,26 @@ const ShowtimePage: React.FC = () => {
     enabled: !!selectedFilmId || !!selectedCinemaId,
   });
 
+  // 全部影厅类型（真实数据 + 补充常见类型，缓存 5 分钟）
+  const { data: allHallTypes } = useQuery({
+    queryKey: ['allHallTypes'],
+    queryFn: async () => {
+      const raw: any = await listAll1();
+      const list = raw?.data ?? raw ?? [];
+      const dbTypes = [...new Set(list.map((s: any) => s.hallType || '').filter(Boolean))];
+      const extraTypes = ['巨幕', 'ScreenX', 'VIP厅', '普通', '杜比'];
+      return [...new Set([...dbTypes, ...extraTypes])] as string[];
+    },
+    staleTime: 300000,
+  });
+
   const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
 
   // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
     queryKey: ['cinemas', cinemaIds, cityName],
     queryFn: async () => {
-      const results: { id: number; name: string; address: string; tags: string; city: string }[] = [];
+      const results: { id: number; name: string; address: string; tags: string; city: string; latitude: number; longitude: number; basePrice: number }[] = [];
       for (const cId of cinemaIds.slice(0, 20)) {
         try {
           const c = await http.get(`/cinema/getInfo/${cId}`) as any;
@@ -178,6 +212,9 @@ const ShowtimePage: React.FC = () => {
             address: c.address || '',
             tags: c.tags || '',
             city: c.city || '未知',
+            latitude: c.latitude,
+            longitude: c.longitude,
+            basePrice: c.basePrice,
           });
         } catch { /* skip */ }
       }
@@ -199,21 +236,25 @@ const ShowtimePage: React.FC = () => {
 
   const cinemasReady = !scheduleLoading && (cinemaIds.length === 0 || cinemasRaw !== undefined);
 
-  // 当前选中影院（扩展 Mock 字段）
+  // 当前选中影院
   const { data: cinema } = useQuery({
     queryKey: ['cinema', selectedCinemaId],
     queryFn: async () => {
       const c = await http.get(`/cinema/getInfo/${selectedCinemaId}`) as any;
       const id = Number(c.id);
+      const dist = (c.longitude != null && c.latitude != null && userLat && userLng)
+        ? calcDistance(userLat, userLng, Number(c.latitude), Number(c.longitude))
+        : null;
+      const distance = dist != null
+        ? dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
+        : '';
       return {
         id,
         name: c.name || '',
         address: c.address || '',
         city: c.city || '',
-        distance: `${(1.5 + (id % 10) * 0.8).toFixed(1)}km`,
+        distance,
         tags: (c.tags || '').split(',').filter(Boolean),
-        services: sortTags(['退票', '改签', '观影小食', ...(id % 3 === 0 ? ['影城卡'] : []), ...(id % 4 === 0 ? ['券包·4.5折起'] : [])]),
-        halls: ['可停车', ...(id % 2 === 0 ? ['充电'] : [])],
       };
     },
     enabled: !!selectedCinemaId,
@@ -280,28 +321,28 @@ const ShowtimePage: React.FC = () => {
   const [screenFilter, setScreenFilter] = useState<string[]>([]);
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
-  const [screenPanelVisible, setScreenPanelVisible] = useState(false);
-  const [brandPanelVisible, setBrandPanelVisible] = useState(false);
+  const [activePanel, setActivePanel] = useState<'filter' | 'brand' | 'sort' | null>(null);
   const [sortPanelVisible, setSortPanelVisible] = useState(false);
   const [sortType, setSortType] = useState<SortType>('composite');
   const [currentSort, setCurrentSort] = useState('综合排序');
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [submittedKeyword, setSubmittedKeyword] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isPast = (showDate: string, startTime: string) => {
     const dt = `${showDate}T${startTime}`;
     return new Date(dt).getTime() < Date.now();
   };
 
-  // 合并真实场次 + Mock 补充字段的影院列表（过滤已过时场次）
+  // 合并真实场次 + 数据库字段的影院列表
   const enrichedCinemas = useMemo(() => {
     if (!cityFilteredCinemas || !scheduleData) return [];
     return cityFilteredCinemas.map(c => {
-      const cShowtimes = scheduleData.filter(s =>
-        String(s.cinemaId) === String(c.id) &&
-        !isPast(s.showDate!, s.startTime!)
-      );
-      return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
+      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
+      return enrichCinema(c, cShowtimes, userLat, userLng);
     });
-  }, [cityFilteredCinemas, scheduleData]);
+  }, [cityFilteredCinemas, scheduleData, userLat, userLng]);
 
   // 筛选后的影院列表
   const filteredCinemas = useMemo(() => {
@@ -309,12 +350,16 @@ const ShowtimePage: React.FC = () => {
 
     if (screenFilter.length > 0) {
       list = list.filter(c =>
-        screenFilter.some(s => c.halls.includes(s) || c.services.some(svc => svc.includes(s)))
+        screenFilter.some(s => c.halls.includes(s) || c.tags.some(tag => tag.includes(s)))
       );
     }
 
     if (brandFilter.length > 0) {
-      list = list.filter(c => brandFilter.some(b => c.name.includes(b.replace('影城', ''))));
+      list = list.filter(c => brandFilter.some(b => matchBrand(c.name, b)));
+    }
+
+    if (submittedKeyword) {
+      list = list.filter(c => c.name.includes(submittedKeyword));
     }
 
     list = list.filter(c => c.minPrice >= priceRange[0] && c.minPrice <= priceRange[1]);
@@ -322,11 +367,11 @@ const ShowtimePage: React.FC = () => {
     if (sortType === 'price') {
       list.sort((a, b) => a.minPrice - b.minPrice);
     } else if (sortType === 'nearest') {
-      list.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+      list.sort((a, b) => a.distNum - b.distNum);
     }
 
     return list;
-  }, [enrichedCinemas, screenFilter, brandFilter, priceRange, sortType]);
+  }, [enrichedCinemas, screenFilter, brandFilter, priceRange, sortType, submittedKeyword]);
 
   // 当前日期+影院的场次
   const showtimes = useMemo(() => {
@@ -355,12 +400,6 @@ const ShowtimePage: React.FC = () => {
     } else {
       setArr([...arr, item]);
     }
-  };
-
-  const clearFilters = () => {
-    setScreenFilter([]);
-    setBrandFilter([]);
-    setPriceRange([0, 200]);
   };
 
   const hasActiveFilters = screenFilter.length > 0 || brandFilter.length > 0 || priceRange[0] > 0 || priceRange[1] < 200;
@@ -403,7 +442,30 @@ const ShowtimePage: React.FC = () => {
           </div>
         </div>
 
-        {/* 筛选条 */}
+        {/* 筛选条 / 搜索栏 */}
+        {searchMode ? (
+          <div className={styles.filterBar}>
+            <input
+              ref={searchInputRef}
+              className={styles.searchInput}
+              placeholder="搜索影院名称"
+              value={searchKeyword}
+              onChange={e => setSearchKeyword(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  setSubmittedKeyword(e.currentTarget.value);
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            <span
+              className={styles.searchCancel}
+              onClick={() => { setSearchMode(false); setSearchKeyword(''); setSubmittedKeyword(''); }}
+            >
+              取消
+            </span>
+          </div>
+        ) : (
         <div className={styles.filterBar}>
           <div className={styles.filterItem} onClick={() => navigate('/city-picker')}>
             <span className={styles.filterText}>{cityName}</span>
@@ -411,14 +473,14 @@ const ShowtimePage: React.FC = () => {
           </div>
           <div
             className={`${styles.filterItem} ${hasActiveFilters ? styles.filterActive : ''}`}
-            onClick={() => setScreenPanelVisible(true)}
+            onClick={() => setActivePanel(prev => prev === 'filter' ? null : 'filter')}
           >
             <FilterOutline fontSize={12} />
             <span className={styles.filterText}>筛选</span>
           </div>
           <div
             className={`${styles.filterItem} ${brandFilter.length > 0 ? styles.filterActive : ''}`}
-            onClick={() => setBrandPanelVisible(true)}
+            onClick={() => setActivePanel(prev => prev === 'brand' ? null : 'brand')}
           >
             <span className={styles.filterText}>品牌</span>
           </div>
@@ -426,14 +488,82 @@ const ShowtimePage: React.FC = () => {
             <span className={styles.filterText}>{currentSort}</span>
             <DownOutline fontSize={10} />
           </div>
-          <div className={styles.filterItem} onClick={() => navigate('/search')}>
+          <div className={styles.filterItem} onClick={() => { setSearchMode(true); setTimeout(() => searchInputRef.current?.focus(), 100); }}>
             <SearchOutline fontSize={14} />
           </div>
         </div>
+        )}
 
-        {/* 影厅快捷标签 — 从真实排片中提取 */}
+        {/* 筛选/品牌下拉面板 */}
+        {activePanel && (
+          <div className={styles.panelDropdown}>
+            {activePanel === 'filter' && (
+              <div className={styles.panelContent}>
+                <div className={styles.filterSection}>
+                  <div className={styles.filterSectionTitle}>放映影厅</div>
+                  <div className={styles.screenGrid}>
+                    {(allHallTypes || []).map(h => (
+                        <span
+                          key={h}
+                          className={`${styles.screenItem} ${screenFilter.includes(h) ? styles.screenItemActive : ''}`}
+                          onClick={() => toggleArrayItem(screenFilter, setScreenFilter, h)}
+                        >
+                          {h}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+                <div className={styles.filterSection}>
+                  <div className={styles.filterSectionTitle}>影院服务</div>
+                  <div className={styles.screenGrid}>
+                    {['可停车', '退票', '改签', '观影小食'].map(svc => {
+                      const isActive = screenFilter.includes(svc);
+                      return (
+                        <span
+                          key={svc}
+                          className={`${styles.screenItem} ${isActive ? styles.screenItemActive : ''}`}
+                          onClick={() => toggleArrayItem(screenFilter, setScreenFilter, svc)}
+                        >
+                          {svc}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className={styles.filterActions}>
+                  <button className={styles.filterClear} onClick={() => { setScreenFilter([]); setPriceRange([0, 200]); }}>清空</button>
+                  <button className={styles.filterConfirm} onClick={() => setActivePanel(null)}>完成</button>
+                </div>
+              </div>
+            )}
+            {activePanel === 'brand' && (
+              <div className={styles.panelContent}>
+                <div className={styles.screenGrid}>
+                  {MOCK_BRANDS.map(b => (
+                    <span
+                      key={b}
+                      className={`${styles.screenItem} ${brandFilter.includes(b) ? styles.screenItemActive : ''}`}
+                      onClick={() => toggleArrayItem(brandFilter, setBrandFilter, b)}
+                    >
+                      {b}
+                    </span>
+                  ))}
+                </div>
+                <div className={styles.filterActions}>
+                  <button className={styles.filterClear} onClick={() => setBrandFilter([])}>清空</button>
+                  <button className={styles.filterConfirm} onClick={() => setActivePanel(null)}>完成</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {activePanel && <div className={styles.overlay} onClick={() => setActivePanel(null)} />}
+
+        {/* 影厅快捷标签 — 真实排片类型 + 补充常见类型 */}
         {(() => {
-          const hallTypes = [...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))];
+          const dbTypes = [...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))];
+          const extraTypes = ['巨幕', 'ScreenX', 'VIP厅', '普通', '杜比'];
+          const hallTypes = [...new Set([...dbTypes, ...extraTypes])];
           if (hallTypes.length === 0) return null;
           return (
             <div className={styles.hallBar}>
@@ -477,10 +607,10 @@ const ShowtimePage: React.FC = () => {
                     <span className={styles.cinemaDistance}>{c.distance}</span>
                   </div>
                   <div className={styles.cinemaInfoRow}>
-                    {c.services.map(svc => (
-                      <span key={svc} className={`${styles.serviceTag} ${styles[getTagColor(svc)]}`}>{svc}</span>
+                    {c.tags.map(tag => (
+                      <span key={tag} className={`${styles.serviceTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
                     ))}
-                    {c.halls.map(h => (
+                    {c.halls.filter(h => !c.tags.includes(h)).map(h => (
                       <span key={h} className={`${styles.hallBadge} ${styles[getTagColor(h)]}`}>{h}</span>
                     ))}
                     {c.showtimeCount > 0 && <span className={`${styles.serviceTag} ${styles.tagGray}`}>共 {c.showtimeCount} 场</span>}
@@ -491,23 +621,6 @@ const ShowtimePage: React.FC = () => {
           )}
         </div>
 
-        {/* 筛选 Popup */}
-        <FilterPopup
-          visible={screenPanelVisible}
-          onClose={() => setScreenPanelVisible(false)}
-          screenFilter={screenFilter}
-          setScreenFilter={setScreenFilter}
-          priceRange={priceRange}
-          setPriceRange={setPriceRange}
-          onClear={clearFilters}
-          hallTypes={[...new Set((scheduleData || []).map(s => s.hallType || '').filter(Boolean))]}
-        />
-        <BrandPopup
-          visible={brandPanelVisible}
-          onClose={() => setBrandPanelVisible(false)}
-          brandFilter={brandFilter}
-          setBrandFilter={setBrandFilter}
-        />
         <SortPopup
           visible={sortPanelVisible}
           onClose={() => setSortPanelVisible(false)}
@@ -552,11 +665,8 @@ const ShowtimePage: React.FC = () => {
           <span className={styles.addrDistance}>{cinema?.distance || '--km'}</span>
         </div>
         <div className={styles.cinemaHeaderTags}>
-          {(cinema?.services || []).map((svc: string, idx: number) => (
-            <span key={idx} className={`${styles.cHeaderTag} ${getTagColor(svc) === 'tagRed' ? styles.cHeaderTagRed : styles.cHeaderTagGray}`} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)}>{svc}</span>
-          ))}
-          {(cinema?.halls || []).map((h: string, idx: number) => (
-            <span key={`h-${idx}`} className={`${styles.cHeaderTag} ${styles.cHeaderTagGray}`} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)}>{h}</span>
+          {(cinema?.tags || []).map((tag: string, idx: number) => (
+            <span key={idx} className={`${styles.cHeaderTag} ${getTagColor(tag) === 'tagRed' ? styles.cHeaderTagRed : styles.cHeaderTagGray}`} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)}>{tag}</span>
           ))}
         </div>
       </div>
@@ -747,122 +857,6 @@ const ShowtimePage: React.FC = () => {
 
       <SafeArea position="bottom" />
     </div>
-  );
-};
-
-// ========== 筛选弹窗 ==========
-const FilterPopup: React.FC<{
-  visible: boolean;
-  onClose: () => void;
-  screenFilter: string[];
-  setScreenFilter: (v: string[]) => void;
-  priceRange: [number, number];
-  setPriceRange: (v: [number, number]) => void;
-  onClear: () => void;
-  hallTypes: string[];
-}> = ({ visible, onClose, screenFilter, setScreenFilter, priceRange, setPriceRange, onClear, hallTypes }) => {
-  const toggle = (item: string) => {
-    if (screenFilter.includes(item)) {
-      setScreenFilter(screenFilter.filter(i => i !== item));
-    } else {
-      setScreenFilter([...screenFilter, item]);
-    }
-  };
-
-  return (
-    <Popup visible={visible} onMaskClick={onClose} position="bottom" bodyStyle={{ maxHeight: '80vh' }}>
-      <div className={styles.filterPanel}>
-        <div className={styles.filterPanelTitle}>
-          <span>筛选</span>
-          <span className={styles.filterClose} onClick={onClose}>✕</span>
-        </div>
-
-        <div className={styles.filterSection}>
-          <div className={styles.filterSectionTitle}>价格区间</div>
-          <div className={styles.timeRange}>
-            <span>¥{priceRange[0]}</span>
-            <Slider
-              value={priceRange}
-              onChange={(v) => setPriceRange(v as [number, number])}
-              min={0}
-              max={200}
-            />
-            <span>¥{priceRange[1]}</span>
-          </div>
-        </div>
-
-        <div className={styles.filterSection}>
-          <div className={styles.filterSectionTitle}>放映影厅</div>
-          <div className={styles.screenGrid}>
-            {hallTypes.map(screen => (
-              <span
-                key={screen}
-                className={`${styles.screenItem} ${screenFilter.includes(screen) ? styles.screenItemActive : ''}`}
-                onClick={() => toggle(screen)}
-              >
-                {screen}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.filterSection}>
-          <div className={styles.filterSectionTitle}>影院服务</div>
-          <div className={styles.screenGrid}>
-            {['可停车', '退票', '改签', '观影小食', 'VIP厅', '艺术影厅'].map(svc => (
-              <span key={svc} className={styles.screenItem}>{svc}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.filterActions}>
-          <button className={styles.filterClear} onClick={onClear}>清空</button>
-          <button className={styles.filterConfirm} onClick={onClose}>完成</button>
-        </div>
-      </div>
-    </Popup>
-  );
-};
-
-// ========== 品牌弹窗 ==========
-const BrandPopup: React.FC<{
-  visible: boolean;
-  onClose: () => void;
-  brandFilter: string[];
-  setBrandFilter: (v: string[]) => void;
-}> = ({ visible, onClose, brandFilter, setBrandFilter }) => {
-  const toggle = (item: string) => {
-    if (brandFilter.includes(item)) {
-      setBrandFilter(brandFilter.filter(i => i !== item));
-    } else {
-      setBrandFilter([...brandFilter, item]);
-    }
-  };
-
-  return (
-    <Popup visible={visible} onMaskClick={onClose} position="bottom" bodyStyle={{ maxHeight: '70vh' }}>
-      <div className={styles.filterPanel}>
-        <div className={styles.filterPanelTitle}>
-          <span>品牌</span>
-          <span className={styles.filterClose} onClick={onClose}>✕</span>
-        </div>
-        <div className={styles.screenGrid}>
-          {MOCK_BRANDS.map(brand => (
-            <span
-              key={brand}
-              className={`${styles.screenItem} ${brandFilter.includes(brand) ? styles.screenItemActive : ''}`}
-              onClick={() => toggle(brand)}
-            >
-              {brand}
-            </span>
-          ))}
-        </div>
-        <div className={styles.filterActions}>
-          <button className={styles.filterClear} onClick={() => setBrandFilter([])}>清空</button>
-          <button className={styles.filterConfirm} onClick={onClose}>完成</button>
-        </div>
-      </div>
-    </Popup>
   );
 };
 
