@@ -70,6 +70,49 @@
   flex-direction: column;
   animation: slideUp 0.25s ease-out;
 }
+/* page 模式：跟随父级 flex 撑满 */
+.pagePanel {
+  flex: 1;
+  min-height: 0;
+  background: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* page 模式 NavBar */
+.pageNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 44px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+.pageNavBack {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
+}
+.pageNavTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.pageNavNew {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
+}
 @keyframes slideUp {
   from {
     transform: translateY(20px);

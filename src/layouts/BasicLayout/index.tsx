@@ -19,8 +19,10 @@ const BasicLayout: React.FC = () => {
   const navigate = useNavigate();
 
   // 子页面不显示 TabBar
-  const hideRoutes = ['/detail', '/orders', '/wallet', '/coupons', '/want-to-see', '/watched', '/settings', '/showtime', '/seat', '/order-confirm', '/payment', '/ticket', '/profile-edit', '/forgot-password', '/city-picker', '/cinema-detail', '/cinema-service-detail', '/cinema-feedback', '/cinema-price-info', '/payment-success', '/refund-apply', '/refund-progress', '/refund-detail'];
+  const hideRoutes = ['/detail', '/orders', '/wallet', '/coupons', '/want-to-see', '/watched', '/settings', '/showtime', '/seat', '/order-confirm', '/payment', '/ticket', '/profile-edit', '/forgot-password', '/city-picker', '/cinema-detail', '/cinema-service-detail', '/cinema-feedback', '/cinema-price-info', '/payment-success', '/refund-apply', '/refund-progress', '/refund-detail', '/ai'];
   const hideTabBar = hideRoutes.some((r) => location.pathname.startsWith(r));
+  // AI 页面有自己完整的聊天面板，不需要悬浮按钮
+  const isAiPage = location.pathname === '/ai';
 
   return (
     <div className={styles.layout}>
@@ -40,8 +42,8 @@ const BasicLayout: React.FC = () => {
           </TabBar>
         </div>
       )}
-      {/* AI 悬浮助手 */}
-      <AiChat />
+      {/* AI 悬浮按钮（/ai 页面自带面板，不重复渲染） */}
+      {!isAiPage && <AiChat mode="overlay" />}
       {/* 全局登录弹窗 */}
       <LoginModal />
     </div>

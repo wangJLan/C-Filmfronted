@@ -27,6 +27,11 @@ const PaymentPage: React.FC = () => {
     if (!oid) return;
     getOrderDetail({ id: oid }).then((o: any) => {
       const vo = o?.data ?? o;
+      // 订单已支付 → 直接跳转票务页，避免显示支付表单
+      if (vo?.status === 'paid' || vo?.status === 'completed') {
+        navigate(`/ticket/${oid}`, { replace: true });
+        return;
+      }
       setOrder(vo);
       sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo));
     }).catch(() => {}).finally(() => setLoading(false));
@@ -65,7 +70,7 @@ const PaymentPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(`/ticket/${oid}`)} back={<LeftOutline />} className={styles.nav}>收银台</NavBar>
+      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>收银台</NavBar>
 
       {/* ===== 金额卡片 ===== */}
       <div className={styles.amountCard}>

@@ -43,7 +43,7 @@ const PaymentSuccessPage: React.FC = () => {
           <button className={styles.btnOutline} onClick={() => navigate('/', { replace: true })}>
             返回首页
           </button>
-          <button className={styles.btnPrimary} onClick={() => navigate(`/ticket/${oid}`, { replace: true })}>
+          <button className={styles.btnPrimary} onClick={() => navigate(`/ticket/${oid}`)}>
             查看电影票
           </button>
         </div>

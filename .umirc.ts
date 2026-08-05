@@ -37,6 +37,7 @@ export default defineConfig({
         { path: '/cinema-service-detail/:serviceType', component: '@/pages/cinema-service-detail/index', title: '服务详情' },
         { path: '/cinema-feedback', component: '@/pages/cinema-feedback/index', title: '给影院提建议' },
         { path: '/cinema-price-info', component: '@/pages/cinema-price-info/index', title: '划线价格说明' },
+        { path: '/ai', component: '@/pages/ai/index', title: 'AI 助手' },
         { path: '/city-picker', component: '@/pages/city-picker/index', title: '选择城市' },
       ],
     },

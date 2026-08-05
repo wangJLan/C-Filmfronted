@@ -16,6 +16,7 @@ import {
 import { useNavigate } from 'umi';
 import { useAiStore } from '@/stores/useAiStore';
 import { useUserStore } from '@/stores/useUserStore';
+import { useLocationStore } from '@/stores/useLocationStore';
 import request from '@/libs/request';
 import dayjs from 'dayjs';
 import styles from './index.module.less';
@@ -838,10 +839,16 @@ const ToolResultCard: React.FC<{
 };
 
 // ==================== 组件 ====================
-const AiChat: React.FC = () => {
+interface AiChatProps {
+  /** 'overlay' = 悬浮按钮 + 弹出面板（默认）；'page' = 全页面模式（/ai 路由） */
+  mode?: 'overlay' | 'page';
+}
+
+const AiChat: React.FC<AiChatProps> = ({ mode = 'overlay' }) => {
+  const isPage = mode === 'page';
   const navigate = useNavigate();
   // —— 面板 & 视图 ——
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(isPage); // page 模式默认打开
   const [view, setView] = useState<'chat' | 'history'>('chat');
 
   // —— 会话 ——
@@ -887,8 +894,10 @@ const AiChat: React.FC = () => {
   const onDragEnd = useCallback(() => {
     dragState.current.dragging = false;
     if (!hasDragged.current) {
-      // 没有拖拽，是点击 → 打开面板
-      handleOpenRef.current();
+      // 没有拖拽，是点击 → overlay 模式打开面板，或跳转 /ai
+      if (mode === 'overlay') {
+        navigate('/ai');
+      }
     } else {
       const w = window.innerWidth;
       const mid = w / 2;
@@ -906,6 +915,9 @@ const AiChat: React.FC = () => {
 
   // —— Store ——
   const userId = useUserStore((s) => s.user?.id);
+  const city = useLocationStore((s) => s.city);
+  const userLat = useLocationStore((s) => s.lat);
+  const userLng = useLocationStore((s) => s.lng);
 
   // ==================== 滚动 ====================
   const scrollBottom = useCallback(() => {
@@ -988,6 +1000,13 @@ const AiChat: React.FC = () => {
     }
   }, [userId, loadMessages]);
 
+  // ★ page 模式：自动初始化会话（类似 overlay 点击悬浮按钮的效果）
+  useEffect(() => {
+    if (isPage && userId) {
+      handleOpen();
+    }
+  }, [isPage, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ==================== 切换会话 ====================
   const switchSession = useCallback(async (sid: number) => {
     if (sid === sessionId) { setView('chat'); return; }
@@ -1068,6 +1087,14 @@ const AiChat: React.FC = () => {
     scrollBottom();
 
     const params = new URLSearchParams({ message: text, conversationId: String(sessionId), userId: String(userId) });
+    // ★ 传递当前城市 + 精确坐标，让 AI 的"附近"搜索更加精准
+    if (city && city !== '全城' && city !== '北京') {
+      params.set('city', city);
+    }
+    if (userLat && userLng && userLat !== 0 && userLng !== 0) {
+      params.set('lat', String(userLat));
+      params.set('lng', String(userLng));
+    }
     const url = `http://localhost:8123/api/movie-agent/smart-stream?${params.toString()}`;
 
     let fullText = '';
@@ -1494,7 +1521,8 @@ const AiChat: React.FC = () => {
   // ==================== 主渲染 ====================
   return (
     <>
-      {/* ===== 可拖拽悬浮按钮 ===== */}
+      {/* ===== 可拖拽悬浮按钮（仅 overlay 模式） ===== */}
+      {mode === 'overlay' && (
       <div
         className={`${styles.floatBtn} ${open ? styles.floatBtnHidden : ''}`}
         style={{ left: floatPos.x, top: floatPos.y }}
@@ -1509,17 +1537,32 @@ const AiChat: React.FC = () => {
         <div className={styles.floatIcon}>🤖</div>
         <div className={styles.floatPulse} />
       </div>
+      )}
 
       {/* ===== 面板 ===== */}
       {open && (
-        <div className={styles.panel}>
+        <div className={isPage ? styles.pagePanel : styles.panel}>
+          {/* ===== page 模式：NavBar ===== */}
+          {isPage && (
+            <div className={styles.pageNav}>
+              <div className={styles.pageNavBack} onClick={() => navigate(-1)}>
+                <LeftOutline fontSize={20} />
+              </div>
+              <span className={styles.pageNavTitle}>小影 · AI 助手</span>
+              <div className={styles.pageNavNew} onClick={newSession}>
+                <AddOutline fontSize={20} />
+              </div>
+            </div>
+          )}
+
           {/* ===== 历史视图 ===== */}
           {view === 'history' && renderHistoryPanel()}
 
           {/* ===== 对话视图 ===== */}
           {view === 'chat' && (
             <>
-              {/* 顶栏 */}
+              {/* 顶栏（overlay 模式） */}
+              {mode === 'overlay' && (
               <div className={styles.topBar}>
                 <div className={styles.topLeft}>
                   <div className={styles.topMenuBtn} onClick={() => setView('history')}>
@@ -1536,6 +1579,19 @@ const AiChat: React.FC = () => {
                   </div>
                 </div>
               </div>
+              )}
+
+              {/* page 模式：历史按钮放在 NavBar 里，这里只留顶栏标题 */}
+              {isPage && (
+              <div className={styles.topBar}>
+                <div className={styles.topLeft}>
+                  <div className={styles.topMenuBtn} onClick={() => setView('history')}>
+                    <MessageOutline fontSize={20} />
+                  </div>
+                  <div className={styles.topTitle}>对话</div>
+                </div>
+              </div>
+              )}
 
               {/* 消息列表 */}
               <div className={styles.messages} ref={listRef}>
