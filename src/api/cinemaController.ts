@@ -24,6 +24,26 @@ export async function list4(options?: { [key: string]: any }) {
   });
 }
 
+/** 多条件筛选影院 GET /cinema/filter */
+export async function filterCinemas(params: {
+  keyword?: string;
+  brand?: string;
+  district?: string;
+  services?: string[];
+  sortType?: string;
+  userLat?: number;
+  userLng?: number;
+}, options?: { [key: string]: any }) {
+  return request<API.BaseResponseListCinema>('/cinema/filter', {
+    method: 'GET',
+    params: {
+      ...params,
+      services: params.services?.join(','),
+    },
+    ...(options || {}),
+  });
+}
+
 /** 此处后端没有提供注释 GET /cinema/page */
 export async function page8(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

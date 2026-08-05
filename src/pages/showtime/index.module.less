@@ -135,6 +135,7 @@
   background: #fff;
   padding: 10px 8px;
   border-bottom: 1px solid #f5f5f5;
+  position: relative;
 }
 
 .filterItem {
@@ -147,12 +148,66 @@
   cursor: pointer;
 }
 
+/* 搜索栏 */
+.searchInput {
+  flex: 1;
+  height: 32px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 16px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: #bbb;
+}
+
+.searchCancel {
+  font-size: 14px;
+  color: var(--primary-color);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 6px 10px;
+}
+
 .filterActive {
   color: var(--primary-color);
 }
 
 .filterText {
   white-space: nowrap;
+}
+
+/* ===== 下拉面板 ===== */
+.panelDropdown {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-height: 50vh;
+  overflow-y: auto;
+  z-index: 101;
+  border-top: 1px solid #f5f5f5;
+}
+
+.panelContent {
+  padding: 12px 16px;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 99;
 }
 
 /* ===== 影厅快捷标签 ===== */

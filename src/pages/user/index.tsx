@@ -327,14 +327,12 @@ const RegisterForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
 // ==================== 用户页面 ====================
 
 const UserPage: React.FC = () => {
-  const { user, isLoggedIn, loading, init, logout } = useUserStore();
+  const { user, isLoggedIn, loading, logout } = useUserStore();
   const orderCount = useOrderStore((s) => s.orders.filter((o) => o.status !== 'cancelled').length);
   const wantCount = useFilmCollectionStore((s) => s.wantToSee.length);
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [loginTab, setLoginTab] = useState<'email' | 'password' | 'register'>('email');
-
-  useEffect(() => { init(); }, []);
 
   const handleLoginSuccess = () => setShowForm(false);
 
