@@ -1296,7 +1296,7 @@ const AiChat: React.FC = () => {
 
     // 构建 OrderVO 兼容结构（字段名和类型与后端 OrderVO 对齐）
     const cachedOrder = {
-      id: Number(orderId),
+      id: orderId,
       orderNo: data.orderNo || '',
       filmName: data.filmName || '',
       cinemaName: data.cinemaName || '',

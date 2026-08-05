@@ -39,7 +39,7 @@ const OrderConfirmPage: React.FC = () => {
   useEffect(() => {
     if (!oid) return;
     setLoading(true);
-    getOrderDetail({ id: Number(oid) }).then((o: any) => {
+    getOrderDetail({ id: oid }).then((o: any) => {
       const vo = o?.data ?? o;
       setOrder(vo);
       try { sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo)); } catch {}
@@ -88,8 +88,7 @@ const OrderConfirmPage: React.FC = () => {
     if (cancelling) return;
     setCancelling(true);
     try {
-      const numericId = Number(oid);
-      await cancelOrder({ id: numericId });
+      await cancelOrder({ id: oid });
       Toast.show({ icon: 'success', content: '订单已取消' });
       sessionStorage.removeItem(`order_${oid}`);
       navigate('/', { replace: true });

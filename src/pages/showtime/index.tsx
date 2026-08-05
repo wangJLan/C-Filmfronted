@@ -291,11 +291,14 @@ const ShowtimePage: React.FC = () => {
     return new Date(dt).getTime() < Date.now();
   };
 
-  // 合并真实场次 + Mock 补充字段的影院列表
+  // 合并真实场次 + Mock 补充字段的影院列表（过滤已过时场次）
   const enrichedCinemas = useMemo(() => {
     if (!cityFilteredCinemas || !scheduleData) return [];
     return cityFilteredCinemas.map(c => {
-      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
+      const cShowtimes = scheduleData.filter(s =>
+        String(s.cinemaId) === String(c.id) &&
+        !isPast(s.showDate!, s.startTime!)
+      );
       return enrichCinema(c.id, c.name, c.address, c.tags, cShowtimes);
     });
   }, [cityFilteredCinemas, scheduleData]);
