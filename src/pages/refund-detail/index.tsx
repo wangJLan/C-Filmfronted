@@ -29,8 +29,7 @@ const RefundDetailPage: React.FC = () => {
   }
 
   const totalPrice = order.totalPrice || 0;
-  const refundAmount = order.refundAmount || 0;
-  const fee = +(totalPrice - refundAmount).toFixed(2);
+  const refundAmount = order.refundAmount || totalPrice;
   const refundTime = order.refundTime ? new Date(order.refundTime) : new Date();
 
   return (
@@ -62,10 +61,6 @@ const RefundDetailPage: React.FC = () => {
         <div className={styles.infoRow}>
           <span className={styles.infoKey}>原订单金额</span>
           <span className={styles.infoVal}>¥{totalPrice}</span>
-        </div>
-        <div className={styles.infoRow}>
-          <span className={styles.infoKey}>退票服务费</span>
-          <span className={styles.infoVal}>¥{fee}</span>
         </div>
         <div className={styles.infoRow}>
           <span className={styles.infoKey}>退款方式</span>

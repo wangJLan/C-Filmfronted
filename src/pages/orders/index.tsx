@@ -1,14 +1,15 @@
 /**
  * 我的订单 — 真实订单数据
  */
-import React, { useState } from 'react';
-import { useNavigate } from 'umi';
-import { Button, NavBar, Tabs, Empty, SpinLoading } from 'antd-mobile';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'umi';
+import { Button, NavBar, Tabs, Empty, SpinLoading, Toast } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { listOrders } from '@/api/orderController';
 import { useUserStore } from '@/stores/useUserStore';
 import { useGuard } from '@/hooks/useGuard';
+import http from '@/services/request';
 import styles from './index.module.less';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -16,13 +17,24 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   paid: { label: '已支付', color: '#00b578' },
   completed: { label: '已完成', color: '#00b578' },
   cancelled: { label: '已取消', color: '#ccc' },
+  refunded: { label: '已退款', color: '#ccc' },
 };
 
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
-  const [tab, setTab] = useState<'all' | 'pending' | 'paid' | 'completed'>('all');
+
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  const [tab, setTab] = useState<'all' | 'pending' | 'paid' | 'completed' | 'cancelled'>(
+    (['pending', 'paid', 'completed', 'cancelled'].includes(urlTab || '') ? urlTab : 'all') as any,
+  );
+
+  useEffect(() => {
+    const t = new URLSearchParams(location.search).get('tab');
+    if (t && ['pending', 'paid', 'completed', 'cancelled'].includes(t)) setTab(t as any);
+  }, [location.search]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders'],
@@ -31,7 +43,15 @@ const OrdersPage: React.FC = () => {
   });
 
   const orders = data?.records || [];
-  const filtered = orders.filter(o => tab === 'all' || o.status === tab);
+  const filtered = orders.filter(o => {
+    if (tab === 'all') return true;
+    if (tab === 'cancelled') return o.status === 'cancelled' || o.status === 'refunded';
+    return o.status === tab;
+  });
+
+  const handleRefundClick = (order: any) => {
+    navigate(`/ticket/${order.id}`);
+  };
 
   if (!isLoggedIn) {
     return <div className={styles.page}><NavBar onBack={() => navigate('/user')} back={<LeftOutline />} className={styles.nav}>我的订单</NavBar>
@@ -49,11 +69,12 @@ const OrdersPage: React.FC = () => {
           <Tabs.Tab title="待支付" key="pending" />
           <Tabs.Tab title="已支付" key="paid" />
           <Tabs.Tab title="已完成" key="completed" />
+          <Tabs.Tab title="退改" key="cancelled" />
         </Tabs>
       </div>
       <div className={styles.list}>
         {isLoading ? <div style={{ textAlign: 'center', padding: 60 }}><SpinLoading color="primary" /></div>
-        : filtered.length === 0 ? <div className={styles.emptyWrap}><Empty description={tab === 'all' ? '暂无订单' : tab === 'pending' ? '暂无待支付订单' : tab === 'paid' ? '暂无已支付订单' : '暂无已完成订单'} />
+        : filtered.length === 0 ? <div className={styles.emptyWrap}><Empty description={tab === 'cancelled' ? '暂无退改订单' : `暂无${tab === 'all' ? '' : STATUS_MAP[tab]?.label || ''}订单`} />
           <Button color="primary" size="small" onClick={() => navigate('/film')} style={{ marginTop: 12, borderRadius: 16 }}>去逛逛</Button></div>
         : filtered.map(order => {
           const st = STATUS_MAP[order.status || ''];
@@ -61,9 +82,7 @@ const OrdersPage: React.FC = () => {
             <div key={order.id} className={styles.card}>
               <div className={styles.cardHead}><span className={styles.cinemaName}>{order.cinemaName}</span><span className={styles.statusTag} style={{ color: st?.color }}>{st?.label}</span></div>
               <div className={styles.cardBody} onClick={() => {
-                if (order.status === 'paid') navigate(`/ticket/${order.id}`);
-                else if (order.status === 'pending') navigate(`/order-confirm/${order.id}`);
-                else navigate(`/ticket/${order.id}`);
+                navigate(`/ticket/${order.id}`);
               }}>
                 <div className={styles.info}>
                   <div className={styles.filmName}>{order.filmName}</div>
@@ -73,7 +92,10 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
               {order.status === 'pending' && <div className={styles.cardFoot}>
-                <Button size="mini" fill="none" className={styles.cancelBtn} onClick={() => navigate(`/order-confirm/${order.id}`)}>去支付</Button>
+                <Button size="mini" fill="none" className={styles.cancelBtn} onClick={(e) => { e.stopPropagation(); navigate(`/order-confirm/${order.id}`); }}>去支付</Button>
+              </div>}
+              {order.status === 'paid' && <div className={styles.cardFoot}>
+                <Button size="mini" fill="none" className={styles.changeBtn} onClick={(e) => { e.stopPropagation(); navigate(`/ticket/${order.id}`); }}>查看</Button>
               </div>}
             </div>
           );

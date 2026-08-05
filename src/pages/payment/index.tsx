@@ -32,14 +32,23 @@ const PaymentPage: React.FC = () => {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [oid]);
 
-  /** 模拟支付 — 跳过支付宝沙箱，直接标记已支付 */
-  const handleMockPay = useCallback(async () => {
+  /** 支付宝沙箱支付 — 获取支付表单并跳转 */
+  const handleAlipayPay = useCallback(async () => {
     if (paying) return;
     setPaying(true);
     try {
-      await http.post('/order/mock-pay', { orderId: oid });
-      Toast.show({ icon: 'success', content: '支付成功！' });
-      navigate(`/payment-success/${oid}`, { replace: true });
+      const res = await http.post('/order/pay', { orderId: oid });
+      const payForm = (res as any)?.payForm || (res as any)?.data?.payForm;
+      if (!payForm) {
+        Toast.show({ icon: 'fail', content: '获取支付表单失败' });
+        return;
+      }
+      // 将支付宝HTML表单写入页面并自动提交，跳转到支付宝收银台
+      const div = document.createElement('div');
+      div.innerHTML = payForm;
+      document.body.appendChild(div);
+      const form = div.querySelector('form');
+      if (form) form.submit();
     } catch (e: any) {
       Toast.show({ icon: 'fail', content: e.message || '支付失败' });
     } finally { setPaying(false); }
@@ -102,8 +111,8 @@ const PaymentPage: React.FC = () => {
           <div className={styles.bottomLeft} onClick={handleCancel}>
             <span className={styles.cancelLabel}>取消订单</span>
           </div>
-          <button className={styles.payBtn} onClick={handleMockPay} disabled={paying}>
-            {paying ? '请稍候…' : `确认支付 ¥${order.totalPrice || 0}`}
+          <button className={styles.payBtn} onClick={handleAlipayPay} disabled={paying}>
+            {paying ? '跳转支付宝…' : `确认支付 ¥${order.totalPrice || 0}`}
           </button>
         </div>
         <SafeArea position="bottom" />

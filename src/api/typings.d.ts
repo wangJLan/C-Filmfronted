@@ -603,6 +603,10 @@ declare namespace API {
     paidAt?: string;
     expireAt?: string;
     createTime?: string;
+    refundAmount?: number;
+    refundTime?: string;
+    /** 影院标签（逗号分隔），用于判断是否支持退票/改签 */
+    cinemaTags?: string;
     /** 影片海报（通过场次-影片链路获取） */
     posterUrl?: string;
     seatLabels?: string[];
