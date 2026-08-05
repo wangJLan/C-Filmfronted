@@ -121,6 +121,18 @@ export async function lockSeat(body: API.LockSeatRequest, options?: { [key: stri
   });
 }
 
+/** 释放已锁定的座位 POST /order/unlockSeat */
+export async function unlockSeat(body: API.LockSeatRequest, options?: { [key: string]: any }) {
+  return request<API.BaseResponseBoolean>('/order/unlockSeat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
 /** 此处后端没有提供注释 POST /order/pay */
 export async function payOrder(body: API.PayOrderRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponsePayOrderVO>('/order/pay', {
