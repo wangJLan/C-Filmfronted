@@ -1,164 +1,322 @@
-/* ========== 电子票页 ========== */
+/* ========== 票务详情页 — 淘票票风格 ========== */
 
 .page {
   min-height: 100vh;
   background: #f5f5f5;
 }
 
-.empty {
-  text-align: center;
-  padding: 80px 16px;
-  font-size: 14px;
-  color: #999;
+.nav {
+  background: var(--status-bg, #13301E);
+  color: #fff;
+  :global(.adm-nav-bar-back) { color: #fff; }
 }
 
-/* ===== 成功横幅 ===== */
-.successBanner {
+.empty { text-align: center; padding: 80px 16px; font-size: 14px; color: #999; }
+
+/* ========== 状态区 ========== */
+.statusSection {
+  background: var(--status-bg, #13301E);
+  padding: 8px 20px 28px; color: #fff;
+}
+.statusTitle { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+.statusDesc { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.8; margin-bottom: 16px; }
+.cd { color: #fff; font-weight: 600; font-size: 14px; }
+.statusActions { display: flex; gap: 12px; }
+
+.btnCancel {
+  flex: 1; height: 40px;
+  border: 1px solid rgba(255,255,255,0.5); border-radius: 20px;
+  background: transparent; color: #fff;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  &:active { opacity: 0.7; }
+  &:disabled { opacity: 0.4; }
+}
+
+.btnPay {
+  flex: 1; height: 40px;
+  border: none; border-radius: 20px;
+  background: #fff; color: var(--status-bg, #13301E);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  &:active { opacity: 0.85; }
+}
+
+.btnOutline {
+  flex: 1; height: 40px;
+  border: 1px solid rgba(255,255,255,0.5); border-radius: 20px;
+  background: transparent; color: #fff;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  &:active { opacity: 0.7; }
+}
+
+/* ===== 二维码置灰 ===== */
+.qrDisabled {
+  opacity: 0.3; pointer-events: none;
+}
+.codeDisabled {
+  opacity: 0.5;
+}
+
+/* ===== 二维码水印 ===== */
+.qrStamp {
+  position: absolute; right: 8px; bottom: 8px;
+  opacity: 0.5; pointer-events: none;
+}
+.qrStamp svg {
+  fill: var(--status-bg, #343b80);
+}
+
+/* ========== 卡片 ========== */
+.card {
+  background: #fff; margin: 10px; border-radius: 12px; padding: 16px;
+}
+.detailHeader {
+  font-size: 15px; font-weight: 600; color: #111;
+  margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ========== 影院行 ========== */
+.cinemaRow {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #f5f5f5;
+}
+.cinemaName {
+  flex: 1; display: flex; align-items: center; gap: 4px;
+  font-size: 14px; font-weight: 600; color: #111; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.arrowSvg { width: 14px; height: 14px; flex-shrink: 0; }
+.cinemaIcons { display: flex; gap: 8px; flex-shrink: 0; }
+.cIcon { width: 20px; height: 20px; fill: #666; cursor: pointer; }
+
+/* ========== 票务信息 ========== */
+.ticketMain { display: flex; gap: 12px; }
+.ticketLeft { flex: 1; min-width: 0; }
+.tktTitle { font-size: 17px; font-weight: 700; color: #111; margin-bottom: 8px; }
+.tktRow { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; margin-bottom: 6px; }
+.tktCount { margin-left: auto; }
+.tktRow2, .tktRow3 { font-size: 12px; color: #666; margin-bottom: 4px; display: flex; gap: 8px; }
+.tktDayLabel { font-weight: 600; color: #111; }
+.tktSeats { color: #111; }
+
+.ticketRight { flex-shrink: 0; }
+.posterImg {
+  width: 72px; height: 96px; border-radius: 6px;
+  background-size: cover; background-position: center;
+}
+.posterPlaceholder {
+  width: 72px; height: 96px; border-radius: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ========== 已支付状态区 ========== */
+.paidBody { text-align: center; }
+.paidCountdown { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.paidHint { font-size: 12px; color: rgba(255,255,255,0.7); }
+
+/* ========== 取票码 ========== */
+.qrTabs {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 16px; position: relative;
+}
+.qrTab {
+  font-size: 14px; color: #959AA5; cursor: pointer; padding-bottom: 8px;
+}
+.qrTabActive {
+  color: #111; font-weight: 600;
+  border-bottom: 2px solid #111;
+}
+.qrHelp {
+  margin-left: auto; font-size: 12px; color: #959AA5; cursor: pointer;
+}
+.qrBody {
+  display: flex; justify-content: center; padding: 8px 0 12px;
+}
+.qrCodeBox {
+  padding: 12px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px;
+  position: relative; display: inline-block;
+}
+.qrSection {
+  display: flex; justify-content: center; padding: 8px 0 12px;
+}
+.codeSection {
+  text-align: center; padding-bottom: 4px;
+}
+.codeLabel {
+  font-size: 13px; color: #959AA5; margin-bottom: 6px;
+}
+.codeNum {
+  font-size: 28px; font-weight: 700; color: #111; letter-spacing: 4px; font-family: monospace;
+}
+.codeHint {
+  font-size: 11px; color: #959AA5; margin-top: 6px;
+}
+
+/* ========== 订单详情 ========== */
+.detailItem {
+  display: flex; align-items: flex-start; padding: 6px 0; font-size: 13px;
+}
+.dLabel { color: #959AA5; flex-shrink: 0; }
+.dVal { color: #111; }
+.dValRow { color: #111; display: flex; align-items: center; gap: 8px; }
+.copyBtn {
+  padding: 2px 10px; border: 1px solid #ddd; border-radius: 10px;
+  background: #fff; font-size: 11px; color: #666; cursor: pointer;
+  &:active { background: #f5f5f5; }
+}
+
+/* ========== 观影须知 ========== */
+.noticeText { font-size: 11px; color: #959AA5; line-height: 1.9; }
+
+/* ========== 底部服务 ========== */
+.bottomServices { display: flex; gap: 10px; padding: 12px 10px 40px; }
+.serviceBtn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 40px; border: 1px solid #e0e0e0; border-radius: 20px;
+  background: #fff; font-size: 13px; color: #666; cursor: pointer;
+  &:active { background: #f5f5f5; }
+}
+.sIcon { width: 18px; height: 18px; }
+
+/* ========== 已取消/已退款页面 — 淘票票简化卡片 ========== */
+.cancelledPage {
+  min-height: 100vh;
+  background: #f5f5f5;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 28px 16px 24px;
-  background: linear-gradient(180deg, #E8FFF0 0%, #fff 100%);
+  justify-content: center;
+  padding: 24px;
 }
 
-.successIcon {
-  font-size: 48px;
+.cancelledCard {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 40px 24px 32px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.cancelledIconWrap {
+  margin-bottom: 16px;
+}
+
+.cancelledIcon {
+  width: 56px;
+  height: 56px;
+}
+
+.cancelledTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
   margin-bottom: 8px;
 }
 
-.successTitle {
-  font-size: 20px;
-  font-weight: 700;
-  color: #00b578;
-  margin-bottom: 4px;
+.cancelledFilm {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
 }
 
-.successDesc {
-  font-size: 12px;
-  color: #999;
+.cancelledBtn {
+  display: inline-block;
+  padding: 10px 36px;
+  border: 1px solid #e0e0e0;
+  border-radius: 22px;
+  font-size: 14px;
+  color: #111;
+  cursor: pointer;
+  &:active { background: #f5f5f5; }
 }
 
-/* ===== 取票码 + 二维码卡片 ===== */
-.ticketCard {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin: 16px;
-  padding: 20px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border: 2px dashed #00b578;
+/* ========== 退改签 ========== */
+.endorseList { }
+
+.endorseItem {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 0;
+  & + & { border-top: 1px solid #f5f5f5; }
 }
 
-.qrSection {
-  flex-shrink: 0;
-  padding: 4px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+.endorseContent { flex: 1; min-width: 0; }
+
+.endorseStatus {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 4px;
 }
 
-.codeSection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.endorseCheck { width: 16px; height: 16px; flex-shrink: 0; }
+
+.endorseTitle {
+  font-size: 14px; font-weight: 600; color: #111;
 }
 
-.codeLabel {
-  font-size: 12px;
-  color: #999;
+.endorseArrow { width: 12px; height: 12px; flex-shrink: 0; }
+
+.endorseSubtitle {
+  font-size: 11px; color: #959AA5; line-height: 1.5;
 }
 
-.codeNum {
-  font-size: 32px;
-  font-weight: 800;
-  color: #1a1a1a;
-  letter-spacing: 6px;
-  font-variant-numeric: tabular-nums;
+.endorseBtn {
+  flex-shrink: 0; align-self: center;
+  padding: 6px 20px;
+  border: 1px solid #1677ff; border-radius: 16px;
+  background: #fff; color: #1677ff;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  &:active { opacity: 0.7; }
 }
 
-.codeHint {
-  font-size: 11px;
-  color: #bbb;
+.endorseBtnDisabled {
+  flex-shrink: 0; align-self: center;
+  padding: 6px 20px;
+  border: 1px solid #e0e0e0; border-radius: 16px;
+  background: #fff; color: #ccc;
+  font-size: 13px; cursor: not-allowed;
 }
 
-/* ===== 详情卡片 ===== */
-.detailCard {
-  margin: 0 16px 16px;
+/* ========== 删除订单按钮 ========== */
+.deleteSection {
   padding: 16px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.detailTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a1a1a;
+.deleteBtn {
+  width: 100%; height: 46px;
+  border: none; border-radius: 23px;
+  background: linear-gradient(135deg, #f8289c 0%, #ff5cae 100%);
+  color: #fff; font-size: 16px; font-weight: 600;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(248, 40, 156, 0.3);
+  &:active { opacity: 0.85; }
+}
+
+/* ========== 如何取票弹窗 ========== */
+.helpOverlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.helpModal {
+  background: #fff; border-radius: 16px;
+  padding: 24px 20px 20px; margin: 0 20px;
+  max-width: 360px; width: 100%;
+  text-align: center;
+}
+.helpTitle {
+  font-size: 18px; font-weight: 700; color: #111;
+  margin-bottom: 6px;
+}
+.helpDesc {
+  font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.5;
+}
+.helpImg {
   margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f5f5f5;
 }
-
-.detailRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 7px 0;
+.helpPlaceholder {
+  width: 100%; height: 160px;
+  background: #f0f0f0; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #bbb;
 }
-
-.dLabel {
-  font-size: 13px;
-  color: #999;
-  flex-shrink: 0;
-}
-
-.dVal {
-  font-size: 13px;
-  color: #1a1a1a;
-  font-weight: 500;
-  text-align: right;
-}
-
-.dValSeats {
-  font-size: 13px;
-  color: #FF5A00;
-  font-weight: 700;
-  text-align: right;
-}
-
-.dValPrice {
-  font-size: 18px;
-  color: #FF5A00;
-  font-weight: 700;
-  text-align: right;
-}
-
-.dValSmall {
-  font-size: 11px;
-  color: #aaa;
-  text-align: right;
-}
-
-/* ===== 底部操作 ===== */
-.actions {
-  padding: 8px 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.actions :global(.adm-button) {
-  border-radius: 24px;
-  font-weight: 600;
-}
-
-.actions :global(.adm-button-primary) {
-  --background-color: linear-gradient(135deg, #FF5A00, #FF8C42);
-}
-
-.backBtn {
-  color: #999 !important;
+.helpImgFull {
+  width: 100%; border-radius: 8px; display: block; object-fit: fill;
 }

@@ -148,6 +148,10 @@ const SeatPage: React.FC = () => {
       try {
         await fetch(`/api/movie-agent/sync-state?userId=${userId}&scheduleId=${sid}&orderId=${order.id}&seatLabels=${encodeURIComponent(seatLabels)}`, { method: 'POST' });
       } catch { /* 非关键路径，失败不影响下单 */ }
+      sessionStorage.setItem(`order_${order.id}_filmType`, filmTypeVal);
+      // 传递影院 tags 供退改签判断
+      const cinemaTags = sessionStorage.getItem('seat_cinemaTags');
+      if (cinemaTags) sessionStorage.setItem(`order_${order.id}_cinemaTags`, cinemaTags);
       Toast.show({ icon: 'success', content: '下单成功！' });
       navigate(`/order-confirm/${order.id}`, { replace: true });
     } catch (e: any) {
