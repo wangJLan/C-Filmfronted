@@ -7,7 +7,7 @@ import { NavBar, Toast, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getSeatMap } from '@/api/seatController';
-import { createOrder } from '@/api/orderController';
+import { createOrder, lockSeat } from '@/api/orderController';
 import { listSchedule } from '@/api/scheduleController';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
@@ -136,10 +136,11 @@ const SeatPage: React.FC = () => {
     if (selectedIds.size === 0) { Toast.show({ content: '请先选择座位' }); return; }
     setLocking(true);
     try {
-      const order = await createOrder({ scheduleId: sid, seatIds: Array.from(selectedIds) });
+      const seatIds = Array.from(selectedIds);
+      await lockSeat({ scheduleId: sid, seatIds });
+      const order = await createOrder({ scheduleId: sid, seatIds });
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
       sessionStorage.setItem(`order_${order.id}_filmType`, filmTypeVal);
-      // 传递影院 tags 供退改签判断
       const cinemaTags = sessionStorage.getItem('seat_cinemaTags');
       if (cinemaTags) sessionStorage.setItem(`order_${order.id}_cinemaTags`, cinemaTags);
       Toast.show({ icon: 'success', content: '下单成功！' });
