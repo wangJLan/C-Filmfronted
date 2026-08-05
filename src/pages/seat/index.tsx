@@ -7,7 +7,7 @@ import { NavBar, Toast, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getSeatMap } from '@/api/seatController';
-import { createOrder } from '@/api/orderController';
+import { createOrder, lockSeat } from '@/api/orderController';
 import { listSchedule } from '@/api/scheduleController';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
@@ -138,7 +138,9 @@ const SeatPage: React.FC = () => {
     if (selectedIds.size === 0) { Toast.show({ content: '请先选择座位' }); return; }
     setLocking(true);
     try {
-      const order = await createOrder({ scheduleId: sid, seatIds: Array.from(selectedIds) });
+      const seatIds = Array.from(selectedIds);
+      await lockSeat({ scheduleId: sid, seatIds });
+      const order = await createOrder({ scheduleId: sid, seatIds });
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
       // ★ 同步通知 AI：标记座位已锁定 & 订单已创建，AI 面板下次打开时自动感知
       const seatLabels = Array.from(selectedIds).map(id => {
@@ -149,7 +151,6 @@ const SeatPage: React.FC = () => {
         await fetch(`/api/movie-agent/sync-state?userId=${userId}&scheduleId=${sid}&orderId=${order.id}&seatLabels=${encodeURIComponent(seatLabels)}`, { method: 'POST' });
       } catch { /* 非关键路径，失败不影响下单 */ }
       sessionStorage.setItem(`order_${order.id}_filmType`, filmTypeVal);
-      // 传递影院 tags 供退改签判断
       const cinemaTags = sessionStorage.getItem('seat_cinemaTags');
       if (cinemaTags) sessionStorage.setItem(`order_${order.id}_cinemaTags`, cinemaTags);
       Toast.show({ icon: 'success', content: '下单成功！' });
