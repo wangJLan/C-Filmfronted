@@ -1,13 +1,13 @@
 /**
  * 统一选座页 — 真实座位数据 + 锁座 + 创建订单 + 淘票票风格底部卡片
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'umi';
 import { NavBar, Toast, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getSeatMap } from '@/api/seatController';
-import { createOrder, lockSeat } from '@/api/orderController';
+import { createOrder, lockSeat, unlockSeat } from '@/api/orderController';
 import { listSchedule } from '@/api/scheduleController';
 import { useGuard } from '@/hooks/useGuard';
 import { useUserStore } from '@/stores/useUserStore';
@@ -65,6 +65,35 @@ const SeatPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [locking, setLocking] = useState(false);
   const maxSelect = 4;
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevSelectedRef = useRef<Set<number>>(new Set());
+
+  // 离开页面时释放所有已锁座位
+  useEffect(() => {
+    return () => {
+      const ids = Array.from(prevSelectedRef.current);
+      if (ids.length > 0 && sid) {
+        unlockSeat({ scheduleId: sid, seatIds: ids }).catch(() => {});
+      }
+    };
+  }, [sid]);
+
+  // 选座变化后防抖 300ms 调锁座/解锁接口
+  const syncLocks = useCallback((next: Set<number>) => {
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    lockTimerRef.current = setTimeout(async () => {
+      const prev = prevSelectedRef.current;
+      const added = Array.from(next).filter(id => !prev.has(id));
+      const removed = Array.from(prev).filter(id => !next.has(id));
+      prevSelectedRef.current = new Set(next);
+      try {
+        if (added.length > 0) await lockSeat({ scheduleId: sid, seatIds: added });
+        if (removed.length > 0) await unlockSeat({ scheduleId: sid, seatIds: removed });
+      } catch {
+        // 锁座冲突由后端返回，不做额外处理
+      }
+    }, 300);
+  }, [sid]);
 
   const { rows, cols, seats, price } = useMemo(() => {
     if (!seatMap) return { rows: 0, cols: 0, seats: [] as API.Seat[], price: 0 };
@@ -86,10 +115,16 @@ const SeatPage: React.FC = () => {
     const seat = seatGrid.get(`${row}-${col}`);
     if (!seat || seat.status !== 'available') return;
     setSelectedIds(prev => {
+      if (prev.has(seat.id!)) {
+        const next = new Set(prev);
+        next.delete(seat.id!);
+        syncLocks(next);
+        return next;
+      }
+      if (prev.size >= maxSelect) { Toast.show({ content: `最多选${maxSelect}座` }); return prev; }
       const next = new Set(prev);
-      if (next.has(seat.id!)) { next.delete(seat.id!); return next; }
-      if (next.size >= maxSelect) { Toast.show({ content: `最多选${maxSelect}座` }); return prev; }
       next.add(seat.id!);
+      syncLocks(next);
       return next;
     });
   };
@@ -139,8 +174,11 @@ const SeatPage: React.FC = () => {
     setLocking(true);
     try {
       const seatIds = Array.from(selectedIds);
+      // 防抖锁座可能尚未触发，再做一次最终锁座
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
       await lockSeat({ scheduleId: sid, seatIds });
       const order = await createOrder({ scheduleId: sid, seatIds });
+      prevSelectedRef.current.clear();
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
       // ★ 同步通知 AI：标记座位已锁定 & 订单已创建，AI 面板下次打开时自动感知
       const seatLabels = Array.from(selectedIds).map(id => {
