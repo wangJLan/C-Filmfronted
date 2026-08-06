@@ -41,7 +41,7 @@ const SeatPage: React.FC = () => {
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const userId = useUserStore((s) => s.user?.id);
-  const sid = Number(showtimeId);
+  const sid = showtimeId; // 雪花 ID 全程用字符串，避免 Number() 精度丢失
 
   const { filmName, filmDuration, filmType, startTime, endTime, hallType, hallName, date } =
     (location.state as any) || {};
@@ -58,7 +58,7 @@ const SeatPage: React.FC = () => {
 
   const { data: seatMap, isLoading } = useQuery({
     queryKey: ['seatMap', sid],
-    queryFn: () => getSeatMap({ scheduleId: sid }),
+    queryFn: () => getSeatMap({ scheduleId: sid as any }),
     enabled: !!sid && isLoggedIn,
   });
 
@@ -73,7 +73,7 @@ const SeatPage: React.FC = () => {
     return () => {
       const ids = Array.from(prevSelectedRef.current);
       if (ids.length > 0 && sid) {
-        unlockSeat({ scheduleId: sid, seatIds: ids }).catch(() => {});
+        unlockSeat({ scheduleId: sid as any, seatIds: ids }).catch(() => {});
       }
     };
   }, [sid]);
@@ -87,21 +87,26 @@ const SeatPage: React.FC = () => {
       const removed = Array.from(prev).filter(id => !next.has(id));
       prevSelectedRef.current = new Set(next);
       try {
-        if (added.length > 0) await lockSeat({ scheduleId: sid, seatIds: added });
-        if (removed.length > 0) await unlockSeat({ scheduleId: sid, seatIds: removed });
+        if (added.length > 0) await lockSeat({ scheduleId: sid as any, seatIds: added });
+        if (removed.length > 0) await unlockSeat({ scheduleId: sid as any, seatIds: removed });
       } catch {
         // 锁座冲突由后端返回，不做额外处理
       }
     }, 300);
   }, [sid]);
 
-  const { rows, cols, seats, price } = useMemo(() => {
-    if (!seatMap) return { rows: 0, cols: 0, seats: [] as API.Seat[], price: 0 };
+  const { rows, cols, seats, price, aisleRows, aisleCols, rowOverrides } = useMemo(() => {
+    if (!seatMap) {
+      return { rows: 0, cols: 0, seats: [] as API.Seat[], price: 0, aisleRows: [] as number[], aisleCols: [] as number[], rowOverrides: {} as Record<number, number> };
+    }
     return {
       rows: seatMap.rowCount || 0,
       cols: seatMap.colCount || 0,
       seats: seatMap.seats || [],
       price: seatMap.price || 0,
+      aisleRows: seatMap.aisleRows || [],
+      aisleCols: seatMap.aisleCols || [],
+      rowOverrides: seatMap.rowOverrides || {},
     };
   }, [seatMap]);
 
@@ -110,6 +115,14 @@ const SeatPage: React.FC = () => {
     seats.forEach(s => grid.set(`${s.rowNum}-${s.colNum}`, s));
     return grid;
   }, [seats]);
+
+  // 过道/空位布局：按物理格遍历，缺口（blockedCells）自然留白、过道（aisleRows/aisleCols）加宽
+  const getRowCols = useCallback(
+    (rowNum: number): number => rowOverrides?.[rowNum] ?? cols,
+    [rowOverrides, cols],
+  );
+  const aisleRowSet = useMemo(() => new Set(aisleRows), [aisleRows]);
+  const aisleColSet = useMemo(() => new Set(aisleCols), [aisleCols]);
 
   const toggle = (row: number, col: number) => {
     const seat = seatGrid.get(`${row}-${col}`);
@@ -158,7 +171,7 @@ const SeatPage: React.FC = () => {
     return (Array.isArray(apiSchedules) ? apiSchedules : []) as any[];
   }, [relatedSchedules, apiSchedules]);
 
-  const currentSkdId = Number(showtimeId);
+  const currentSkdId = showtimeId; // 与场次列表 id（字符串雪花）比较，不能用 Number
 
   const switchSkd = (item: any) => {
     const p = new URLSearchParams(location.search);
@@ -176,8 +189,8 @@ const SeatPage: React.FC = () => {
       const seatIds = Array.from(selectedIds);
       // 防抖锁座可能尚未触发，再做一次最终锁座
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-      await lockSeat({ scheduleId: sid, seatIds });
-      const order = await createOrder({ scheduleId: sid, seatIds });
+      await lockSeat({ scheduleId: sid as any, seatIds });
+      const order = await createOrder({ scheduleId: sid as any, seatIds });
       prevSelectedRef.current.clear();
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
       // ★ 同步通知 AI：标记座位已锁定 & 订单已创建，AI 面板下次打开时自动感知
@@ -224,23 +237,37 @@ const SeatPage: React.FC = () => {
         <div className={styles.seatGrid}>
           {Array.from({ length: rows }, (_, rowIdx) => {
             const rowNum = rowIdx + 1;
+            const rowCols = getRowCols(rowNum);
             return (
-              <div key={rowNum} className={styles.seatRow}>
+              <div
+                key={rowNum}
+                className={`${styles.seatRow} ${aisleRowSet.has(rowNum) ? styles.seatRowAisle : ''}`}
+              >
                 <span className={styles.rowLabel}>{ROW_LABELS[rowIdx]}</span>
                 <div className={styles.seatCells}>
-                  {Array.from({ length: cols }, (_, colIdx) => {
+                  {Array.from({ length: rowCols }, (_, colIdx) => {
                     const colNum = colIdx + 1;
                     const seat = seatGrid.get(`${rowNum}-${colNum}`);
-                    if (!seat) return <span key={colNum} className={styles.aisle} />;
-                    const isSold = seat.status === 'sold' || seat.status === 'locked';
-                    const isSel = selectedIds.has(seat.id!);
-                    const isVip = seat.zone === 'vip';
-                    let cls = styles.seat;
-                    if (isSold) cls += ` ${styles.seatSold}`;
-                    else if (isSel) cls += ` ${styles.seatSelected}`;
-                    else if (isVip) cls += ` ${styles.seatCouple}`;
-                    else cls += ` ${styles.seatAvail}`;
-                    return <div key={colNum} className={cls} onClick={() => toggle(rowNum, colNum)} />;
+                    return (
+                      <React.Fragment key={colNum}>
+                        {!seat ? (
+                          <span className={styles.seatGap} />
+                        ) : (
+                          (() => {
+                            const isSold = seat.status === 'sold' || seat.status === 'locked';
+                            const isSel = selectedIds.has(seat.id!);
+                            const isVip = seat.zone === 'vip';
+                            let cls = styles.seat;
+                            if (isSold) cls += ` ${styles.seatSold}`;
+                            else if (isSel) cls += ` ${styles.seatSelected}`;
+                            else if (isVip) cls += ` ${styles.seatCouple}`;
+                            else cls += ` ${styles.seatAvail}`;
+                            return <div className={cls} onClick={() => toggle(rowNum, colNum)} />;
+                          })()
+                        )}
+                        {aisleColSet.has(colNum) && <span className={styles.seatColAisle} />}
+                      </React.Fragment>
+                    );
                   })}
                 </div>
                 <span className={styles.rowLabel}>{ROW_LABELS[rowIdx]}</span>

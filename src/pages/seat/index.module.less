@@ -52,6 +52,12 @@
   &::after { content: '×'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ccc; }
 }
 .aisle { width: 14px; height: 22px; }
+/* 空位/缺口（blockedCells）：无座格留白 */
+.seatGap { width: 14px; height: 22px; flex-shrink: 0; }
+/* 纵向过道（aisleCols）：列间加宽 */
+.seatColAisle { width: 18px; height: 22px; flex-shrink: 0; }
+/* 横向过道（aisleRows）：行间加宽 */
+.seatRowAisle { margin-bottom: 14px; }
 
 /* ===== 图例 ===== */
 .legend { display: flex; justify-content: center; gap: 20px; padding: 14px 0; }

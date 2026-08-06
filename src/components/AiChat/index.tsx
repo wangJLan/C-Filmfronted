@@ -17,6 +17,7 @@ import { useNavigate } from 'umi';
 import { useAiStore } from '@/stores/useAiStore';
 import { useUserStore } from '@/stores/useUserStore';
 import request from '@/libs/request';
+import { getOrderDetail } from '@/api/orderController';
 import dayjs from 'dayjs';
 import styles from './index.module.less';
 
@@ -571,6 +572,32 @@ const OrderConfirmCard: React.FC<{
 }> = ({ data, onOpenOrder, onNavigate }) => {
   const expiryMinutes = Math.max(0, Number(data?.expireInMinutes ?? data?.remainingMinutes ?? 15) || 15);
   const [remainingSeconds, setRemainingSeconds] = useState(Math.round(expiryMinutes * 60));
+  // ★ 订单实际状态：卡片数据为下单时快照（pending），支付后异步查后端刷新为 paid
+  const [orderStatus, setOrderStatus] = useState<string | undefined>(data?.status);
+
+  useEffect(() => {
+    const orderId = data?.orderId;
+    if (!orderId) return;
+    let alive = true;
+    let timer: number | undefined;
+    // ★ 轮询订单状态：下单时查到 pending，支付完成后刷新为 paid（卡片不重新渲染也能更新）
+    const check = () => {
+      getOrderDetail({ id: orderId as any })
+        .then((o: any) => {
+          const vo = o?.data ?? o;
+          if (alive && vo?.status) {
+            setOrderStatus(vo.status);
+            if (vo.status !== 'pending' && timer) window.clearInterval(timer);
+          }
+        })
+        .catch(() => { /* 忽略，保留快照状态 */ });
+    };
+    timer = window.setInterval(check, 8000);
+    check();
+    return () => { alive = false; if (timer) window.clearInterval(timer); };
+  }, [data?.orderId]);
+
+  const isPaid = orderStatus === 'paid' || orderStatus === 'completed';
 
   useEffect(() => {
     setRemainingSeconds(Math.round(expiryMinutes * 60));
@@ -631,7 +658,9 @@ const OrderConfirmCard: React.FC<{
             {data?.orderNo && <div className={styles.orderNo}>订单号 {data.orderNo}</div>}
           </div>
         </div>
-        <span className={styles.orderPending}>待支付</span>
+        <span className={isPaid ? styles.orderPaid : orderStatus === 'cancelled' ? styles.orderCancelled : orderStatus === 'refunded' ? styles.orderRefunded : styles.orderPending}>
+          {isPaid ? '已支付' : orderStatus === 'cancelled' ? '已取消' : orderStatus === 'refunded' ? '已退款' : '待支付'}
+        </span>
       </header>
 
       <div className={styles.orderCardBody}>
@@ -670,8 +699,16 @@ const OrderConfirmCard: React.FC<{
 
       <div className={`${styles.orderCountdown} ${expired ? styles.orderCountdownExpired : ''}`}>
         <ClockCircleOutline />
-        <span>{expired ? '订单已超时，座位将自动释放' : '请在倒计时内完成支付'}</span>
-        {!expired && <strong aria-label={`剩余 ${formatCountdown(remainingSeconds)}`}>{formatCountdown(remainingSeconds)}</strong>}
+        {isPaid ? (
+          <span>订单已支付，请查看订单</span>
+        ) : expired ? (
+          <span>订单已超时，座位将自动释放</span>
+        ) : (
+          <>
+            <span>请在倒计时内完成支付</span>
+            <strong aria-label={`剩余 ${formatCountdown(remainingSeconds)}`}>{formatCountdown(remainingSeconds)}</strong>
+          </>
+        )}
       </div>
 
       <footer className={styles.orderCardFooter}>
@@ -1415,7 +1452,7 @@ const AiChat: React.FC = () => {
       // sessionStorage 不可用时仍允许订单页通过接口加载
     }
     setOpen(false);
-    navigate(`/order-confirm/${encodeURIComponent(orderId)}`);
+    navigate(`/ticket/${encodeURIComponent(orderId)}`);
   }, [navigate]);
 
   const handleCardNavigate = useCallback((path: string) => {

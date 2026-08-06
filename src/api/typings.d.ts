@@ -936,6 +936,12 @@ declare namespace API {
     price?: number;
     vipPrice?: number;
     seats?: Seat[];
+    /** 横向过道（行间加宽）：这些行之后插入过道 */
+    aisleRows?: number[];
+    /** 纵向过道（列间加宽）：这些列之后插入过道 */
+    aisleCols?: number[];
+    /** 每行独立列数（缺省用 colCount），按物理格遍历 */
+    rowOverrides?: Record<number, number>;
   };
 
   type SendMailCodeRequest = {
