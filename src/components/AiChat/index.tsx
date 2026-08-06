@@ -370,17 +370,22 @@ const CinemaListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ da
       <div className={styles.cardReason}>为您找到 {cinemas.length} 家影院</div>
       {cinemas.map((c: any, i: number) => {
         const path = getItemRoute(c);
+        // ★ 兼容 name / cinemaName / amapName 三种字段名
+        const displayName = c.name || c.cinemaName || c.amapName || '未知影院';
+        // 距离 + 地址
+        const metaParts = [c.distanceText, c.address].filter(Boolean);
         return (
         <CardSurface
           key={c.cinemaId ?? i}
           path={path}
-          ariaLabel={`查看影院${c.name || ''}场次`}
+          ariaLabel={`查看影院${displayName}场次`}
           onNavigate={onNavigate}
         >
           <div className={styles.cardHeader}>
-            <span className={styles.cardFilmName}>{c.name}</span>
+            <span className={styles.cardFilmName}>{displayName}</span>
+            {c.basePrice != null && <span className={styles.cardPrice}>¥{c.basePrice}起</span>}
           </div>
-          <div className={styles.cardMeta}>{c.address}</div>
+          <div className={styles.cardMeta}>{metaParts.join(' · ')}</div>
           {path && onNavigate && (
             <div className={styles.cardActionRow}>
               <button
@@ -964,19 +969,67 @@ const AiChat: React.FC = () => {
     try {
       const history = await fetchChatHistory(sid);
       if (history && history.length > 0) {
-        const msgs: Message[] = history.map((h, i) => {
-          const role = h.messageType === 'user' ? 'user' : 'assistant';
-          const parsedCard = role === 'assistant' ? extractCardFromText(h.message || '') : null;
-          return {
-            id: i + 1,
-            role,
-            content: parsedCard?.text ?? h.message ?? '',
-            activeTools: [],
-            streaming: false,
-            cardData: parsedCard?.card,
-          };
-        });
-        setMessages(msgs);
+        // 后端存储顺序：user → card → ai（三条独立记录）
+        // 需要将 card 消息合并到紧随其后的 ai 消息中，
+        // 使卡片出现在 AI 文本下方，与实时对话渲染一致
+        const msgs: Message[] = [];
+        let pendingCard: SSECardData | null = null;
+        let idCounter = 0;
+
+        for (const h of history) {
+          const mtype = h.messageType || '';
+          if (mtype === 'user') {
+            // 先落盘之前挂起的 card（如果有未匹配的 card 挂在用户消息前）
+            if (pendingCard) {
+              const lastMsg = msgs[msgs.length - 1];
+              if (lastMsg && lastMsg.role === 'assistant') {
+                lastMsg.cardData = pendingCard;
+              }
+              pendingCard = null;
+            }
+            msgs.push({
+              id: ++idCounter,
+              role: 'user',
+              content: h.message || '',
+              activeTools: [],
+              streaming: false,
+            });
+          } else if (mtype === 'card') {
+            // 挂起 card，等待紧随其后的 ai 消息
+            const card = tryParseCardJson(h.message || '');
+            if (card) {
+              pendingCard = card;
+            }
+          } else {
+            // ai 消息：将挂起的 card 合并到当前消息
+            const parsedCard = extractCardFromText(h.message || '');
+            msgs.push({
+              id: ++idCounter,
+              role: 'assistant',
+              content: parsedCard?.text ?? h.message ?? '',
+              activeTools: [],
+              streaming: false,
+              cardData: pendingCard || parsedCard?.card || undefined,
+            });
+            pendingCard = null;
+          }
+        }
+
+        // 兜底：末尾还有未匹配的 card
+        if (pendingCard) {
+          const lastMsg = msgs[msgs.length - 1];
+          if (lastMsg && lastMsg.role === 'assistant') {
+            lastMsg.cardData = pendingCard;
+          }
+        }
+
+        setMessages(msgs.length > 0 ? msgs : [{
+          id: 0,
+          role: 'assistant',
+          content: '你好！我是小影 🎬\n\n我可以帮你：\n• 推荐热映电影\n• 查找附近影院\n• 选座购票\n• 解答观影疑问',
+          activeTools: [],
+          streaming: false,
+        }]);
       } else {
         setMessages([{
           id: 0,
@@ -1085,18 +1138,23 @@ const AiChat: React.FC = () => {
       await deleteSessionApi(sid);
       await refreshSessions();
       if (sid === sessionId) {
-        // 当前会话被删 → 切到最新会话或新建
-        const list = await fetchSessions(userId!);
-        if (list.length > 0) {
-          switchSession(list[0].id);
-        } else {
-          newSession();
+        // 当前会话被删 → 新建空会话，不跳转到其他会话
+        if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+        setSending(false);
+        try {
+          const session = await createNewSession(userId!);
+          setSessionId(session.id);
+          setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
+          await refreshSessions();
+        } catch {
+          setSessionId(0);
+          setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
         }
       }
     } catch {
       Toast.show({ icon: 'fail', content: '删除失败' });
     }
-  }, [sessionId, userId, refreshSessions, switchSession, newSession]);
+  }, [sessionId, userId, refreshSessions]);
 
   // ==================== 发送消息 — SSE (fetch + ReadableStream) ====================
   const send = useCallback(async (text: string) => {
