@@ -46,12 +46,10 @@ const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     init(); // GPS 会因权限失败自动降级到 IP 定位
   };
 
-  if (!show) {
-    return <>{children}</>;
-  }
-
   return (
-    <div className={styles.overlay}>
+    <>
+      {show && (
+        <div className={styles.overlay}>
       <div className={styles.card}>
         <div className={styles.iconWrap}>
           <div className={styles.pin}>
@@ -104,8 +102,12 @@ const LocationGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         </div>
       </div>
 
-      <div className={styles.brand}>妙语购票</div>
-    </div>
+          <div className={styles.brand}>妙语购票</div>
+        </div>
+      )}
+      {/* 页面主体始终渲染（AiChat 悬浮窗在定位弹窗之上可见） */}
+      {children}
+    </>
   );
 };
 
