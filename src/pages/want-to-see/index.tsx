@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'umi';
 import { NavBar, Button, Empty } from 'antd-mobile';
 import { LeftOutline, CloseOutline } from 'antd-mobile-icons';
@@ -11,7 +11,11 @@ const WantToSeePage: React.FC = () => {
   const navigate = useNavigate();
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
-  const { wantToSee, toggleWantToSee } = useFilmCollectionStore();
+  const { wantToSee, fetchWantToSee, removeWantToSeeApi } = useFilmCollectionStore();
+
+  useEffect(() => {
+    if (isLoggedIn) fetchWantToSee();
+  }, [isLoggedIn]);
 
   if (!isLoggedIn) {
     return (
@@ -39,18 +43,17 @@ const WantToSeePage: React.FC = () => {
           </div>
         ) : (
           wantToSee.map((film) => (
-            <div key={film.filmId} className={styles.card} onClick={() => navigate(`/detail/${film.filmId}`)}>
+            <div key={film.id} className={styles.card} onClick={() => navigate(`/detail/${film.id}`)}>
               <div className={styles.poster}>
-                <img src={film.poster} alt={film.title} />
+                <img src={film.posterUrl} alt={film.name} />
               </div>
               <div className={styles.info}>
-                <div className={styles.name}>{film.title}</div>
-                <div className={styles.meta}>评分 {film.rating.toFixed(1)} · {film.wantCount}</div>
-                <div className={styles.date}>添加于 {new Date(film.addedAt).toLocaleDateString()}</div>
+                <div className={styles.name}>{film.name}</div>
+                <div className={styles.meta}>评分 {(film.rating ?? 0).toFixed(1)}</div>
               </div>
               <div
                 className={styles.remove}
-                onClick={(e) => { e.stopPropagation(); toggleWantToSee(film); }}
+                onClick={(e) => { e.stopPropagation(); removeWantToSeeApi(film.id); }}
               >
                 <CloseOutline fontSize={16} />
               </div>

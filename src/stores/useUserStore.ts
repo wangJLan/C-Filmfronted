@@ -17,6 +17,7 @@ import {
   changePassword as changePasswordApi,
   userLogin as userLoginApi,
   userRegister as userRegisterApi,
+  weixinLogin as weixinLoginApi,
   getLoginUser,
   userLogout as userLogoutApi,
 } from '@/api/userController';
@@ -37,6 +38,9 @@ interface UserState {
   // ===== 邮箱验证码通道 =====
   sendMailCode: (email: string) => Promise<void>;
   loginByMail: (email: string, code: string) => Promise<void>;
+
+  // ===== 微信扫码通道 =====
+  loginByWechat: (openid: string) => Promise<void>;
 
   // ===== 账号密码通道 =====
   login: (params: API.UserRegisterRequest) => Promise<void>;
@@ -100,6 +104,19 @@ export const useUserStore = create<UserState>()((set, get) => ({
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '登录失败' });
+      throw e;
+    }
+  },
+
+  // ==================== 微信扫码通道 ====================
+
+  loginByWechat: async (openid) => {
+    set({ loading: true, lastError: null });
+    try {
+      const user = await weixinLoginApi({ openid });
+      set({ user, isLoggedIn: true, loading: false });
+    } catch (e: any) {
+      set({ loading: false, lastError: e?.message || '微信登录失败' });
       throw e;
     }
   },

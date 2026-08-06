@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'umi';
 import { NavBar, SafeArea, Toast } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import { getOrderDetail, cancelOrder } from '@/api/orderController';
+import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
 
 const LOCK_DURATION = 15 * 60;
@@ -30,11 +31,39 @@ const OrderConfirmPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const oid = orderId!;
+  const userId = useUserStore((s) => s.user?.id);
 
   const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(!order);
   const [remainSec, setRemainSec] = useState(LOCK_DURATION);
   const [cancelling, setCancelling] = useState(false);
+  const [sseTerminated, setSseTerminated] = useState(false); // SSE 通知已超时
+
+  // ======================== SSE 订阅订单状态变更 ========================
+  useEffect(() => {
+    if (!userId || !oid) return;
+    const es = new EventSource(`/api/sse/order/${userId}`);
+    es.addEventListener('order_cancelled', (e: MessageEvent) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (String(payload.orderId) === String(oid)) {
+          setSseTerminated(true);
+          setRemainSec(0);
+        }
+      } catch {}
+    });
+    es.addEventListener('order_paid', (e: MessageEvent) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (String(payload.orderId) === String(oid)) {
+          Toast.show({ icon: 'success', content: '支付成功！' });
+          navigate(`/payment-success/${oid}`, { replace: true });
+        }
+      } catch {}
+    });
+    es.onerror = () => { /* 连接断开后自动重连，无需处理 */ };
+    return () => { es.close(); };
+  }, [userId, oid, navigate]);
 
   useEffect(() => {
     if (!oid) return;
@@ -124,7 +153,11 @@ const OrderConfirmPage: React.FC = () => {
         <div className={styles.expiredContainer}>
           <div className={styles.expiredIcon}>⏰</div>
           <div className={styles.expiredTitle}>订单已超时</div>
-          <div className={styles.expiredDesc}>座位已自动释放，喜欢的话可以重新下单哦～</div>
+          <div className={styles.expiredDesc}>
+            {sseTerminated
+              ? '订单已超时自动取消，座位已释放，喜欢的话可以重新下单哦～'
+              : '订单支付超时，座位已自动释放，喜欢的话可以重新下单哦～'}
+          </div>
           <div className={styles.retryBtn} onClick={() => navigate(-2)}>重新选座</div>
         </div>
       </div>
