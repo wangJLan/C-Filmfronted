@@ -399,44 +399,73 @@ const CinemaListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ da
   );
 };
 
-/** 场次列表卡片 */
+/** 场次列表卡片（按影院分组展示，默认每影院最多显示 3 场，可展开全部） */
 const ScheduleListCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
   const schedules: any[] = data?.schedules || data?.sessions || [];
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   if (schedules.length === 0) {
     return <div className={styles.cardWrap}><div className={styles.cardReason}>暂无场次</div></div>;
   }
+  // 按影院分组：无影院名的场次归入"其他影院"，保证跨影院结果能看清归属
+  const groups = new Map<string, any[]>();
+  schedules.forEach((s: any) => {
+    const key = s.cinemaName || '其他影院';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(s);
+  });
+  // 每影院默认只显示最接近目标时间的前 3 场（工具已按接近度排序），避免一次列出全部
+  const MAX_SHOW = 3;
+  const fmtTime = (t?: any) => (t ? String(t).slice(0, 5) : '');
   return (
     <div className={styles.cardWrap}>
-      <div className={styles.cardReason}>可选场次</div>
-      {schedules.map((s: any, i: number) => {
-        const path = getItemRoute(s);
+      <div className={styles.cardReason}>可选场次（按影院分组）</div>
+      {Array.from(groups.entries()).map(([cinemaName, list]) => {
+        const isExpanded = !!expanded[cinemaName];
+        const visible = isExpanded ? list : list.slice(0, MAX_SHOW);
         return (
-        <CardSurface
-          key={s.scheduleId ?? i}
-          path={path}
-          ariaLabel={`选择${s.showDate || ''} ${s.startTime || ''}场次`}
-          onNavigate={onNavigate}
-        >
-          <div className={styles.cardHeader}>
-            <span className={styles.cardFilmName}>{s.hallName}</span>
-            <span className={styles.cardPrice}>¥{s.price}</span>
-          </div>
-          <div className={styles.cardMeta}>{s.showDate} {s.startTime}{(s.version || s.hallType) ? ` · ${s.version || s.hallType}` : ''}</div>
-          <div className={styles.cardFooter}>
-            {s.availableSeats != null && <span className={styles.cardSeats}>余{s.availableSeats}座</span>}
-          </div>
-          {path && onNavigate && (
-            <div className={styles.cardActionRow}>
-              <button
-                type="button"
-                className={styles.cardActionBtn}
-                onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
-              >
-                选座购票
-              </button>
-            </div>
+        <div key={cinemaName} className={styles.cinemaGroup}>
+          <div className={styles.cinemaGroupName}>{cinemaName}</div>
+          {visible.map((s: any, i: number) => {
+            const path = getItemRoute(s);
+            return (
+            <CardSurface
+              key={s.scheduleId ?? i}
+              path={path}
+              ariaLabel={`选择${s.cinemaName || ''} ${s.showDate || ''} ${s.startTime || ''}场次`}
+              onNavigate={onNavigate}
+            >
+              <div className={styles.cardHeader}>
+                <span className={styles.cardFilmName}>{fmtTime(s.startTime)}</span>
+                <span className={styles.cardPrice}>¥{s.price}</span>
+              </div>
+              <div className={styles.cardMeta}>{s.showDate} · {s.hallName}{(s.version || s.hallType) ? ` · ${s.version || s.hallType}` : ''}</div>
+              <div className={styles.cardFooter}>
+                {s.availableSeats != null && <span className={styles.cardSeats}>余{s.availableSeats}座</span>}
+              </div>
+              {path && onNavigate && (
+                <div className={styles.cardActionRow}>
+                  <button
+                    type="button"
+                    className={styles.cardActionBtn}
+                    onClick={(e) => { e.stopPropagation(); onNavigate(path); }}
+                  >
+                    选座购票
+                  </button>
+                </div>
+              )}
+            </CardSurface>
+            );
+          })}
+          {list.length > MAX_SHOW && (
+            <button
+              type="button"
+              className={styles.cardExpandBtn}
+              onClick={() => setExpanded((prev) => ({ ...prev, [cinemaName]: !prev[cinemaName] }))}
+            >
+              {isExpanded ? '收起' : `展开全部 ${list.length} 场`}
+            </button>
           )}
-        </CardSurface>
+        </div>
         );
       })}
     </div>
