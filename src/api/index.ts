@@ -23,6 +23,9 @@ import * as healthController from './healthController';
 import * as geoController from './geoController';
 import * as dashboardController from './dashboardController';
 import * as aiController from './aiController';
+import * as userWantFilmController from './userWantFilmController';
+import * as userWatchedFilmController from './userWatchedFilmController';
+import * as filmReviewController from './filmReviewController';
 export default {
   userPreferenceController,
   systemConfigController,
@@ -45,4 +48,7 @@ export default {
   geoController,
   dashboardController,
   aiController,
+  userWantFilmController,
+  userWatchedFilmController,
+  filmReviewController,
 };

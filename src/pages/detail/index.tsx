@@ -1,17 +1,18 @@
 /**
  * 影片详情页 — 查看影片信息 + 评分 + 影评 + 动态 + 推荐 + 选座购票
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'umi';
 import { Button, NavBar, Skeleton, Toast, Tabs } from 'antd-mobile';
 import { LeftOutline, StarFill, StarOutline, UpOutline, EyeOutline, HeartFill, HeartOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import { getFilm } from '@/api/filmController';
-import { useFilmCollectionStore, type CollectedFilm } from '@/stores/useFilmCollectionStore';
-import { useOrderStore } from '@/stores/useOrderStore';
+import { listReviews, markHelpful as markHelpfulApi } from '@/api/filmReviewController';
+import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import { useGuard } from '@/hooks/useGuard';
+import ReviewForm from '@/components/ReviewForm';
 import {
-  MOCK_REVIEWS,
   MOCK_NEWS,
   MOCK_BOX_OFFICE,
   MOCK_FILM_INFO,
@@ -23,6 +24,42 @@ import { enrichFilm } from '@/mock/home';
 import styles from './index.module.less';
 
 type TabKey = 'intro' | 'reviews' | 'news' | 'recommend';
+
+interface ReviewItem {
+  id: number;
+  userId: number;
+  filmId: number;
+  orderId: number;
+  rating: number;
+  content: string;
+  tags: string | string[];
+  helpfulCount: number;
+  commentCount: number;
+  createTime: string;
+  userName: string;
+  userAvatar: string;
+  isPurchased: boolean;
+}
+
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  const d = dayjs(dateStr);
+  const now = dayjs();
+  const diffMin = now.diff(d, 'minute');
+  const diffHour = now.diff(d, 'hour');
+  const diffDay = now.diff(d, 'day');
+  if (diffMin < 1) return '刚刚';
+  if (diffMin < 60) return `${diffMin}分钟前`;
+  if (diffHour < 24) return `${diffHour}小时前`;
+  if (diffDay < 30) return `${diffDay}天前`;
+  return d.format('YYYY-MM-DD');
+}
+
+function parseTags(tags: string | string[]): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  return tags.split(',').filter(Boolean);
+}
 
 function getTagColor(tag: string): string {
   const t = tag.toLowerCase();
@@ -52,8 +89,53 @@ const DetailPage: React.FC = () => {
   const guard = useGuard();
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('intro');
-  const { toggleWantToSee, isWanted, markAsWatched, isWatched } = useFilmCollectionStore();
-  const orderStore = useOrderStore();
+  const { toggleWantToSee, isWanted, markAsWatched, isWatched, fetchWantToSee, fetchWatched } = useFilmCollectionStore();
+
+  // 影评相关状态
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [reviewFormVisible, setReviewFormVisible] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const fetchReviews = useCallback(async (pageNum = 1) => {
+    try {
+      const res: any = await listReviews(Number(id), { pageNum, pageSize: 10 });
+      const records = (res?.records || []).map((r: any) => ({
+        ...r,
+        tags: parseTags(r.tags),
+        createTime: r.createTime || '',
+      }));
+      if (pageNum === 1) {
+        setReviews(records);
+      } else {
+        setReviews((prev) => [...prev, ...records]);
+      }
+      setReviewCount(res?.total ?? 0);
+      setReviewPage(pageNum);
+    } catch {
+      // ignore
+    }
+  }, [id]);
+
+  const handleLoadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    await fetchReviews(reviewPage + 1);
+    setLoadingMore(false);
+  };
+
+  const handleMarkHelpful = async (reviewId: number) => {
+    try {
+      await markHelpfulApi(reviewId);
+      setReviews((prev) =>
+        prev.map((r) => (r.id === reviewId ? { ...r, helpfulCount: r.helpfulCount + 1 } : r)),
+      );
+      Toast.show({ content: '已标记有用' });
+    } catch (e: any) {
+      Toast.show({ icon: 'fail', content: e.message || '操作失败' });
+    }
+  };
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
@@ -61,23 +143,11 @@ const DetailPage: React.FC = () => {
     enabled: !!id,
   });
 
-  // 用户已购票 → 自动标记看过
+  // onMount 时从后端同步想看/看过状态
   useEffect(() => {
-    if (!detail?.id) return;
-    const hasOrdered = orderStore.orders.some(
-      (o) => o.filmId === Number(id) && (o.status === 'paid' || o.status === 'completed'),
-    );
-    if (hasOrdered && !isWatched(Number(id))) {
-      markAsWatched({
-        filmId: detail.id!,
-        title: detail.name || '',
-        poster: detail.posterUrl || '',
-        rating: detail.rating || 0,
-        wantCount: '',
-        addedAt: new Date().toISOString(),
-      });
-    }
-  }, [detail?.id, orderStore.orders.length]);
+    fetchWantToSee();
+    fetchWatched();
+  }, []);
 
   if (isLoading) {
     return (
@@ -153,33 +223,17 @@ const DetailPage: React.FC = () => {
           <div className={styles.heroActions}>
             <div
               className={styles.heroBtn}
-              onClick={() => guard(() => {
-                const wasWanted = isWanted(detail.id!);
-                toggleWantToSee({
-                  filmId: detail.id!,
-                  title: detail.name!,
-                  poster: detail.posterUrl || '',
-                  rating: detail.rating || 0,
-                  wantCount: '',
-                  addedAt: new Date().toISOString(),
-                });
-                Toast.show({ content: wasWanted ? '已取消想看' : '已标记想看' });
+              onClick={() => guard(async () => {
+                const wanted = await toggleWantToSee(detail.id!);
+                Toast.show({ content: wanted ? '已标记想看' : '已取消想看' });
               })}
             >
               {isWanted(detail.id!) ? <HeartFill fontSize={16} color="#FF5A00" /> : <HeartOutline fontSize={16} color="#999" />}
               <span>想看</span>
             </div>
-            <div className={styles.heroBtn} onClick={() => guard(() => {
-              const wasWatched = isWatched(detail.id!);
-              if (wasWatched) return; // 看过的不能取消
-              markAsWatched({
-                filmId: detail.id!,
-                title: detail.name!,
-                poster: detail.posterUrl || '',
-                rating: detail.rating || 0,
-                wantCount: '',
-                addedAt: new Date().toISOString(),
-              });
+            <div className={styles.heroBtn} onClick={() => guard(async () => {
+              if (isWatched(detail.id!)) return;
+              await markAsWatched(detail.id!);
               Toast.show({ content: '已标记看过' });
             })}>
               {isWatched(detail.id!) ? <StarFill fontSize={14} color="#FFB800" /> : <StarOutline fontSize={14} color="#999" />}
@@ -234,7 +288,10 @@ const DetailPage: React.FC = () => {
       {/* Tab 导航 */}
       <Tabs
         activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as TabKey)}
+        onChange={(key) => {
+          setActiveTab(key as TabKey);
+          if (key === 'reviews') fetchReviews(1);
+        }}
         className={styles.detailTabs}
       >
         <Tabs.Tab title="简介" key="intro">
@@ -293,54 +350,78 @@ const DetailPage: React.FC = () => {
           </div>
         </Tabs.Tab>
 
-        <Tabs.Tab title={`影评(${MOCK_REVIEWS.length})`} key="reviews">
+        <Tabs.Tab title={`影评(${reviewCount})`} key="reviews">
           <div className={styles.tabContent}>
             <div className={styles.section}>
               <div className={styles.filterRow}>
-                {['全部', '最新', '购票好评', '购票差评', '有图', '购票'].map((tag, i) => (
-                  <span key={tag} className={`${styles.filterTag} ${i === 0 ? styles.filterActive : ''}`}>
-                    {tag}
-                  </span>
-                ))}
+                <span className={`${styles.filterTag} ${styles.filterActive}`}>全部</span>
+                <span className={styles.filterTag}>最新</span>
+                <span className={styles.filterTag}>购票好评</span>
               </div>
 
-              <div className={styles.reviewList}>
-                {MOCK_REVIEWS.map(review => (
-                  <div key={review.id} className={styles.reviewItem}>
-                    <div className={styles.reviewHeader}>
-                      <div className={styles.reviewAvatar}>{review.userAvatar}</div>
-                      <div className={styles.reviewMeta}>
-                        <span className={styles.reviewName}>{review.userName}</span>
-                        {review.isPurchased && <span className={styles.reviewPurchased}>已购票</span>}
+              <div
+                className={styles.writeReviewBtn}
+                onClick={() => guard(() => setReviewFormVisible(true))}
+              >
+                写影评
+              </div>
+
+              {reviews.length === 0 ? (
+                <div className={styles.noReview}>暂无影评，快来写第一条吧</div>
+              ) : (
+                <div className={styles.reviewList}>
+                  {reviews.map(review => (
+                    <div key={review.id} className={styles.reviewItem}>
+                      <div className={styles.reviewHeader}>
+                        <div className={styles.reviewAvatar}>
+                          {review.userAvatar ? (
+                            <img src={review.userAvatar} alt="" className={styles.reviewAvatarImg} />
+                          ) : (
+                            '👤'
+                          )}
+                        </div>
+                        <div className={styles.reviewMeta}>
+                          <span className={styles.reviewName}>{review.userName}</span>
+                          {review.isPurchased && <span className={styles.reviewPurchased}>已购票</span>}
+                        </div>
+                        <span className={styles.reviewLocation}>{formatRelativeTime(review.createTime)}</span>
                       </div>
-                      <span className={styles.reviewLocation}>{review.location} | {review.date}</span>
+                      <div className={styles.reviewRating}>
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <StarFill
+                            key={i}
+                            className={styles.reviewStar}
+                            style={{ color: i < review.rating ? '#FFB800' : '#ddd' }}
+                          />
+                        ))}
+                      </div>
+                      <p className={styles.reviewContent}>{review.content}</p>
+                      {review.tags.length > 0 && (
+                        <div className={styles.reviewTags}>
+                          {(review.tags as string[]).map(tag => (
+                            <span key={tag} className={styles.reviewTag}>{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className={styles.reviewActions}>
+                        <span
+                          className={styles.reviewAction}
+                          onClick={() => guard(() => handleMarkHelpful(review.id))}
+                        >
+                          👍 有用({review.helpfulCount})
+                        </span>
+                        <span className={styles.reviewAction}>💬 评论({review.commentCount})</span>
+                      </div>
                     </div>
-                    <div className={styles.reviewRating}>
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <StarFill
-                          key={i}
-                          className={styles.reviewStar}
-                          style={{ color: i < review.rating ? '#FFB800' : '#ddd' }}
-                        />
-                      ))}
-                    </div>
-                    <p className={styles.reviewContent}>{review.content}</p>
-                    <div className={styles.reviewTags}>
-                      {review.tags.map(tag => (
-                        <span key={tag} className={styles.reviewTag}>{tag}</span>
-                      ))}
-                    </div>
-                    <div className={styles.reviewActions}>
-                      <span className={styles.reviewAction}>👍 有用({review.helpfulCount})</span>
-                      <span className={styles.reviewAction}>💬 评论({review.commentCount})</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              <div className={styles.loadMore}>
-                <span>查看更多影评</span>
-              </div>
+              {reviewCount > reviews.length && (
+                <div className={styles.loadMore} onClick={handleLoadMore}>
+                  <span>{loadingMore ? '加载中...' : '查看更多影评'}</span>
+                </div>
+              )}
             </div>
             <div className={styles.bottomSpace} />
           </div>
@@ -487,6 +568,14 @@ const DetailPage: React.FC = () => {
       <div className={styles.backToTop} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
         <UpOutline fontSize={18} />
       </div>
+
+      {/* 写影评弹窗 */}
+      <ReviewForm
+        visible={reviewFormVisible}
+        filmId={Number(id)}
+        onClose={() => setReviewFormVisible(false)}
+        onSuccess={() => fetchReviews(1)}
+      />
     </div>
   );
 };
