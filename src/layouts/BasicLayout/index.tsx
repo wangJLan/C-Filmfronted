@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'umi';
 import { TabBar, SpinLoading } from 'antd-mobile';
-import { AppOutline, UnorderedListOutline, ContentOutline, CompassOutline, UserOutline } from 'antd-mobile-icons';
+import { AppOutline, UnorderedListOutline, ContentOutline, UserOutline } from 'antd-mobile-icons';
 import { useUserStore } from '@/stores/useUserStore';
 import AiChat from '@/components/AiChat';
 import LoginModal from '@/components/LoginModal';
@@ -11,7 +11,6 @@ const tabs = [
   { key: '/', title: '电影', icon: <AppOutline /> },
   { key: '/film', title: '热映', icon: <UnorderedListOutline /> },
   { key: '/cinema', title: '影院', icon: <ContentOutline /> },
-  { key: '/discover', title: '发现', icon: <CompassOutline /> },
   { key: '/user', title: '我的', icon: <UserOutline /> },
 ];
 

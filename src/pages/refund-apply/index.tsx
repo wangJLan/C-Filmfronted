@@ -25,7 +25,7 @@ function parseShowTime(scheduleTime?: string): Date | null {
 
 function diffMinutes(showTime: Date | null): number {
   if (!showTime) return Infinity;
-  return Math.round((showTime.getTime() - Date.now()) / 60_000);
+  return Math.floor((showTime.getTime() - Date.now()) / 60_000);
 }
 
 const RefundApplyPage: React.FC = () => {
@@ -58,6 +58,7 @@ const RefundApplyPage: React.FC = () => {
     if (order.status === 'expired') return '电影已结束，无法退票';
     if (order.status === 'refunded') return '订单已退款';
     if (order.status !== 'paid') return '订单状态不支持退票';
+    if (minutes <= 0) return '电影已开场，无法退票';
     if (minutes < 1) return '距开场不足1分钟，不支持退票';
     return null;
   }, [order, minutes]);

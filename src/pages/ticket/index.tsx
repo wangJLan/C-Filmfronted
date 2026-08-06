@@ -82,7 +82,6 @@ const TicketPage: React.FC = () => {
   const [remainSec, setRemainSec] = useState(LOCK_DURATION);
   const [cancelling, setCancelling] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [qrTab, setQrTab] = useState<'ticket' | 'entry'>('ticket');
 
   const filmType = useMemo(() => {
     try { return sessionStorage.getItem(`order_${oid}_filmType`) || ''; } catch { return ''; }
@@ -133,9 +132,7 @@ const TicketPage: React.FC = () => {
     try {
       await cancelOrder({ id: oid });
       Toast.show({ icon: 'success', content: '订单已取消' });
-      const updated = { ...order, status: 'cancelled' };
-      setOrder(updated as any);
-      sessionStorage.setItem(`order_${oid}`, JSON.stringify(updated));
+      navigate('/', { replace: true });
     } catch (e: any) { Toast.show({ icon: 'fail', content: e.message || '取消失败' }); }
     finally { setCancelling(false); }
   };
@@ -146,24 +143,6 @@ const TicketPage: React.FC = () => {
 
   if (loading) return <div className={styles.page}><div style={{ textAlign: 'center', padding: 80, color: '#999' }}>加载中…</div></div>;
   if (!order) return <div className={styles.page}><div className={styles.empty}>订单不存在</div></div>;
-
-  // ===== 已取消：简约卡片 =====
-  if (order.status === 'cancelled') {
-    return (
-      <div className={styles.cancelledPage}>
-        <div className={styles.cancelledCard}>
-          <div className={styles.cancelledIconWrap}>
-            <svg className={styles.cancelledIcon} viewBox="0 0 96 96">
-              <path d="M48 88c22.1 0 40-17.9 40-40S70.1 8 48 8 8 25.9 8 48s17.9 40 40 40zm16.3-56.3c2 2 2 5.1 0 7.1L55.1 48l9.2 9.2c2 2 2 5.1 0 7.1s-5.1 2-7.1 0L48 55.1l-9.2 9.2c-2 2-5.1 2-7.1 0s-2-5.1 0-7.1l9.2-9.2-9.2-9.2c-2-2-2-5.1 0-7.1s5.1-2 7.1 0l9.2 9.2 9.2-9.2c1.9-1.9 5.1-1.9 7.1 0z" fill="#f8289c"/>
-            </svg>
-          </div>
-          <div className={styles.cancelledTitle}>订单已关闭</div>
-          <div className={styles.cancelledFilm}>{order.filmName || '影片'}（{order.count || 0}张）</div>
-          <div className={styles.cancelledBtn} onClick={() => navigate('/', { replace: true })}>返回首页</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.page} style={{ '--status-bg': statusCfg.bg } as any}>
@@ -216,6 +195,14 @@ const TicketPage: React.FC = () => {
               </div>
             </>
           )}
+          {order.status === 'cancelled' && (
+            <>
+              <div className={styles.statusTitle}>已取消</div>
+              <div className={styles.statusDesc}>
+                该订单已取消，如需购票请重新下单
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -248,29 +235,21 @@ const TicketPage: React.FC = () => {
       {(order.status === 'paid' || order.status === 'refunded' || order.status === 'expired') && (
         <div className={styles.card}>
           <div className={styles.qrTabs}>
-            <span className={`${styles.qrTab} ${qrTab === 'ticket' ? styles.qrTabActive : ''}`} onClick={() => setQrTab('ticket')}>取电影票</span>
-            <span className={`${styles.qrTab} ${qrTab === 'entry' ? styles.qrTabActive : ''}`} onClick={() => setQrTab('entry')}>扫码入场</span>
             <span className={styles.qrHelp} onClick={() => setShowHelp(true)}>如何取票 ›</span>
           </div>
           <div className={`${styles.qrBody} ${(order.status === 'refunded' || order.status === 'expired') ? styles.qrDisabled : ''}`}>
             <div className={styles.qrCodeBox}>
-              <FakeQR code={`${qrTab === 'ticket' ? 'TK' : 'EN'}_${order.orderNo || '000000'}`} />
+              <FakeQR code={order.tickets?.[0]?.ticketCode || order.orderNo?.slice(-8) || '000000'} />
               {(order.status === 'refunded' || order.status === 'expired') && (
                 <div className={styles.qrStamp}>
                   <svg viewBox="0 0 120 120" width="88" height="88">
-                    {/* 外圆 */}
                     <circle cx="60" cy="60" r="55" fill="#ff4d4f" opacity="0.95"/>
-                    {/* 内圆装饰 */}
                     <circle cx="60" cy="60" r="48" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.6"/>
-                    {/* 五角星装饰 - 上 */}
                     <polygon points="60,18 62,28 72,28 64,34 67,44 60,38 53,44 56,34 48,28 58,28" fill="#fff" opacity="0.7"/>
-                    {/* 五角星装饰 - 下 */}
                     <polygon points="60,98 62,108 72,108 64,114 67,124 60,118 53,124 56,114 48,108 58,108" fill="#fff" opacity="0.5"/>
-                    {/* 文字：已退款 / 已过期 */}
                     <text x="60" y="56" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="bold" fontFamily="SimHei, sans-serif">
                       {order.status === 'expired' ? '已过期' : '已退款'}
                     </text>
-                    {/* 底部小字 */}
                     <text x="60" y="80" textAnchor="middle" fill="#fff" fontSize="11" opacity="0.85" fontFamily="sans-serif">
                       {order.status === 'expired' ? 'EXPIRED' : 'REFUNDED'}
                     </text>
@@ -279,10 +258,34 @@ const TicketPage: React.FC = () => {
               )}
             </div>
           </div>
-          <div className={`${styles.codeSection} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
-            <div className={styles.codeLabel}>{qrTab === 'ticket' ? '取票码' : '入场码'}</div>
-            <div className={styles.codeNum}>{order.orderNo?.slice(-8) || '000000'}</div>
-            <div className={styles.codeHint}>{order.status === 'refunded' ? '该订单已退款，二维码已失效' : order.status === 'expired' ? '电影已放映结束，二维码已失效' : qrTab === 'ticket' ? '请在影院取票机上扫码或输入此码取票' : '请在影院检票口扫码入场'}</div>
+
+          {/* 每张票的取票码和核销状态 */}
+          {(order.tickets && order.tickets.length > 0) ? (
+            <div className={styles.ticketList}>
+              {order.tickets.map((t, idx) => {
+                const statusLabel = t.status === 1 ? '已核销' : t.status === 2 ? '已退票' : t.status === 3 ? '已过期' : '未使用';
+                const statusClass = t.status === 1 ? styles.ticketChecked : t.status === 2 || t.status === 3 ? styles.ticketInvalid : '';
+                return (
+                  <div key={t.id || idx} className={`${styles.ticketItem} ${statusClass}`}>
+                    <div className={styles.ticketItemLeft}>
+                      <span className={styles.ticketSeatLabel}>{t.seatLabel || `${idx + 1}号票`}</span>
+                      <span className={styles.ticketCodeText}>{t.ticketCode || '—'}</span>
+                    </div>
+                    <span className={`${styles.ticketStatus} ${t.status === 1 ? styles.ticketStatusChecked : ''}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={`${styles.codeSection} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
+              <div className={styles.codeLabel}>取票码</div>
+              <div className={styles.codeNum}>{order.orderNo?.slice(-8) || '000000'}</div>
+            </div>
+          )}
+          <div className={`${styles.codeHint} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
+            {order.status === 'refunded' ? '该订单已退款，取票码已失效' : order.status === 'expired' ? '电影已放映结束，取票码已失效' : '请在影院取票机上扫码或输入取票码取票'}
           </div>
         </div>
       )}
@@ -291,6 +294,7 @@ const TicketPage: React.FC = () => {
             const tags = order.cinemaTags || '';
             const hasEndorse = tags.includes('改签');
             const hasRefund = tags.includes('退票');
+            const hasChecked = (order.tickets || []).some(t => t.status === 1);
             if (!hasEndorse && !hasRefund) return null;
             return (
         <div className={styles.card}>
@@ -317,9 +321,14 @@ const TicketPage: React.FC = () => {
                   <span className={styles.endorseTitle}>限时退票</span>
                   <svg className={styles.endorseArrow} viewBox="0 0 96 96" fill="#959AA5"><path d="M55.1 48 32.3 26.9c-1.6-1.5-1.7-4-.2-5.7 1.5-1.6 4-1.7 5.7-.2l26 24c1.7 1.6 1.7 4.3 0 5.9l-26 24c-1.6 1.5-4.2 1.4-5.7-.2-1.5-1.6-1.4-4.2.2-5.7l22.8-21z"/></svg>
                 </div>
-                <div className={styles.endorseSubtitle}>未取票开场前可退票，不收取服务费，全额退款</div>
+                <div className={styles.endorseSubtitle}>{hasChecked ? '已有票已核销，无法退票' : '未取票开场前可退票，不收取服务费，全额退款'}</div>
               </div>
-              <button className={styles.endorseBtn} onClick={() => navigate(`/refund-apply/${oid}`)}>退票</button>
+              <button
+                className={hasChecked ? styles.endorseBtnDisabled : styles.endorseBtn}
+                onClick={hasChecked ? undefined : () => navigate(`/refund-apply/${oid}`)}
+              >
+                退票
+              </button>
             </div>
             )}
           </div>

@@ -610,6 +610,27 @@ declare namespace API {
     /** 影片海报（通过场次-影片链路获取） */
     posterUrl?: string;
     seatLabels?: string[];
+    /** 订单内的票列表（每座位一票，含独立取票码和核销状态） */
+    tickets?: TicketVO[];
+  };
+
+  type TicketVO = {
+    id?: number;
+    orderId?: number;
+    scheduleId?: number;
+    seatId?: number;
+    seatLabel?: string;
+    ticketCode?: string;
+    /** 核销状态: 0-未核销 1-已核销 2-已退票 3-已过期 */
+    status?: number;
+    checkedInAt?: string;
+    checkedBy?: number;
+    orderNo?: string;
+    orderStatus?: string;
+    filmName?: string;
+    cinemaName?: string;
+    hallName?: string;
+    scheduleTime?: string;
   };
 
   type page4Params = {

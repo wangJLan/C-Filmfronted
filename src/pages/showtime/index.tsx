@@ -650,7 +650,15 @@ const ShowtimePage: React.FC = () => {
     <div className={styles.page}>
       {/* NavBar：影院名 */}
       <NavBar
-        onBack={() => navigate(-1)}
+        onBack={() => {
+          if (isFilmOnly) {
+            setSelectedCinemaId(null);
+          } else if (isCinemaOnly) {
+            setSelectedFilmId(null);
+          } else {
+            navigate(-1);
+          }
+        }}
         back={<LeftOutline />}
         right={<span className={styles.aiBtn} onClick={handleAiHelp}>🤖</span>}
       >
