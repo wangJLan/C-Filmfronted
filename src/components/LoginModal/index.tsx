@@ -8,6 +8,7 @@ import {
 } from 'antd-mobile';
 import { useUserStore } from '@/stores/useUserStore';
 import { useLoginGuardStore } from '@/stores/useLoginGuard';
+import WechatLogin from '@/components/WechatLogin';
 import styles from './index.module.less';
 
 // ==================== 邮箱验证码登录子组件 ====================
@@ -103,7 +104,16 @@ const PwdTab: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 
 const LoginModal: React.FC = () => {
   const { open, closePanel, onLoginSuccess } = useLoginGuardStore();
-  const [tab, setTab] = useState<'mail' | 'pwd'>('mail');
+  const [tab, setTab] = useState<'wechat' | 'mail' | 'pwd'>('wechat');
+  // ★ 每次弹窗打开时生成新 key，强制 WechatLogin 重新挂载，清除上次扫码状态
+  const [wechatKey, setWechatKey] = useState(0);
+
+  useEffect(() => {
+    if (open) {
+      setWechatKey((k) => k + 1);
+      setTab('wechat'); // 重置到微信 tab
+    }
+  }, [open]);
 
   const handleDone = () => {
     onLoginSuccess();
@@ -123,10 +133,12 @@ const LoginModal: React.FC = () => {
       </div>
 
       <Tabs activeKey={tab} onChange={(k) => setTab(k as typeof tab)} className={styles.tabs}>
-        <Tabs.Tab title="验证码登录" key="mail" />
-        <Tabs.Tab title="密码登录" key="pwd" />
+        <Tabs.Tab title="💚 微信" key="wechat" />
+        <Tabs.Tab title="验证码" key="mail" />
+        <Tabs.Tab title="密码" key="pwd" />
       </Tabs>
 
+      {tab === 'wechat' && <WechatLogin key={wechatKey} onSuccess={handleDone} />}
       {tab === 'mail' && <MailTab onDone={handleDone} />}
       {tab === 'pwd' && <PwdTab onDone={handleDone} />}
 

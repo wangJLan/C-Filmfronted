@@ -4,6 +4,7 @@ import { useNavigate } from 'umi';
 import { useUserStore } from '@/stores/useUserStore';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import WechatLogin from '@/components/WechatLogin';
 import {
   BillOutline, CheckCircleOutline, StarOutline, ExclamationCircleOutline,
   SetOutline, GiftOutline, RightOutline, HistogramOutline,
@@ -232,98 +233,6 @@ const PasswordLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =
   );
 };
 
-// ==================== 账号密码注册 Tab ====================
-
-const RegisterForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
-  const { register, loading } = useUserStore();
-
-  const handleSubmit = async (values: { account: string; password: string; confirm: string }) => {
-    if (!isValidEmail(values.account)) {
-      Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
-      return;
-    }
-    if (!values.password || values.password.length < 8) {
-      Toast.show({ icon: 'fail', content: '密码至少 8 位' });
-      return;
-    }
-    if (!/[a-zA-Z]/.test(values.password) || !/[0-9]/.test(values.password)) {
-      Toast.show({ icon: 'fail', content: '密码必须包含字母和数字' });
-      return;
-    }
-    if (values.password !== values.confirm) {
-      Toast.show({ icon: 'fail', content: '两次密码不一致' });
-      return;
-    }
-    try {
-      await register({
-        userAccount: values.account,
-        userPassword: values.password,
-        checkPassword: values.confirm,
-      });
-      Toast.show({ icon: 'success', content: '注册成功，已自动登录' });
-      onSuccess();
-    } catch (e: any) {
-      Toast.show({ icon: 'fail', content: e.message || '注册失败' });
-    }
-  };
-
-  return (
-    <div className={styles.loginPanel}>
-      <Form
-        onFinish={handleSubmit}
-        layout="horizontal"
-        footer={
-          <Button
-            block
-            type="submit"
-            color="primary"
-            size="large"
-            loading={loading}
-            className={styles.submitBtn}
-          >
-            注册
-          </Button>
-        }
-      >
-        <Form.Item
-          name="account"
-          rules={[{ required: true, message: '请输入邮箱作为账号' }]}
-        >
-          <Input
-            className={styles.loginInput}
-            placeholder="请输入邮箱作为登录账号"
-            clearable
-          />
-        </Form.Item>
-
-        <Form.Item
-          name="password"
-          rules={[{ required: true, message: '密码至少8位' }]}
-        >
-          <Input
-            className={styles.loginInput}
-            placeholder="请设置密码（8位以上）"
-            type="password"
-            clearable
-          />
-        </Form.Item>
-
-        <Form.Item
-          name="confirm"
-          rules={[{ required: true, message: '请再次输入密码' }]}
-        >
-          <Input
-            className={styles.loginInput}
-            placeholder="确认密码"
-            type="password"
-            clearable
-          />
-        </Form.Item>
-      </Form>
-    </div>
-  );
-};
-
 // ==================== 用户页面 ====================
 
 const UserPage: React.FC = () => {
@@ -331,10 +240,9 @@ const UserPage: React.FC = () => {
   const orderCount = useOrderStore((s) => s.orders.filter((o) => o.status !== 'cancelled').length);
   const wantCount = useFilmCollectionStore((s) => s.wantToSee.length);
   const navigate = useNavigate();
-  const [showForm, setShowForm] = useState(false);
-  const [loginTab, setLoginTab] = useState<'email' | 'password' | 'register'>('email');
+  const [loginTab, setLoginTab] = useState<'email' | 'password' | 'wechat'>('wechat');
 
-  const handleLoginSuccess = () => setShowForm(false);
+  const handleLoginSuccess = () => {}; // 登录成功后页面会自动切换到已登录视图
 
   // ========== 已登录 ==========
   if (isLoggedIn && user) {
@@ -406,39 +314,27 @@ const UserPage: React.FC = () => {
   // ========== 未登录 ==========
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <Avatar src="" style={{ '--size': '68px', border: '3px solid rgba(255,255,255,0.5)' }} />
-        <h2 className={styles.nickname}>未登录</h2>
-        <p className={styles.desc}>登录后享受更多权益</p>
+      <div className={`${styles.header} ${styles.guestHeader}`}>
+        <Avatar src="" style={{ '--size': '72px', border: '3px solid rgba(255,255,255,0.4)' }} />
+        <h2 className={styles.nickname}>欢迎来到妙语购票</h2>
+        <p className={styles.desc}>登录即可享受 AI 智能选片 · 在线选座 · 即时出票</p>
       </div>
 
-      {!showForm ? (
-        <div style={{ padding: '16px' }}>
-          <Button block size="large" loading={loading} className={styles.entryBtn} onClick={() => setShowForm(true)}>
-            登录 / 注册
-          </Button>
-        </div>
-      ) : (
-        <div className={styles.formWrap}>
-          <Tabs
-            activeKey={loginTab}
-            onChange={(key) => setLoginTab(key as typeof loginTab)}
-            className={styles.loginTabs}
-          >
-            <Tabs.Tab title="验证码登录" key="email" />
-            <Tabs.Tab title="密码登录" key="password" />
-            <Tabs.Tab title="注册" key="register" />
-          </Tabs>
+      <div className={styles.formWrap}>
+        <Tabs
+          activeKey={loginTab}
+          onChange={(key) => setLoginTab(key as typeof loginTab)}
+          className={styles.loginTabs}
+        >
+          <Tabs.Tab title="💚 微信" key="wechat" />
+          <Tabs.Tab title="验证码" key="email" />
+          <Tabs.Tab title="密码" key="password" />
+        </Tabs>
 
-          {loginTab === 'email' && <EmailLoginForm onSuccess={handleLoginSuccess} />}
-          {loginTab === 'password' && <PasswordLoginForm onSuccess={handleLoginSuccess} />}
-          {loginTab === 'register' && <RegisterForm onSuccess={handleLoginSuccess} />}
-
-          <Button block fill="none" size="small" onClick={() => setShowForm(false)} style={{ marginTop: 8 }}>
-            返回
-          </Button>
-        </div>
-      )}
+        {loginTab === 'wechat' && <WechatLogin key={loginTab} onSuccess={handleLoginSuccess} />}
+        {loginTab === 'email' && <EmailLoginForm onSuccess={handleLoginSuccess} />}
+        {loginTab === 'password' && <PasswordLoginForm onSuccess={handleLoginSuccess} />}
+      </div>
     </div>
   );
 };
