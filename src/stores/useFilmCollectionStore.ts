@@ -1,19 +1,32 @@
 /**
  * 影片收藏状态 — 想看的电影 / 看过的电影
- * Zustand + localStorage 持久化
+ * Zustand + 后端 API 持久化
  */
 import { create } from 'zustand';
+import {
+  toggleWantToSee,
+  getMyWantToSee,
+  removeWantToSee,
+} from '@/api/userWantFilmController';
+import {
+  markWatched,
+  getMyWatched,
+} from '@/api/userWatchedFilmController';
 
-const STORAGE_KEY = 'film-collection';
 const COUPON_KEY = 'coupon-store';
 
-export interface CollectedFilm {
-  filmId: number;
-  title: string;
-  poster: string;
-  rating: number;
-  wantCount: string;
-  addedAt: string;
+export interface FilmItem {
+  id: number;
+  name: string;
+  posterUrl?: string;
+  rating?: number;
+  duration?: number;
+  type?: string;
+  releaseDate?: string;
+  director?: string;
+  actors?: string;
+  description?: string;
+  status?: string;
 }
 
 export interface CouponItem {
@@ -26,15 +39,20 @@ export interface CouponItem {
 }
 
 interface FilmCollectionState {
-  wantToSee: CollectedFilm[];
-  watched: CollectedFilm[];
+  wantToSee: FilmItem[];
+  watched: FilmItem[];
+  wantToSeeLoading: boolean;
+  watchedLoading: boolean;
   coupons: CouponItem[];
   balance: number;
   points: number;
 
-  toggleWantToSee: (film: CollectedFilm) => void;
+  fetchWantToSee: () => Promise<void>;
+  fetchWatched: () => Promise<void>;
+  toggleWantToSee: (filmId: number) => Promise<boolean>;
   isWanted: (filmId: number) => boolean;
-  markAsWatched: (film: CollectedFilm) => void;
+  removeWantToSeeApi: (filmId: number) => Promise<void>;
+  markAsWatched: (filmId: number) => Promise<void>;
   isWatched: (filmId: number) => boolean;
   useCoupon: (id: string) => void;
   addCoupon: (c: CouponItem) => void;
@@ -53,40 +71,59 @@ function save<T>(key: string, data: T) {
 }
 
 export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) => ({
-  wantToSee: load<CollectedFilm[]>(STORAGE_KEY + '-want', []),
-  watched: load<CollectedFilm[]>(STORAGE_KEY + '-watched', []),
+  wantToSee: [],
+  watched: [],
+  wantToSeeLoading: false,
+  watchedLoading: false,
   coupons: load<CouponItem[]>(COUPON_KEY, [
     { id: 'c1', title: '新人专享券', amount: 15, condition: '满30元可用', expireDate: '2026-09-30', used: false },
     { id: 'c2', title: '观影立减券', amount: 10, condition: '满40元可用', expireDate: '2026-08-15', used: false },
     { id: 'c3', title: 'IMAX专属券', amount: 20, condition: 'IMAX厅满60元可用', expireDate: '2026-12-31', used: false },
     { id: 'c4', title: '好友助力券', amount: 8, condition: '无门槛', expireDate: '2026-08-10', used: false },
   ]),
-  balance: Number(localStorage.getItem(STORAGE_KEY + '-balance') || 128.5),
-  points: Number(localStorage.getItem(STORAGE_KEY + '-points') || 2360),
+  balance: Number(localStorage.getItem('film-collection-balance') || 128.5),
+  points: Number(localStorage.getItem('film-collection-points') || 2360),
 
-  toggleWantToSee: (film) => {
-    set((s) => {
-      const exists = s.wantToSee.find((f) => f.filmId === film.filmId);
-      const updated = exists
-        ? s.wantToSee.filter((f) => f.filmId !== film.filmId)
-        : [{ ...film, addedAt: new Date().toISOString() }, ...s.wantToSee];
-      save(STORAGE_KEY + '-want', updated);
-      return { wantToSee: updated };
-    });
+  fetchWantToSee: async () => {
+    set({ wantToSeeLoading: true });
+    try {
+      const res: any = await getMyWantToSee();
+      set({ wantToSee: (res as FilmItem[]) || [], wantToSeeLoading: false });
+    } catch {
+      set({ wantToSeeLoading: false });
+    }
   },
 
-  isWanted: (filmId) => get().wantToSee.some((f) => f.filmId === filmId),
-
-  markAsWatched: (film) => {
-    set((s) => {
-      if (s.watched.find((f) => f.filmId === film.filmId)) return s;
-      const updated = [{ ...film, addedAt: new Date().toISOString() }, ...s.watched];
-      save(STORAGE_KEY + '-watched', updated);
-      return { watched: updated };
-    });
+  fetchWatched: async () => {
+    set({ watchedLoading: true });
+    try {
+      const res: any = await getMyWatched();
+      set({ watched: (res as FilmItem[]) || [], watchedLoading: false });
+    } catch {
+      set({ watchedLoading: false });
+    }
   },
 
-  isWatched: (filmId) => get().watched.some((f) => f.filmId === filmId),
+  toggleWantToSee: async (filmId) => {
+    const res: any = await toggleWantToSee(filmId);
+    const wanted = res?.wanted === true;
+    await get().fetchWantToSee();
+    return wanted;
+  },
+
+  isWanted: (filmId) => get().wantToSee.some((f) => f.id === filmId),
+
+  removeWantToSeeApi: async (filmId) => {
+    await removeWantToSee(filmId);
+    await get().fetchWantToSee();
+  },
+
+  markAsWatched: async (filmId) => {
+    await markWatched(filmId);
+    await get().fetchWatched();
+  },
+
+  isWatched: (filmId) => get().watched.some((f) => f.id === filmId),
 
   useCoupon: (id) => {
     set((s) => {
@@ -107,7 +144,7 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
   addBalance: (amount) => {
     set((s) => {
       const next = +(s.balance + amount).toFixed(2);
-      localStorage.setItem(STORAGE_KEY + '-balance', String(next));
+      localStorage.setItem('film-collection-balance', String(next));
       return { balance: next };
     });
   },

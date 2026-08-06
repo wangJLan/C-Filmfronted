@@ -562,6 +562,41 @@
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.writeReviewBtn {
+  display: block;
+  text-align: center;
+  padding: 10px 0;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  border-radius: 20px;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.reviewAvatarImg {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.noReview {
+  text-align: center;
+  padding: 30px 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .loadMore {

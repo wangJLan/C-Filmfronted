@@ -65,40 +65,17 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
 
   const handleToggleWant = (e: React.MouseEvent) => {
     e.stopPropagation();
-    guard(() => {
-      if (isWanted) {
-        collectionStore.removeWantToSee(enriched.id);
-        Toast.show({ content: '已取消想看' });
-      } else {
-        collectionStore.toggleWantToSee({
-          filmId: enriched.id,
-          title: enriched.name,
-          poster: enriched.posterUrl,
-          rating: enriched.rating,
-          wantCount: '',
-          addedAt: new Date().toISOString(),
-        });
-        Toast.show({ content: '已标记想看' });
-      }
+    guard(async () => {
+      const wanted = await collectionStore.toggleWantToSee(enriched.id);
+      Toast.show({ content: wanted ? '已标记想看' : '已取消想看' });
     });
   };
 
   const handleToggleWatched = (e: React.MouseEvent) => {
     e.stopPropagation();
-    guard(() => {
-      if (isWatched) {
-        collectionStore.removeWatched(enriched.id);
-        Toast.show({ content: '已取消看过' });
-      } else {
-        collectionStore.toggleWatched({
-          filmId: enriched.id,
-          title: enriched.name,
-          poster: enriched.posterUrl,
-          rating: enriched.rating,
-          watchedAt: new Date().toISOString(),
-        });
-        Toast.show({ content: '已标记看过' });
-      }
+    guard(async () => {
+      await collectionStore.markAsWatched(enriched.id);
+      Toast.show({ content: '已标记看过' });
     });
   };
 

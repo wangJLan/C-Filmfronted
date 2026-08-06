@@ -1,20 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'umi';
 import { NavBar, Button, Empty } from 'antd-mobile';
 import { LeftOutline, StarFill } from 'antd-mobile-icons';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { useGuard } from '@/hooks/useGuard';
-import { MOCK_HOT_FILMS, MOCK_UPCOMING_FILMS } from '@/mock/home';
 import styles from './index.module.less';
-
-const ALL_FILMS = [...MOCK_HOT_FILMS, ...MOCK_UPCOMING_FILMS];
 
 const WatchedPage: React.FC = () => {
   const navigate = useNavigate();
   const guard = useGuard();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
-  const { watched } = useFilmCollectionStore();
+  const { watched, fetchWatched } = useFilmCollectionStore();
+
+  useEffect(() => {
+    if (isLoggedIn) fetchWatched();
+  }, [isLoggedIn]);
 
   if (!isLoggedIn) {
     return (
@@ -42,23 +43,22 @@ const WatchedPage: React.FC = () => {
           </div>
         ) : (
           watched.map((film) => (
-            <div key={film.filmId} className={styles.card} onClick={() => navigate(`/detail/${film.filmId}`)}>
+            <div key={film.id} className={styles.card} onClick={() => navigate(`/detail/${film.id}`)}>
               <div className={styles.poster}>
-                <img src={film.poster} alt={film.title} />
+                <img src={film.posterUrl} alt={film.name} />
               </div>
               <div className={styles.info}>
-                <div className={styles.name}>{film.title}</div>
+                <div className={styles.name}>{film.name}</div>
                 <div className={styles.rating}>
                   <StarFill color="#FFB800" fontSize={12} />
-                  <span className={styles.ratingNum}>{film.rating.toFixed(1)}</span>
+                  <span className={styles.ratingNum}>{(film.rating ?? 0).toFixed(1)}</span>
                 </div>
-                <div className={styles.date}>观看于 {new Date(film.addedAt).toLocaleDateString()}</div>
               </div>
               <Button
                 size="mini"
                 color="primary"
                 className={styles.rebuyBtn}
-                onClick={(e) => { e.stopPropagation(); navigate(`/detail/${film.filmId}`); }}
+                onClick={(e) => { e.stopPropagation(); navigate(`/detail/${film.id}`); }}
               >
                 再看一次
               </Button>
