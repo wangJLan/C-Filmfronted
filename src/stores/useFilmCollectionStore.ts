@@ -88,7 +88,9 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
     set({ wantToSeeLoading: true });
     try {
       const res: any = await getMyWantToSee();
-      set({ wantToSee: (res as FilmItem[]) || [], wantToSeeLoading: false });
+      // 兼容解包：request 拦截器返回 {code,data,message}，取 data 数组；直接数组也兼容
+      const list = Array.isArray(res) ? res : (res?.data ?? []);
+      set({ wantToSee: Array.isArray(list) ? list : [], wantToSeeLoading: false });
     } catch {
       set({ wantToSeeLoading: false });
     }
@@ -98,7 +100,8 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
     set({ watchedLoading: true });
     try {
       const res: any = await getMyWatched();
-      set({ watched: (res as FilmItem[]) || [], watchedLoading: false });
+      const list = Array.isArray(res) ? res : (res?.data ?? []);
+      set({ watched: Array.isArray(list) ? list : [], watchedLoading: false });
     } catch {
       set({ watchedLoading: false });
     }
@@ -111,7 +114,7 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
     return wanted;
   },
 
-  isWanted: (filmId) => get().wantToSee.some((f) => f.id === filmId),
+  isWanted: (filmId) => Array.isArray(get().wantToSee) && get().wantToSee.some((f) => f.id === filmId),
 
   removeWantToSeeApi: async (filmId) => {
     await removeWantToSee(filmId);
@@ -123,7 +126,7 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
     await get().fetchWatched();
   },
 
-  isWatched: (filmId) => get().watched.some((f) => f.id === filmId),
+  isWatched: (filmId) => Array.isArray(get().watched) && get().watched.some((f) => f.id === filmId),
 
   useCoupon: (id) => {
     set((s) => {

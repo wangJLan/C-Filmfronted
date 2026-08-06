@@ -92,7 +92,7 @@ function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number): n
 }
 
 interface EnrichedCinema {
-  id: number;
+  id: string;
   name: string;
   address: string;
   distance: string;
@@ -105,7 +105,8 @@ interface EnrichedCinema {
 }
 
 function enrichCinema(c: any, showtimes: API.ScheduleVO[], userLat: number, userLng: number): EnrichedCinema {
-  const id = Number(c.id);
+  // 雪花 ID 超出 JS Number 精度，必须保持字符串（同选座页修复）
+  const id = String(c.id);
   const minPrice = showtimes.length > 0
     ? Math.min(...showtimes.map(s => Number(s.price)))
     : (c.basePrice ?? 30);
@@ -155,13 +156,13 @@ const ShowtimePage: React.FC = () => {
   const isDirect = !isCinemaOnly && !isFilmOnly;
 
   const directFilmId = isDirect ? Number(params.filmId) : undefined;
-  const directCinemaId = isDirect ? Number(params.cinemaId) : undefined;
+  const directCinemaId = isDirect ? params.cinemaId : undefined;
 
   const [selectedFilmId, setSelectedFilmId] = useState<number | null>(
     isFilmOnly ? Number(params.filmId) : isDirect ? directFilmId! : null,
   );
-  const [selectedCinemaId, setSelectedCinemaId] = useState<number | null>(
-    isCinemaOnly ? Number(params.cinemaId) : isDirect ? directCinemaId! : null,
+  const [selectedCinemaId, setSelectedCinemaId] = useState<string | null>(
+    isCinemaOnly ? params.cinemaId! : isDirect ? directCinemaId! : null,
   );
 
   // 影片详情
@@ -177,7 +178,7 @@ const ShowtimePage: React.FC = () => {
     queryFn: () => (selectedFilmId || selectedCinemaId)
       ? listSchedule({
           filmId: selectedFilmId || undefined,
-          cinemaId: selectedCinemaId || undefined,
+          cinemaId: (selectedCinemaId as any) || undefined,
         })
       : Promise.resolve([]),
     enabled: !!selectedFilmId || !!selectedCinemaId,
@@ -196,18 +197,18 @@ const ShowtimePage: React.FC = () => {
     staleTime: 300000,
   });
 
-  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as number[], [scheduleData]);
+  const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as string[], [scheduleData]);
 
   // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
     queryKey: ['cinemas', cinemaIds, cityName],
     queryFn: async () => {
-      const results: { id: number; name: string; address: string; tags: string; city: string; latitude: number; longitude: number; basePrice: number }[] = [];
+      const results: { id: string; name: string; address: string; tags: string; city: string; latitude: number; longitude: number; basePrice: number }[] = [];
       for (const cId of cinemaIds.slice(0, 20)) {
         try {
           const c = await http.get(`/cinema/getInfo/${cId}`) as any;
           results.push({
-            id: Number(c.id),
+            id: String(c.id),
             name: c.name || '',
             address: c.address || '',
             tags: c.tags || '',
@@ -241,7 +242,7 @@ const ShowtimePage: React.FC = () => {
     queryKey: ['cinema', selectedCinemaId],
     queryFn: async () => {
       const c = await http.get(`/cinema/getInfo/${selectedCinemaId}`) as any;
-      const id = Number(c.id);
+      const id = String(c.id);
       const dist = (c.longitude != null && c.latitude != null && userLat && userLng)
         ? calcDistance(userLat, userLng, Number(c.latitude), Number(c.longitude))
         : null;

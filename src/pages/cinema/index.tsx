@@ -54,9 +54,10 @@ function matchDistrict(address: string): string | null {
 }
 
 function transformCinema(c: any, userLat: number, userLng: number) {
-  const id = Number(c.id);
+  // 雪花 ID 超出 JS Number 精度，必须保持字符串（导航/跳转用精确 ID）
+  const id = String(c.id);
   const tags: string[] = c.tags ? c.tags.split(',').filter(Boolean) : [];
-  const minPrice = c.basePrice ?? (30 + (id % 20));
+  const minPrice = c.basePrice ?? (30 + ((Number(c.id) || 0) % 20));
   const dist = (c.longitude != null && c.latitude != null)
     ? calcDistance(userLat, userLng, c.latitude, c.longitude)
     : null;

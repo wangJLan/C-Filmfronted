@@ -242,10 +242,20 @@ const CardSurface: React.FC<{
   if (!path || !onNavigate) return <div className={classes}>{children}</div>;
 
   return (
-    <button type="button" className={classes} aria-label={ariaLabel} onClick={() => onNavigate(path)}>
+    // 用可点击 div 而非 button：卡片内部还有操作按钮（选座购票等），button 不能嵌套 button
+    <div
+      role="button"
+      tabIndex={0}
+      className={classes}
+      aria-label={ariaLabel}
+      onClick={() => onNavigate(path)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(path); }
+      }}
+    >
       {children}
       <RightOutline className={styles.cardChevron} aria-hidden="true" />
-    </button>
+    </div>
   );
 };
 
