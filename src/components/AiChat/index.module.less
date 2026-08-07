@@ -1,7 +1,7 @@
 /* ==================== 悬浮按钮 ==================== */
 .floatBtn {
   position: fixed;
-  z-index: 10000;
+  z-index: 200;
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -64,11 +64,54 @@
 .panel {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 300;
   background: #f7f8fa;
   display: flex;
   flex-direction: column;
   animation: slideUp 0.25s ease-out;
+}
+/* page 模式：跟随父级 flex 撑满 */
+.pagePanel {
+  flex: 1;
+  min-height: 0;
+  background: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* page 模式 NavBar */
+.pageNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 44px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+.pageNavBack {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
+}
+.pageNavTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.pageNavNew {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
 }
 @keyframes slideUp {
   from {
@@ -543,33 +586,6 @@
   background: #fffbe6;
   border-radius: 6px;
   border-left: 3px solid #faad14;
-}
-/* 场次按影院分组 */
-.cinemaGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.cinemaGroupName {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary, #333);
-  padding: 4px 8px 0;
-}
-.cardExpandBtn {
-  align-self: flex-start;
-  margin: 2px 8px 0;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--primary, #ff4d4f);
-  background: transparent;
-  border: 1px dashed rgba(255, 77, 79, 0.45);
-  border-radius: 6px;
-  cursor: pointer;
-
-  &:active {
-    opacity: 0.7;
-  }
 }
 .cardItem {
   position: relative;

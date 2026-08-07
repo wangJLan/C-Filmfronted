@@ -9,8 +9,6 @@ import { getOrderDetail, cancelOrder } from '@/api/orderController';
 import { useUserStore } from '@/stores/useUserStore';
 import styles from './index.module.less';
 
-const LOCK_DURATION = 15 * 60;
-
 function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -35,9 +33,10 @@ const OrderConfirmPage: React.FC = () => {
 
   const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(!order);
-  const [remainSec, setRemainSec] = useState(LOCK_DURATION);
+  const [remainSec, setRemainSec] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const [sseTerminated, setSseTerminated] = useState(false); // SSE 通知已超时
+  const [serverStatus, setServerStatus] = useState<string | null>(null); // 轮询回来的服务端状态
 
   // ======================== SSE 订阅订单状态变更 ========================
   useEffect(() => {
@@ -65,43 +64,65 @@ const OrderConfirmPage: React.FC = () => {
     return () => { es.close(); };
   }, [userId, oid, navigate]);
 
-  useEffect(() => {
+  // 拉取订单详情（首次 + 轮询复用）
+  const fetchOrder = React.useCallback(async () => {
     if (!oid) return;
-    setLoading(true);
-    getOrderDetail({ id: oid }).then((o: any) => {
+    try {
+      const o: any = await getOrderDetail({ id: oid });
       const vo = o?.data ?? o;
-      setOrder(vo);
-      try { sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo)); } catch {}
-    }).catch((err: any) => {
-      console.error('[OrderConfirm] 加载订单失败:', err);
-      if (!order) {
-        Toast.show({ icon: 'fail', content: '订单加载失败，请返回重试' });
+      if (vo) {
+        setOrder(vo);
+        setServerStatus(vo.status ?? null);
+        try { sessionStorage.setItem(`order_${oid}`, JSON.stringify(vo)); } catch {}
       }
-    }).finally(() => {
-      setLoading(false);
-    });
+    } catch (err: any) {
+      console.error('[OrderConfirm] 加载订单失败:', err);
+    }
   }, [oid]);
 
   useEffect(() => {
-    if (!order) return;
-    // 优先使用 createTime，否则从 expireAt 反推，最后回退到当前时间
-    let created: number;
-    if (order.createTime) {
-      created = new Date(order.createTime).getTime();
-    } else if (order.expireAt) {
-      created = new Date(order.expireAt).getTime() - LOCK_DURATION * 1000;
-    } else {
-      created = Date.now();
-    }
-    const validCreated = Number.isNaN(created) ? Date.now() : created;
-    const remaining = Math.max(0, LOCK_DURATION - Math.floor((Date.now() - validCreated) / 1000));
-    setRemainSec(remaining);
-    if (remaining <= 0) return;
+    if (!oid) return;
+    setLoading(true);
+    fetchOrder().finally(() => setLoading(false));
+  }, [fetchOrder]);
+
+  // 轮询：每 10 秒同步一次后端状态，弥补 SSE 不可靠
+  useEffect(() => {
+    if (!oid || remainSec <= 0) return;
+    const pollTimer = setInterval(() => {
+      fetchOrder();
+    }, 10_000);
+    return () => clearInterval(pollTimer);
+  }, [oid, remainSec > 0, fetchOrder]);
+
+  // 倒计时：基于服务端 expireAt 的绝对时间，免疫客户端时钟漂移和刷新重置
+  useEffect(() => {
+    if (!order?.expireAt) return;
+    const expireMs = new Date(order.expireAt).getTime();
+    if (Number.isNaN(expireMs)) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((expireMs - Date.now()) / 1000));
+      setRemainSec(remaining);
+      if (remaining <= 0) return; // 停止 tick
+      return true; // 继续
+    };
+
+    if (!tick()) return;
+
     const timer = setInterval(() => {
-      setRemainSec(prev => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; });
+      if (!tick()) clearInterval(timer);
     }, 1000);
     return () => clearInterval(timer);
-  }, [order?.createTime, order?.expireAt]);
+  }, [order?.expireAt]);
+
+  // 轮询到已支付 → 跳转成功页（SSE 兜底）
+  useEffect(() => {
+    if (serverStatus === 'paid') {
+      Toast.show({ icon: 'success', content: '支付成功！' });
+      navigate(`/payment-success/${oid}`, { replace: true });
+    }
+  }, [serverStatus]);
 
   const scheduleTime = useMemo(() => {
     if (!order) return '';
@@ -146,7 +167,11 @@ const OrderConfirmPage: React.FC = () => {
     );
   }
 
-  if (remainSec <= 0 || order.status === 'cancelled') {
+  const isExpired = remainSec <= 0
+    || order.status === 'cancelled'
+    || serverStatus === 'cancelled'
+    || serverStatus === 'refunded';
+  if (isExpired) {
     return (
       <div className={styles.page}>
         <NavBar onBack={() => navigate('/')} back={<LeftOutline />}>订单确认</NavBar>

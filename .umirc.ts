@@ -17,6 +17,7 @@ export default defineConfig({
         { path: '/orders', component: '@/pages/orders/index', title: '我的订单' },
         { path: '/wallet', component: '@/pages/wallet/index', title: '我的钱包' },
         { path: '/coupons', component: '@/pages/coupons/index', title: '优惠券' },
+        { path: '/my-reviews', component: '@/pages/my-reviews/index', title: '我的影评' },
         { path: '/want-to-see', component: '@/pages/want-to-see/index', title: '想看的电影' },
         { path: '/watched', component: '@/pages/watched/index', title: '看过的电影' },
         { path: '/settings', component: '@/pages/settings/index', title: '设置' },
