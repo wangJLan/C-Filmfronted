@@ -19,13 +19,12 @@ interface FilmCardProps {
     rating?: number;
     duration?: number;
     type?: string;
+    status?: string;
     releaseDate?: string;
     director?: string;
     actors?: string;
   };
   variant?: 'list' | 'hero' | 'vertical';
-  /** 竖排卡片模式: 'hot'=热映(购票) | 'upcoming'=即将上映(想看) */
-  mode?: 'hot' | 'upcoming';
   onSelect?: (id: string) => void;
 }
 
@@ -128,7 +127,7 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
 
   // vertical 模式：淘票票风格竖排卡片（首页用）
   if (variant === 'vertical') {
-    const isUpcoming = onSelect === undefined ? (enriched.rating <= 0) : false;
+    const isUpcoming = film.status === 'upcoming';
     // 顶部标签
     const topTags: string[] = [];
     if (isWanted) topTags.push('已想看');
@@ -161,12 +160,12 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
           </div>
         </div>
         <span className={styles.verticalTitle}>{enriched.name}</span>
-        {enriched.rating <= 0 && <span className={styles.verticalDate}>{enriched.releaseDate}上映</span>}
+        {isUpcoming && <span className={styles.verticalDate}>{enriched.releaseDate}上映</span>}
         <div
-          className={`${styles.verticalBtn} ${enriched.rating > 0 ? styles.verticalBtnBuy : styles.verticalBtnWant}`}
+          className={`${styles.verticalBtn} ${isUpcoming ? styles.verticalBtnWant : styles.verticalBtnBuy}`}
           onClick={(e) => { e.stopPropagation(); guard(() => navigate(`/detail/${enriched.id}`)); }}
         >
-          <span>{enriched.rating > 0 ? '购票' : '想看'}</span>
+          <span>{isUpcoming ? '想看' : '购票'}</span>
         </div>
       </div>
     );
@@ -214,15 +213,21 @@ const FilmCard: React.FC<FilmCardProps> = ({ film, variant = 'list', onSelect })
               <span key={tag} className={`${styles.listTag} ${styles[getTagColor(tag)]}`}>{tag}</span>
             ))}
           </div>
-          <div
-            className={styles.listBuyBtn}
-            onClick={(e) => {
-              e.stopPropagation();
-              guard(() => navigate(`/showtime/film/${enriched.id}`));
-            }}
-          >
-            购票
-          </div>
+          {film.status === 'upcoming' ? (
+            <div className={styles.listWantBtn} onClick={handleToggleWant}>
+              想看
+            </div>
+          ) : (
+            <div
+              className={styles.listBuyBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                guard(() => navigate(`/showtime/film/${enriched.id}`));
+              }}
+            >
+              购票
+            </div>
+          )}
         </div>
       </div>
     </div>

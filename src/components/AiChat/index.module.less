@@ -950,6 +950,36 @@
   font-weight: 600;
   line-height: 1.4;
 }
+/* 订单聚合卡：每单底部行（订单号 + 查看订单按钮） */
+.orderListActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.orderListAction {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 90, 0, 0.3);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  touch-action: manipulation;
+
+  svg {
+    font-size: 14px;
+  }
+  &:active {
+    opacity: 0.8;
+  }
+}
 .orderCountdown {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto;

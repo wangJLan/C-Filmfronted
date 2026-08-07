@@ -300,7 +300,9 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  const rating = detail.rating ?? 9.2;
+  // 请求拦截器已解包 body.data，detail 实为 Film；断言为 Film 以便访问 status 等字段
+  const detailFilm = detail as unknown as API.Film;
+  const rating = detailFilm.rating ?? 9.2;
   const ratingCount = '6.1万人评分';
   const wantCountDisplay = '61.7万想看';
   const watchedCountDisplay = '206.5万看过';
@@ -373,11 +375,21 @@ const DetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 购票评分卡片 */}
-      <div className={styles.quickBuy} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
-        <span>选座购票</span>
-        <span className={styles.quickBuyArrow}>›</span>
-      </div>
+      {/* 购票评分卡片：即将上映显示「想看」不可购票，其余显示「选座购票」 */}
+      {detailFilm.status === 'upcoming' ? (
+        <div className={styles.quickBuy} onClick={() => guard(async () => {
+          const wanted = await toggleWantToSee(detailFilm.id!);
+          Toast.show({ content: wanted ? '已标记想看' : '已取消想看' });
+        })}>
+          <span>{isWanted(detailFilm.id!) ? '已想看' : '想看'}</span>
+          <span className={styles.quickBuyArrow}>›</span>
+        </div>
+      ) : (
+        <div className={styles.quickBuy} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
+          <span>选座购票</span>
+          <span className={styles.quickBuyArrow}>›</span>
+        </div>
+      )}
 
       {/* 购票评分 */}
       <div className={styles.ratingSection}>

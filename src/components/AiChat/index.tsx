@@ -182,6 +182,23 @@ function isPendingCardText(content: string): boolean {
   return /^\{\s*"type"\s*:\s*"card"/i.test(trimmed);
 }
 
+function isOrderCard(card: SSECardData): boolean {
+  return card.cardType === 'order_confirm' || card.cardType === 'order_detail';
+}
+
+/**
+ * 合并订单卡：同一回合连下多单时，把多张 order 卡合成一张 orders_list 卡；
+ * 只有一张订单卡时原样返回；无订单卡时返回最后一张（与旧行为一致）。
+ */
+function mergeOrderCards(cards: SSECardData[]): SSECardData | undefined {
+  if (cards.length === 0) return undefined;
+  const orderCards = cards.filter(isOrderCard);
+  if (orderCards.length >= 2) {
+    return { cardType: 'orders_list', data: { orders: orderCards.map((c) => c.data) } };
+  }
+  return orderCards[0] ?? cards[cards.length - 1];
+}
+
 function formatOrderTime(value?: string): { date: string; time: string } {
   if (!value) return { date: '场次时间待确认', time: '' };
   const parsed = dayjs(value);
@@ -758,6 +775,93 @@ const OrderConfirmCard: React.FC<{
   );
 };
 
+/** 订单聚合卡片：同一回合连下多单时，一张卡紧凑展示全部订单 */
+const OrdersListCard: React.FC<{
+  data: any;
+  onOpenOrder?: (data: OrderConfirmCardData) => void;
+}> = ({ data, onOpenOrder }) => {
+  const orders: any[] = Array.isArray(data?.orders) ? data.orders : [];
+  if (orders.length === 0) {
+    return <div className={styles.cardWrap}><div className={styles.cardReason}>暂无订单</div></div>;
+  }
+  const totalCount = orders.reduce(
+    (sum, o) => sum + (Number(o?.count) || (Array.isArray(o?.seatLabels) ? o.seatLabels.length : 0)),
+    0,
+  );
+  const totalPrice = orders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
+
+  return (
+    <section className={styles.orderCard} aria-label="全部订单确认">
+      <header className={styles.orderCardHeader}>
+        <div className={styles.orderStatus}>
+          <span className={styles.orderStatusIcon}><CheckCircleFill /></span>
+          <div>
+            <div className={styles.orderStatusTitle}>已为您成功下单 {orders.length} 笔订单</div>
+          </div>
+        </div>
+      </header>
+
+      <div className={styles.orderCardBody}>
+        {orders.map((o, i) => {
+          const showTime = formatOrderTime(o?.showTime || o?.scheduleTime);
+          const seats: string[] = Array.isArray(o?.seatLabels) ? o.seatLabels : [];
+          return (
+            <div key={o?.orderId ?? i}>
+              {i > 0 && <div className={styles.orderDivider} />}
+              <div className={styles.orderFilmRow}>
+                <span className={styles.orderFilmIcon}><MovieOutline /></span>
+                <div className={styles.orderFilmInfo}>
+                  <h3>{o?.filmName || '电影票订单'}</h3>
+                  <p>{o?.cinemaName || '影院信息待确认'}</p>
+                </div>
+                <div className={styles.orderPrice}><span>¥</span>{formatPrice(o?.totalPrice)}</div>
+              </div>
+              <div className={styles.orderDetails}>
+                <div className={styles.orderDetailRow}>
+                  <CalendarOutline />
+                  <span>{showTime.date}</span>
+                  {showTime.time && <strong>{showTime.time}</strong>}
+                </div>
+                <div className={styles.orderDetailRow}>
+                  <LocationOutline />
+                  <span>{o?.hallName || '影厅待确认'}</span>
+                </div>
+              </div>
+              {seats.length > 0 && (
+                <div className={styles.orderSeats}>
+                  <span className={styles.orderSeatsLabel}>座位</span>
+                  <div className={styles.orderSeatList}>
+                    {seats.map((seat) => <span key={seat} className={styles.orderSeat}>{seat}</span>)}
+                  </div>
+                </div>
+              )}
+              <div className={styles.orderListActionRow}>
+                <span className={styles.orderNo}>{o?.orderNo ? `订单号 ${o.orderNo}` : '订单已生成'}</span>
+                {o?.orderId && (
+                  <button
+                    type="button"
+                    className={styles.orderListAction}
+                    onClick={() => onOpenOrder?.(o)}
+                  >
+                    <ReceiptOutline /><span>查看订单</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <footer className={styles.orderCardFooter}>
+        <div className={styles.orderSummary}>
+          <span>共 {totalCount} 张</span>
+          <strong>合计 ¥{formatPrice(totalPrice)}</strong>
+        </div>
+      </footer>
+    </section>
+  );
+};
+
 /** 支付卡片 */
 const PaymentCard: React.FC<{ data: any; onNavigate?: CardNavigate }> = ({ data, onNavigate }) => {
   if (!data?.success) {
@@ -927,6 +1031,7 @@ const ToolResultCard: React.FC<{
     case 'seats_confirmed':   return <SeatsConfirmedCard data={data} />;
     case 'order_confirm':
     case 'order_detail':      return <OrderConfirmCard data={data} onOpenOrder={onOpenOrder} onNavigate={onNavigate} />;
+    case 'orders_list':       return <OrdersListCard data={data} onOpenOrder={onOpenOrder} />;
     case 'payment_form':      return <PaymentCard data={data} onNavigate={onNavigate} />;
     case 'recommendation':    return <RecommendationCard data={data} onNavigate={onNavigate} />;
     default:                  return null;
@@ -1035,19 +1140,19 @@ const AiChat: React.FC = () => {
         // 需要将 card 消息合并到紧随其后的 ai 消息中，
         // 使卡片出现在 AI 文本下方，与实时对话渲染一致
         const msgs: Message[] = [];
-        let pendingCard: SSECardData | null = null;
+        let pendingCards: SSECardData[] = [];
         let idCounter = 0;
 
         for (const h of history) {
           const mtype = h.messageType || '';
           if (mtype === 'user') {
-            // 先落盘之前挂起的 card（如果有未匹配的 card 挂在用户消息前）
-            if (pendingCard) {
+            // 先落盘之前挂起的 cards（如果有未匹配的卡挂在用户消息前）
+            if (pendingCards.length > 0) {
               const lastMsg = msgs[msgs.length - 1];
               if (lastMsg && lastMsg.role === 'assistant') {
-                lastMsg.cardData = pendingCard;
+                lastMsg.cardData = mergeOrderCards(pendingCards);
               }
-              pendingCard = null;
+              pendingCards = [];
             }
             msgs.push({
               id: ++idCounter,
@@ -1057,13 +1162,11 @@ const AiChat: React.FC = () => {
               streaming: false,
             });
           } else if (mtype === 'card') {
-            // 挂起 card，等待紧随其后的 ai 消息
+            // 挂起 card，等待紧随其后的 ai 消息（连下多单时可能多张，每单一张）
             const card = tryParseCardJson(h.message || '');
-            if (card) {
-              pendingCard = card;
-            }
+            if (card) pendingCards.push(card);
           } else {
-            // ai 消息：将挂起的 card 合并到当前消息
+            // ai 消息：将挂起的 cards 合并到当前消息（多张订单卡 → 聚合为一张「全部订单」卡）
             const parsedCard = extractCardFromText(h.message || '');
             msgs.push({
               id: ++idCounter,
@@ -1071,17 +1174,17 @@ const AiChat: React.FC = () => {
               content: parsedCard?.text ?? h.message ?? '',
               activeTools: [],
               streaming: false,
-              cardData: pendingCard || parsedCard?.card || undefined,
+              cardData: pendingCards.length > 0 ? mergeOrderCards(pendingCards) : (parsedCard?.card || undefined),
             });
-            pendingCard = null;
+            pendingCards = [];
           }
         }
 
-        // 兜底：末尾还有未匹配的 card
-        if (pendingCard) {
+        // 兜底：末尾还有未匹配的 cards
+        if (pendingCards.length > 0) {
           const lastMsg = msgs[msgs.length - 1];
           if (lastMsg && lastMsg.role === 'assistant') {
-            lastMsg.cardData = pendingCard;
+            lastMsg.cardData = mergeOrderCards(pendingCards);
           }
         }
 
@@ -1233,6 +1336,8 @@ const AiChat: React.FC = () => {
 
     let fullText = '';
     let activeToolList: { key: string; label: string }[] = [];
+    // 聚合订单卡：收集本回合收到的订单卡，≥2 张时合成一张「全部订单」卡
+    const orderCards: SSECardData[] = [];
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -1305,10 +1410,22 @@ const AiChat: React.FC = () => {
               // —— 卡片 ——
               if (payload.type === 'card') {
                 activeToolList = [];
-                updateAssistant({
-                  cardData: { cardType: payload.cardType || 'unknown', data: payload.data },
-                  loading: false, streaming: false, activeTools: [],
-                });
+                const card: SSECardData = { cardType: payload.cardType || 'unknown', data: payload.data };
+                // 订单卡聚合：连下多单时合成为一张「全部订单」卡；单张订单卡保持原样
+                if (isOrderCard(card)) {
+                  orderCards.push(card);
+                  updateAssistant({
+                    cardData: mergeOrderCards(orderCards),
+                    loading: false, streaming: false, activeTools: [],
+                  });
+                } else {
+                  // 非订单卡直接展示；不重置 orderCards —— 两单之间会穿插 seats_confirmed 等卡，
+                  // 重置会导致第一张订单卡被盖掉、只剩最后一单
+                  updateAssistant({
+                    cardData: card,
+                    loading: false, streaming: false, activeTools: [],
+                  });
+                }
                 continue;
               }
 
