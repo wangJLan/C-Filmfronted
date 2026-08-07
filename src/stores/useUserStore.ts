@@ -76,6 +76,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
 
   logout: async () => {
     try { await userLogoutApi(); } catch { /* ignore */ }
+    localStorage.removeItem('token');
     set({ user: null, isLoggedIn: false, lastError: null });
   },
 
@@ -114,6 +115,11 @@ export const useUserStore = create<UserState>()((set, get) => ({
     set({ loading: true, lastError: null });
     try {
       const user = await weixinLoginApi({ openid });
+      // ★ 将 JWT Token 存入 localStorage，后续请求通过 Authorization header 携带
+      // 解决跨域 Cookie 无法传递导致登录态丢失的问题
+      if ((user as any)?.token) {
+        localStorage.setItem('token', (user as any).token);
+      }
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '微信登录失败' });
