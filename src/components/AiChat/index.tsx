@@ -580,11 +580,11 @@ const OrderConfirmCard: React.FC<{
   onOpenOrder?: (data: OrderConfirmCardData) => void;
   onNavigate?: CardNavigate;
 }> = ({ data, onOpenOrder, onNavigate }) => {
-  const expiryMinutes = Math.max(0, Number(data?.expireInMinutes ?? data?.remainingMinutes ?? 15) || 15);
-  const [remainingSeconds, setRemainingSeconds] = useState(Math.round(expiryMinutes * 60));
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
   // ★ 订单实际状态：卡片数据为下单时快照（pending），支付后异步查后端刷新为 paid
   const [orderStatus, setOrderStatus] = useState<string | undefined>(data?.status);
 
+  // 倒计时：基于 expireAt 绝对时间，刷新/重置不会从头计时
   useEffect(() => {
     const orderId = data?.orderId;
     if (!orderId) return;
@@ -610,12 +610,27 @@ const OrderConfirmCard: React.FC<{
   const isPaid = orderStatus === 'paid' || orderStatus === 'completed';
 
   useEffect(() => {
-    setRemainingSeconds(Math.round(expiryMinutes * 60));
+    const tick = () => {
+      if (data?.expireAt) {
+        const expireMs = new Date(data.expireAt).getTime();
+        if (!Number.isNaN(expireMs)) {
+          const remaining = Math.max(0, Math.floor((expireMs - Date.now()) / 1000));
+          setRemainingSeconds(remaining);
+          return remaining > 0;
+        }
+      }
+      // 兜底：相对时长（无 expireAt 时）
+      const expiryMinutes = Math.max(0, Number(data?.expireInMinutes ?? data?.remainingMinutes ?? 15) || 15);
+      setRemainingSeconds(Math.round(expiryMinutes * 60));
+      return false;
+    };
+
+    if (!tick()) return;
     const timer = window.setInterval(() => {
-      setRemainingSeconds((seconds) => Math.max(0, seconds - 1));
+      if (!tick()) window.clearInterval(timer);
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [data?.orderId, expiryMinutes]);
+  }, [data?.orderId, data?.expireAt]);
 
   if (data?.success === false) {
     const errorMsg = data?.error || data?.message || '订单创建失败，请重新选择座位';
@@ -1185,7 +1200,7 @@ const AiChat: React.FC = () => {
       await deleteSessionApi(sid);
       await refreshSessions();
       if (sid === sessionId) {
-        // 当前会话被删 → 新建空会话，不跳转到其他会话
+        // 当前会话被删 → 新建会话替代，保证始终有活跃会话；失败则清空状态
         if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
         setSending(false);
         try {

@@ -40,6 +40,7 @@ const OrdersPage: React.FC = () => {
     queryKey: ['orders'],
     queryFn: () => listOrders({ pageNum: 1, pageSize: 50 }),
     enabled: isLoggedIn,
+    staleTime: 0,
   });
 
   const orders = data?.records || [];

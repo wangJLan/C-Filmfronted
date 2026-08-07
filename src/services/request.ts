@@ -32,6 +32,20 @@ function safeStringify(obj: any): string {
   return marked.replace(/"__BIGINT_(\d+)__"/g, '$1');
 }
 
+// ================= 请求拦截器：JWT Token 认证 =================
+http.interceptors.request.use(
+  (config) => {
+    // ★ 从 localStorage 读取 JWT Token，通过 Authorization header 携带
+    // 解决微信登录跨域 Cookie 无法传递导致登录态丢失的问题
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = 'Bearer ' + token;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
 // ================= 响应拦截器：统一解包 BaseResponse =================
 http.interceptors.response.use(
   (response) => {
@@ -57,7 +71,8 @@ http.interceptors.response.use(
       return Promise.reject(error);
     }
     if (error.response.status === 401) {
-      // 未登录，清除本地状态
+      // 未登录，清除本地状态和 Token
+      localStorage.removeItem('token');
       import('@/stores/useUserStore').then(({ useUserStore }) => {
         useUserStore.getState().logout();
       });

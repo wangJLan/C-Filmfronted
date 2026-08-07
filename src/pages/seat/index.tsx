@@ -5,7 +5,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'umi';
 import { NavBar, Toast, SpinLoading } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSeatMap } from '@/api/seatController';
 import { createOrder, lockSeat, unlockSeat } from '@/api/orderController';
 import { listSchedule } from '@/api/scheduleController';
@@ -42,6 +42,8 @@ const SeatPage: React.FC = () => {
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const userId = useUserStore((s) => s.user?.id);
   const sid = showtimeId; // 雪花 ID 全程用字符串，避免 Number() 精度丢失
+
+  const queryClient = useQueryClient();
 
   const { filmName, filmDuration, filmType, startTime, endTime, hallType, hallName, date } =
     (location.state as any) || {};
@@ -89,8 +91,12 @@ const SeatPage: React.FC = () => {
       try {
         if (added.length > 0) await lockSeat({ scheduleId: sid as any, seatIds: added });
         if (removed.length > 0) await unlockSeat({ scheduleId: sid as any, seatIds: removed });
-      } catch {
-        // 锁座冲突由后端返回，不做额外处理
+      } catch (e: any) {
+        // 锁座冲突：回退已添加的座位，提示用户
+        setSelectedIds(prev);
+        prevSelectedRef.current = new Set(prev);
+        const msg = e?.message || '该座位已被其他人选中';
+        Toast.show({ icon: 'fail', content: msg });
       }
     }, 300);
   }, [sid]);
@@ -187,28 +193,35 @@ const SeatPage: React.FC = () => {
   const handleConfirm = async () => {
     if (selectedIds.size === 0) { Toast.show({ content: '请先选择座位' }); return; }
     setLocking(true);
+    const seatIds = Array.from(selectedIds);
     try {
-      const seatIds = Array.from(selectedIds);
-      // 防抖锁座可能尚未触发，再做一次最终锁座
+      // 1. 最终锁座（防抖锁座可能尚未触发）
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
       await lockSeat({ scheduleId: sid as any, seatIds });
+      // 2. 创建订单（内部再次校验锁，原子落库）
       const order = await createOrder({ scheduleId: sid as any, seatIds });
+      // 3. 清空本地选中状态，跳转支付页
       prevSelectedRef.current.clear();
+      setSelectedIds(new Set());
       sessionStorage.setItem(`order_${order.id}`, JSON.stringify(order));
-      // ★ 同步通知 AI：标记座位已锁定 & 订单已创建，AI 面板下次打开时自动感知
-      const seatLabels = Array.from(selectedIds).map(id => {
+      // 同步通知 AI 面板
+      const seatLabels = Array.from(seatIds).map(id => {
         const s = seats.find(x => x.id === id);
         return s?.seatLabel || '';
       }).filter(Boolean).join('、');
       try {
         await fetch(`/api/movie-agent/sync-state?userId=${userId}&scheduleId=${sid}&orderId=${order.id}&seatLabels=${encodeURIComponent(seatLabels)}`, { method: 'POST' });
-      } catch { /* 非关键路径，失败不影响下单 */ }
+      } catch { /* 非关键路径 */ }
       sessionStorage.setItem(`order_${order.id}_filmType`, filmTypeVal);
       const cinemaTags = sessionStorage.getItem('seat_cinemaTags');
       if (cinemaTags) sessionStorage.setItem(`order_${order.id}_cinemaTags`, cinemaTags);
       Toast.show({ icon: 'success', content: '下单成功！' });
+      // 立即刷新订单列表缓存，确保用户进入订单页能看到新订单
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       navigate(`/order-confirm/${order.id}`, { replace: true });
     } catch (e: any) {
+      // 锁座或下单失败 → 释放已锁座位，避免孤儿锁
+      try { await unlockSeat({ scheduleId: sid as any, seatIds }); } catch {}
       Toast.show({ icon: 'fail', content: e.message || '操作失败' });
     } finally { setLocking(false); }
   };
