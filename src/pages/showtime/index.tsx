@@ -111,12 +111,18 @@ function enrichCinema(c: any, showtimes: API.ScheduleVO[], userLat: number, user
     ? Math.min(...showtimes.map(s => Number(s.price)))
     : (c.basePrice ?? 30);
 
-  const dist = (c.longitude != null && c.latitude != null && userLat && userLng)
-    ? calcDistance(userLat, userLng, Number(c.latitude), Number(c.longitude))
-    : null;
-  const distance = dist != null
-    ? dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
-    : '';
+  // 优先使用后端通过高德API返回的距离（米），与AI选影院结果一致；无则回退到Haversine
+  const backendDist = c.distance != null ? Number(c.distance) : null;
+  const dist = backendDist != null
+    ? backendDist / 1000
+    : (c.longitude != null && c.latitude != null && userLat && userLng)
+      ? calcDistance(userLat, userLng, Number(c.latitude), Number(c.longitude))
+      : null;
+  const distance = backendDist != null
+    ? backendDist < 1000 ? `${backendDist}m` : `${(backendDist / 1000).toFixed(1)}km`
+    : dist != null
+      ? dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
+      : '';
   const distNum = dist ?? 999;
 
   const tags: string[] = c.tags ? c.tags.split(',').filter(Boolean) : [];
@@ -202,12 +208,13 @@ const ShowtimePage: React.FC = () => {
 
   // 影院详情（真实数据，按当前城市过滤）
   const { data: cinemasRaw, isLoading: cinemasLoading } = useQuery({
-    queryKey: ['cinemas', cinemaIds, cityName],
+    queryKey: ['cinemas', cinemaIds, cityName, userLat, userLng],
     queryFn: async () => {
-      const results: { id: string; name: string; address: string; tags: string; city: string; latitude: number; longitude: number; basePrice: number }[] = [];
+      const results: { id: string; name: string; address: string; tags: string; city: string; latitude: number; longitude: number; basePrice: number; distance: number }[] = [];
+      const locParam = userLat && userLng ? `?userLat=${userLat}&userLng=${userLng}` : '';
       for (const cId of cinemaIds.slice(0, 20)) {
         try {
-          const c = await http.get(`/cinema/getInfo/${cId}`) as any;
+          const c = await http.get(`/cinema/getInfo/${cId}${locParam}`) as any;
           results.push({
             id: String(c.id),
             name: c.name || '',
@@ -217,6 +224,7 @@ const ShowtimePage: React.FC = () => {
             latitude: c.latitude,
             longitude: c.longitude,
             basePrice: c.basePrice,
+            distance: c.distance,
           });
         } catch { /* skip */ }
       }
@@ -652,15 +660,7 @@ const ShowtimePage: React.FC = () => {
     <div className={styles.page}>
       {/* NavBar：影院名 */}
       <NavBar
-        onBack={() => {
-          if (isFilmOnly) {
-            setSelectedCinemaId(null);
-          } else if (isCinemaOnly) {
-            setSelectedFilmId(null);
-          } else {
-            navigate(-1);
-          }
-        }}
+        onBack={() => navigate(-1)}
         back={<LeftOutline />}
         right={<span className={styles.aiBtn} onClick={handleAiHelp}>🤖</span>}
       >

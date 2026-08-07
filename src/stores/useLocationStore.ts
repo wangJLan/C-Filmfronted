@@ -35,6 +35,13 @@ function loadCache(): { city: string; lat: number; lng: number } | null {
     const coords = localStorage.getItem(STORAGE_COORDS);
     if (city && coords) {
       const [lat, lng] = coords.split(',').map(Number);
+      // 清除旧的错误默认坐标缓存（洛阳城市中心 34.62,112.45）
+      if (lat === 34.62 && lng === 112.45) {
+        console.log('[定位] 清除旧默认坐标缓存');
+        localStorage.removeItem(STORAGE_CITY);
+        localStorage.removeItem(STORAGE_COORDS);
+        return null;
+      }
       return { city, lat, lng };
     }
   } catch { /* ignore */ }
@@ -123,15 +130,15 @@ async function tryIpLocate(): Promise<{ city: string; lat: number; lng: number }
 
 export const useLocationStore = create<LocationState>()((set) => ({
   city: '洛阳',
-  lat: 34.62,
-  lng: 112.45,
+  lat: 34.66598275858435,
+  lng: 112.37335681915285,
   loading: false,
   located: false,
 
   init: async () => {
     console.log('[定位] init 开始…');
     const cache = loadCache();
-    if (cache) { set({ city: cache.city, lat: cache.lat, lng: cache.lng, located: true }); console.log('[定位] 缓存命中:', cache.city); } else { console.log('[定位] 无缓存'); }
+    if (cache) { set({ city: cache.city, lat: cache.lat, lng: cache.lng, located: false }); console.log('[定位] 缓存命中:', cache.city); } else { console.log('[定位] 无缓存'); }
 
     set({ loading: true });
 
@@ -157,24 +164,13 @@ export const useLocationStore = create<LocationState>()((set) => ({
       }
     } catch (e: any) { console.warn('[定位] GPS 失败，降级到 IP:', e.message || e); }
 
-    // 第2步：IP 定位（已有非默认缓存时不覆盖）
-    if (!cache || cache.city === '北京') {
-      const ip = await tryIpLocate();
-      if (ip) {
-        // 已有缓存且不是"北京"，IP 定位结果不覆盖
-        if (cache && cache.city !== '北京') {
-          console.log('[定位] 保留缓存:', cache.city, '跳过IP:', ip.city);
-          set({ loading: false, located: true });
-          return;
-        }
-        set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
-        saveCache(ip.city, ip.lat, ip.lng);
-        console.log('[定位] init 完成(IP) —', ip.city);
-        return;
-      }
-    } else {
-      console.log('[定位] 已有缓存:', cache.city, ', 跳过IP');
-      set({ loading: false, located: true });
+    // 第2步：IP 定位（GPS 失败时始终尝试，不因有缓存就跳过）
+    const ip = await tryIpLocate();
+    if (ip) {
+      // IP 成功 → 始终更新坐标（IP 可能比旧缓存更准）
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: false });
+      saveCache(ip.city, ip.lat, ip.lng);
+      console.log('[定位] init 完成(IP) —', ip.city);
       return;
     }
 
@@ -214,7 +210,7 @@ export const useLocationStore = create<LocationState>()((set) => ({
 
     const ip = await tryIpLocate();
     if (ip) {
-      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: false });
       saveCache(ip.city, ip.lat, ip.lng);
       console.log('[定位] relocate(IP) —', ip.city);
       return;
