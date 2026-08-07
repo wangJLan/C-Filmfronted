@@ -411,6 +411,7 @@ declare namespace API {
     keyword?: string;
     type?: string;
     status?: string;
+    minRating?: number;
   };
 
   type getByKeyParams = {
@@ -799,6 +800,8 @@ declare namespace API {
   type recommendedParams = {
     limit?: number;
     type?: string;
+    minRating?: number;
+    excludeFilmId?: number;
   };
 
   type remove1Params = {
