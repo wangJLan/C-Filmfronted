@@ -19,10 +19,10 @@ import styles from './index.module.less';
 type TabKey = 'intro' | 'reviews' | 'recommend';
 
 interface ReviewItem {
-  id: string;
-  userId: string;
-  filmId: string;
-  orderId: string;
+  id: number;
+  userId: number;
+  filmId: number;
+  orderId: number;
   rating: number;
   content: string;
   tags: string | string[];
@@ -36,10 +36,10 @@ interface ReviewItem {
 }
 
 interface CommentItem {
-  id: string;
-  reviewId: string;
-  userId: string;
-  parentId: string | null;
+  id: number;
+  reviewId: number;
+  userId: number;
+  parentId: number | null;
   content: string;
   helpfulCount: number;
   createTime: string;
@@ -110,8 +110,7 @@ const DetailPage: React.FC = () => {
 
   const fetchReviews = useCallback(async (pageNum = 1, sortBy?: string, filterBy?: string) => {
     try {
-      // id 为雪花 ID 字符串，直接透传，不能 Number() 否则精度丢失
-      const res: any = await listReviews(id!, { pageNum, pageSize: 10, sortBy, filterBy } as any);
+      const res: any = await listReviews(Number(id), { pageNum, pageSize: 10, sortBy, filterBy });
       const records = (res?.records || []).map((r: any) => ({
         ...r,
         tags: parseTags(r.tags),
@@ -136,13 +135,13 @@ const DetailPage: React.FC = () => {
     setLoadingMore(false);
   };
 
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
-  const [commentData, setCommentData] = useState<Map<string, CommentItem[]>>(new Map());
-  const [replyTarget, setReplyTarget] = useState<{ reviewId: string; parentId?: string } | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+  const [commentData, setCommentData] = useState<Map<number, CommentItem[]>>(new Map());
+  const [replyTarget, setReplyTarget] = useState<{ reviewId: number; parentId?: number } | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  const handleMarkHelpful = async (reviewId: string) => {
+  const handleMarkHelpful = async (reviewId: number) => {
     try {
       const res: any = await markHelpfulApi(reviewId);
       const helpful = res ?? true;
@@ -162,9 +161,9 @@ const DetailPage: React.FC = () => {
     }
   };
 
-  const handleMarkCommentHelpful = async (reviewId: string, commentId: string) => {
+  const handleMarkCommentHelpful = async (reviewId: number, commentId: number) => {
     try {
-      const res: any = await markCommentHelpfulApi(commentId as any);
+      const res: any = await markCommentHelpfulApi(commentId);
       const helpful = res ?? true;
       setCommentData((prev) => {
         const list = (prev.get(reviewId) || []).map((c) => {
@@ -182,29 +181,29 @@ const DetailPage: React.FC = () => {
     }
   };
 
-  const refreshCommentCount = async (reviewId: string) => {
+  const refreshCommentCount = async (reviewId: number) => {
     try {
-      const count: number = await getCommentCount(reviewId as any);
+      const count: number = await getCommentCount(reviewId);
       setReviews((prev) =>
         prev.map((r) => (r.id === reviewId ? { ...r, commentCount: count } : r)),
       );
     } catch { /* ignore */ }
   };
 
-  const toggleCommentSection = async (reviewId: string) => {
+  const toggleCommentSection = async (reviewId: number) => {
     if (expandedComments.has(reviewId)) {
       setExpandedComments((prev) => { const next = new Set(prev); next.delete(reviewId); return next; });
       return;
     }
     setExpandedComments((prev) => new Set(prev).add(reviewId));
     try {
-      const res: any = await listComments(reviewId as any, { pageNum: 1, pageSize: 50 });
+      const res: any = await listComments(reviewId, { pageNum: 1, pageSize: 50 });
       setCommentData((prev) => new Map(prev).set(reviewId, res?.records || []));
       refreshCommentCount(reviewId);
     } catch { /* ignore */ }
   };
 
-  const showReplyInput = (reviewId: string, parentId?: string) => {
+  const showReplyInput = (reviewId: number, parentId?: number) => {
     setReplyTarget({ reviewId, parentId });
     setReplyText('');
   };
@@ -216,7 +215,7 @@ const DetailPage: React.FC = () => {
     if (!text) { Toast.show({ icon: 'fail', content: '请输入内容' }); return; }
     setSubmittingComment(true);
     try {
-      const res: any = await createComment({ reviewId, content: text, parentId } as any);
+      const res: any = await createComment({ reviewId, content: text, parentId });
       const newComment: CommentItem = {
         id: res?.id, reviewId, userId: res?.userId,
         parentId: parentId ?? null,
@@ -239,9 +238,9 @@ const DetailPage: React.FC = () => {
     }
   };
 
-  const handleDeleteComment = async (reviewId: string, commentId: string) => {
+  const handleDeleteComment = async (reviewId: number, commentId: number) => {
     try {
-      await deleteComment(commentId as any);
+      await deleteComment(commentId);
       setCommentData((prev) => {
         const list = (prev.get(reviewId) || []).filter((c) => c.id !== commentId);
         return new Map(prev).set(reviewId, list);
@@ -254,7 +253,7 @@ const DetailPage: React.FC = () => {
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
-    queryFn: () => getFilm({ id: id! }),
+    queryFn: () => getFilm({ id: Number(id) }),
     enabled: !!id,
   });
 
@@ -300,9 +299,7 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  // 请求拦截器已解包 body.data，detail 实为 Film；断言为 Film 以便访问 status 等字段
-  const detailFilm = detail as unknown as API.Film;
-  const rating = detailFilm.rating ?? 9.2;
+  const rating = detail.rating ?? 9.2;
   const ratingCount = '6.1万人评分';
   const wantCountDisplay = '61.7万想看';
   const watchedCountDisplay = '206.5万看过';
@@ -375,16 +372,8 @@ const DetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 购票评分卡片：即将上映显示「想看」不可购票，其余显示「选座购票」 */}
-      {detailFilm.status === 'upcoming' ? (
-        <div className={styles.quickBuy} onClick={() => guard(async () => {
-          const wanted = await toggleWantToSee(detailFilm.id!);
-          Toast.show({ content: wanted ? '已标记想看' : '已取消想看' });
-        })}>
-          <span>{isWanted(detailFilm.id!) ? '已想看' : '想看'}</span>
-          <span className={styles.quickBuyArrow}>›</span>
-        </div>
-      ) : (
+      {/* 购票评分卡片 — 即将上映时隐藏 */}
+      {detail.status !== 'upcoming' && (
         <div className={styles.quickBuy} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
           <span>选座购票</span>
           <span className={styles.quickBuyArrow}>›</span>
@@ -685,7 +674,7 @@ const DetailPage: React.FC = () => {
       {/* 写影评弹窗 */}
       <ReviewForm
         visible={reviewFormVisible}
-        filmId={id!}
+        filmId={Number(id)}
         onClose={() => setReviewFormVisible(false)}
         onSuccess={() => fetchReviews(1, reviewSort, reviewFilter)}
       />
