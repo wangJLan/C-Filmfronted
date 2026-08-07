@@ -16,6 +16,7 @@ import {
 import { useNavigate } from 'umi';
 import { useAiStore } from '@/stores/useAiStore';
 import { useUserStore } from '@/stores/useUserStore';
+import { useLocationStore } from '@/stores/useLocationStore';
 import request from '@/libs/request';
 import { getOrderDetail } from '@/api/orderController';
 import dayjs from 'dayjs';
@@ -1014,6 +1015,9 @@ const AiChat: React.FC = () => {
 
   // —— Store ——
   const userId = useUserStore((s) => s.user?.id);
+  const userLat = useLocationStore((s) => s.lat);
+  const userLng = useLocationStore((s) => s.lng);
+  const userCity = useLocationStore((s) => s.city);
 
   // ==================== 滚动 ====================
   const scrollBottom = useCallback(() => {
@@ -1157,7 +1161,7 @@ const AiChat: React.FC = () => {
 
   // ==================== 新建会话 ====================
   const newSession = useCallback(async () => {
-    console.log('[AiChat] newSession called, userId=', userId);
+    console.log('[AiChat] newSession called');
     if (!userId) {
       Toast.show({ icon: 'fail', content: '请先登录' });
       return;
@@ -1198,25 +1202,18 @@ const AiChat: React.FC = () => {
   const deleteSession = useCallback(async (sid: string) => {
     try {
       await deleteSessionApi(sid);
-      await refreshSessions();
       if (sid === sessionId) {
-        // 当前会话被删 → 新建会话替代，保证始终有活跃会话；失败则清空状态
+        // 当前会话被删 → 清空状态，不自动创建也不自动切换
         if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
         setSending(false);
-        try {
-          const session = await createNewSession(userId!);
-          setSessionId(session.id);
-          setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
-          await refreshSessions();
-        } catch {
-          setSessionId(null);
-          setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
-        }
+        setSessionId(null);
+        setMessages([{ id: 0, role: 'assistant', content: '暂无对话，点击上方 + 新建', activeTools: [], streaming: false }]);
       }
+      await refreshSessions();
     } catch {
       Toast.show({ icon: 'fail', content: '删除失败' });
     }
-  }, [sessionId, userId, refreshSessions]);
+  }, [sessionId, refreshSessions]);
 
   // ==================== 发送消息 — SSE (fetch + ReadableStream) ====================
   const send = useCallback(async (text: string) => {
@@ -1229,6 +1226,13 @@ const AiChat: React.FC = () => {
     scrollBottom();
 
     const params = new URLSearchParams({ message: text, conversationId: String(sessionId), userId: String(userId) });
+    // 传递城市名（始终可用）
+    if (userCity) params.set('city', userCity);
+    // GPS 成功 → 精确坐标；GPS 失败 → 兜底坐标（比 IP 定位靠谱）
+    if (userLat && userLat !== 0 && userLng && userLng !== 0) {
+      params.set('lat', String(userLat));
+      params.set('lng', String(userLng));
+    }
     const url = `http://localhost:8123/api/movie-agent/smart-stream?${params.toString()}`;
 
     let fullText = '';
@@ -1370,7 +1374,7 @@ const AiChat: React.FC = () => {
       });
       scrollBottom();
     }
-  }, [sessionId, sending, userId, scrollBottom, refreshSessions]);
+  }, [sessionId, sending, userId, userLat, userLng, userCity, scrollBottom, refreshSessions]);
 
   // ==================== 外部触发 ====================
   const sendRef = useRef(send);
