@@ -373,11 +373,13 @@ const DetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 购票评分卡片 */}
-      <div className={styles.quickBuy} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
-        <span>选座购票</span>
-        <span className={styles.quickBuyArrow}>›</span>
-      </div>
+      {/* 购票评分卡片 — 即将上映时隐藏 */}
+      {detail.status !== 'upcoming' && (
+        <div className={styles.quickBuy} onClick={() => guard(() => navigate(`/showtime/film/${id}`))}>
+          <span>选座购票</span>
+          <span className={styles.quickBuyArrow}>›</span>
+        </div>
+      )}
 
       {/* 购票评分 */}
       <div className={styles.ratingSection}>

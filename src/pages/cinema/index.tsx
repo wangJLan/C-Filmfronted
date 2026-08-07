@@ -58,12 +58,18 @@ function transformCinema(c: any, userLat: number, userLng: number) {
   const id = String(c.id);
   const tags: string[] = c.tags ? c.tags.split(',').filter(Boolean) : [];
   const minPrice = c.basePrice ?? (30 + ((Number(c.id) || 0) % 20));
-  const dist = (c.longitude != null && c.latitude != null)
-    ? calcDistance(userLat, userLng, c.latitude, c.longitude)
-    : null;
-  const distance = dist != null
-    ? dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
-    : null;
+  // 优先使用后端通过高德API返回的距离（米），与AI选影院结果一致
+  const backendDist = c.distance != null ? Number(c.distance) : null;
+  const dist = backendDist != null
+    ? backendDist / 1000 // 米转千米用于 distNum 排序
+    : (c.longitude != null && c.latitude != null)
+      ? calcDistance(userLat, userLng, c.latitude, c.longitude)
+      : null;
+  const distance = backendDist != null
+    ? backendDist < 1000 ? `${backendDist}m` : `${(backendDist / 1000).toFixed(1)}km`
+    : dist != null
+      ? dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
+      : null;
   const distNum = dist ?? 999;
   const district = matchDistrict(c.address || '');
   return { id, name: c.name || '', address: c.address || '', city: c.city || '未知', tags, distance, distNum, minPrice, district };

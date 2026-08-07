@@ -7,7 +7,7 @@ import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
 import WechatLogin from '@/components/WechatLogin';
 import {
   BillOutline, CheckCircleOutline, StarOutline, ExclamationCircleOutline,
-  SetOutline, GiftOutline, RightOutline, HistogramOutline,
+  SetOutline, RightOutline, HistogramOutline,
 } from 'antd-mobile-icons';
 import styles from './index.module.less';
 
@@ -19,8 +19,6 @@ const orderGrid = [
 ];
 
 const functionList = [
-  { icon: <GiftOutline fontSize={20} />, label: '我的钱包', path: '/wallet' },
-  { icon: <GiftOutline fontSize={20} />, label: '优惠券', path: '/coupons' },
   { icon: <StarOutline fontSize={20} />, label: '我的影评', path: '/my-reviews' },
   { icon: <StarOutline fontSize={20} />, label: '想看的电影', path: '/want-to-see' },
   { icon: <HistogramOutline fontSize={20} />, label: '看过的电影', path: '/watched' },
