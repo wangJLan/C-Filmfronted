@@ -23,9 +23,9 @@ import styles from './index.module.less';
 
 // ==================== 类型 ====================
 interface ChatSessionItem {
-  id: number;
+  id: string;
   sessionName: string;
-  userId: number;
+  userId: string;
   editTime: string;
   createTime: string;
 }
@@ -82,30 +82,30 @@ interface OrderConfirmCardData {
 }
 
 // ==================== API 封装 ====================
-async function getOrCreateSession(userId: number): Promise<ChatSessionItem> {
+async function getOrCreateSession(userId: string): Promise<ChatSessionItem> {
   return request<ChatSessionItem>(`/chatSession/current?userId=${userId}`, { method: 'GET' });
 }
 
-async function createNewSession(userId: number): Promise<ChatSessionItem> {
+async function createNewSession(userId: string): Promise<ChatSessionItem> {
   return request<ChatSessionItem>(`/chatSession/create?userId=${userId}`, { method: 'POST' });
 }
 
-async function fetchSessions(userId: number): Promise<ChatSessionItem[]> {
+async function fetchSessions(userId: string): Promise<ChatSessionItem[]> {
   return request<ChatSessionItem[]>(`/chatSession/listByUser?userId=${userId}`, { method: 'GET' });
 }
 
-async function fetchChatHistory(sessionId: number): Promise<{ message: string; messageType: string }[]> {
+async function fetchChatHistory(sessionId: string): Promise<{ message: string; messageType: string }[]> {
   return request<{ message: string; messageType: string }[]>(
     `/chatHistory/listBySession/${sessionId}`,
     { method: 'GET' },
   );
 }
 
-async function renameSessionApi(id: number, name: string): Promise<boolean> {
+async function renameSessionApi(id: string, name: string): Promise<boolean> {
   return request<boolean>(`/chatSession/rename?id=${id}&name=${encodeURIComponent(name)}`, { method: 'PUT' });
 }
 
-async function deleteSessionApi(id: number): Promise<boolean> {
+async function deleteSessionApi(id: string): Promise<boolean> {
   return request<boolean>(`/chatSession/remove/${id}`, { method: 'DELETE' });
 }
 
@@ -926,10 +926,10 @@ const AiChat: React.FC = () => {
   const [view, setView] = useState<'chat' | 'history'>('chat');
 
   // —— 会话 ——
-  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSessionItem[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
   // —— 消息 ——
@@ -1010,7 +1010,7 @@ const AiChat: React.FC = () => {
   useEffect(() => { if (open && view === 'chat') scrollBottom(); }, [open, view, messages]);
 
   // ==================== 加载会话历史 ====================
-  const loadMessages = useCallback(async (sid: number) => {
+  const loadMessages = useCallback(async (sid: string) => {
     setLoadingHistory(true);
     setMessages([]);
     try {
@@ -1130,7 +1130,7 @@ const AiChat: React.FC = () => {
   }, [userId, loadMessages]);
 
   // ==================== 切换会话 ====================
-  const switchSession = useCallback(async (sid: number) => {
+  const switchSession = useCallback(async (sid: string) => {
     if (sid === sessionId) { setView('chat'); return; }
     // 关闭旧 SSE
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
@@ -1163,11 +1163,11 @@ const AiChat: React.FC = () => {
   }, [userId, refreshSessions]);
 
   // ==================== 重命名会话 ====================
-  const startRename = useCallback((sid: number, name: string) => {
+  const startRename = useCallback((sid: string, name: string) => {
     setRenamingId(sid);
     setRenameValue(name || '新对话');
   }, []);
-  const submitRename = useCallback(async (sid: number) => {
+  const submitRename = useCallback(async (sid: string) => {
     const newName = renameValue.trim();
     setRenamingId(null);
     if (!newName) return;
@@ -1180,7 +1180,7 @@ const AiChat: React.FC = () => {
   }, [renameValue, refreshSessions]);
 
   // ==================== 删除会话 ====================
-  const deleteSession = useCallback(async (sid: number) => {
+  const deleteSession = useCallback(async (sid: string) => {
     try {
       await deleteSessionApi(sid);
       await refreshSessions();
@@ -1194,7 +1194,7 @@ const AiChat: React.FC = () => {
           setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
           await refreshSessions();
         } catch {
-          setSessionId(0);
+          setSessionId(null);
           setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
         }
       }

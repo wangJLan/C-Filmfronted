@@ -155,11 +155,12 @@ const ShowtimePage: React.FC = () => {
   const isFilmOnly = location.pathname.includes('/showtime/film/');
   const isDirect = !isCinemaOnly && !isFilmOnly;
 
-  const directFilmId = isDirect ? Number(params.filmId) : undefined;
+  // 雪花 ID 全程用字符串，避免 Number() 精度丢失
+  const directFilmId = isDirect ? params.filmId : undefined;
   const directCinemaId = isDirect ? params.cinemaId : undefined;
 
-  const [selectedFilmId, setSelectedFilmId] = useState<number | null>(
-    isFilmOnly ? Number(params.filmId) : isDirect ? directFilmId! : null,
+  const [selectedFilmId, setSelectedFilmId] = useState<string | null>(
+    isFilmOnly ? params.filmId ?? null : isDirect ? directFilmId ?? null : null,
   );
   const [selectedCinemaId, setSelectedCinemaId] = useState<string | null>(
     isCinemaOnly ? params.cinemaId! : isDirect ? directCinemaId! : null,
@@ -179,7 +180,7 @@ const ShowtimePage: React.FC = () => {
       ? listSchedule({
           filmId: selectedFilmId || undefined,
           cinemaId: (selectedCinemaId as any) || undefined,
-        })
+        }).then((res: any) => res?.data ?? res ?? [])
       : Promise.resolve([]),
     enabled: !!selectedFilmId || !!selectedCinemaId,
   });
@@ -287,10 +288,10 @@ const ShowtimePage: React.FC = () => {
 
   // 横向影片列表
   const stripRef = useRef<HTMLDivElement>(null);
-  const [activeStripFilmId, setActiveStripFilmId] = useState<number | null>(selectedFilmId);
+  const [activeStripFilmId, setActiveStripFilmId] = useState<string | null>(selectedFilmId);
 
   // 切换影片（点击影片海报后自动滚动到中间）
-  const handleStripFilmClick = (fid: number) => {
+  const handleStripFilmClick = (fid: string) => {
     setActiveStripFilmId(fid);
     if (isFilmOnly || isCinemaOnly) {
       setSelectedFilmId(fid);

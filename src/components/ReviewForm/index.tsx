@@ -8,7 +8,7 @@ const PRESET_TAGS = ['特效炸裂', '剧情精彩', '演技在线', '值得二�
 
 interface ReviewFormProps {
   visible: boolean;
-  filmId: number;
+  filmId: string;
   onClose: () => void;
   onSuccess: () => void;
 }

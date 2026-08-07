@@ -4,7 +4,7 @@ import request from '@/libs/request';
 
 /** POST /userWatchedFilm/mark/{filmId} */
 export async function markWatched(
-  filmId: number,
+  filmId: string,
   options?: { [key: string]: any },
 ) {
   return request<any>(`/userWatchedFilm/mark/${filmId}`, {
@@ -15,7 +15,7 @@ export async function markWatched(
 
 /** GET /userWatchedFilm/isWatched/{filmId} */
 export async function isWatched(
-  filmId: number,
+  filmId: string,
   options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseMapStringObject>(`/userWatchedFilm/isWatched/${filmId}`, {

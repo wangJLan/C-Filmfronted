@@ -62,11 +62,11 @@ const SeatPage: React.FC = () => {
     enabled: !!sid && isLoggedIn,
   });
 
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [locking, setLocking] = useState(false);
   const maxSelect = 4;
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevSelectedRef = useRef<Set<number>>(new Set());
+  const prevSelectedRef = useRef<Set<string>>(new Set());
 
   // 离开页面时释放所有已锁座位
   useEffect(() => {
@@ -79,7 +79,7 @@ const SeatPage: React.FC = () => {
   }, [sid]);
 
   // 选座变化后防抖 300ms 调锁座/解锁接口
-  const syncLocks = useCallback((next: Set<number>) => {
+  const syncLocks = useCallback((next: Set<string>) => {
     if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
     lockTimerRef.current = setTimeout(async () => {
       const prev = prevSelectedRef.current;
@@ -153,16 +153,18 @@ const SeatPage: React.FC = () => {
     } catch { return []; }
   }, []);
 
-  // 兜底：sessionStorage 为空时从 API 拉取同一影片+日期的场次
+  // 兜底：sessionStorage 为空时从 API 拉取同一影片+日期的场次（filmId 为雪花字符串，不能 Number()）
   const filmIdFromUrl = useMemo(() => {
     const q = new URLSearchParams(location.search);
     const id = q.get('filmId');
-    return id ? Number(id) : undefined;
+    return id || undefined;
   }, [location.search]);
 
   const { data: apiSchedules } = useQuery({
     queryKey: ['seatSchedules', filmIdFromUrl, dateVal],
-    queryFn: () => filmIdFromUrl ? listSchedule({ filmId: filmIdFromUrl, showDate: dateVal }) : Promise.resolve([]),
+    queryFn: () => filmIdFromUrl
+      ? listSchedule({ filmId: filmIdFromUrl, showDate: dateVal }).then((res: any) => res?.data ?? res ?? [])
+      : Promise.resolve([]),
     enabled: !!filmIdFromUrl && relatedSchedules.length === 0,
   });
 

@@ -4,7 +4,7 @@ import request from '@/libs/request';
 
 /** POST /userWantFilm/toggle/{filmId} */
 export async function toggleWantToSee(
-  filmId: number,
+  filmId: string,
   options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseMapStringObject>(`/userWantFilm/toggle/${filmId}`, {
@@ -15,7 +15,7 @@ export async function toggleWantToSee(
 
 /** GET /userWantFilm/isWanted/{filmId} */
 export async function isWanted(
-  filmId: number,
+  filmId: string,
   options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseMapStringObject>(`/userWantFilm/isWanted/${filmId}`, {
@@ -34,7 +34,7 @@ export async function getMyWantToSee(options?: { [key: string]: any }) {
 
 /** DELETE /userWantFilm/remove/{filmId} */
 export async function removeWantToSee(
-  filmId: number,
+  filmId: string,
   options?: { [key: string]: any },
 ) {
   return request<any>(`/userWantFilm/remove/${filmId}`, {

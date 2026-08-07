@@ -4,7 +4,7 @@ import request from '@/libs/request';
 
 /** POST /filmReview/create */
 export async function createReview(
-  body: { filmId: number; rating: number; content: string; tags?: string },
+  body: { filmId: string; rating: number; content: string; tags?: string },
   options?: { [key: string]: any },
 ) {
   return request<any>('/filmReview/create', {
@@ -17,7 +17,7 @@ export async function createReview(
 
 /** GET /filmReview/list/{filmId} */
 export async function listReviews(
-  filmId: number,
+  filmId: string,
   params?: { pageNum?: number; pageSize?: number },
   options?: { [key: string]: any },
 ) {
@@ -30,7 +30,7 @@ export async function listReviews(
 
 /** POST /filmReview/helpful/{reviewId} */
 export async function markHelpful(
-  reviewId: number,
+  reviewId: string,
   options?: { [key: string]: any },
 ) {
   return request<any>(`/filmReview/helpful/${reviewId}`, {

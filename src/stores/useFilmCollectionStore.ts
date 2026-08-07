@@ -16,7 +16,7 @@ import {
 const COUPON_KEY = 'coupon-store';
 
 export interface FilmItem {
-  id: number;
+  id: string;
   name: string;
   posterUrl?: string;
   rating?: number;
@@ -49,11 +49,11 @@ interface FilmCollectionState {
 
   fetchWantToSee: () => Promise<void>;
   fetchWatched: () => Promise<void>;
-  toggleWantToSee: (filmId: number) => Promise<boolean>;
-  isWanted: (filmId: number) => boolean;
-  removeWantToSeeApi: (filmId: number) => Promise<void>;
-  markAsWatched: (filmId: number) => Promise<void>;
-  isWatched: (filmId: number) => boolean;
+  toggleWantToSee: (filmId: string) => Promise<boolean>;
+  isWanted: (filmId: string) => boolean;
+  removeWantToSeeApi: (filmId: string) => Promise<void>;
+  markAsWatched: (filmId: string) => Promise<void>;
+  isWatched: (filmId: string) => boolean;
   useCoupon: (id: string) => void;
   addCoupon: (c: CouponItem) => void;
   addBalance: (amount: number) => void;

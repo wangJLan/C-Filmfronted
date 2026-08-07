@@ -26,10 +26,10 @@ import styles from './index.module.less';
 type TabKey = 'intro' | 'reviews' | 'news' | 'recommend';
 
 interface ReviewItem {
-  id: number;
-  userId: number;
-  filmId: number;
-  orderId: number;
+  id: string;
+  userId: string;
+  filmId: string;
+  orderId: string;
   rating: number;
   content: string;
   tags: string | string[];
@@ -100,7 +100,8 @@ const DetailPage: React.FC = () => {
 
   const fetchReviews = useCallback(async (pageNum = 1) => {
     try {
-      const res: any = await listReviews(Number(id), { pageNum, pageSize: 10 });
+      // id 为雪花 ID 字符串，直接透传，不能 Number() 否则精度丢失
+      const res: any = await listReviews(id!, { pageNum, pageSize: 10 });
       const records = (res?.records || []).map((r: any) => ({
         ...r,
         tags: parseTags(r.tags),
@@ -125,7 +126,7 @@ const DetailPage: React.FC = () => {
     setLoadingMore(false);
   };
 
-  const handleMarkHelpful = async (reviewId: number) => {
+  const handleMarkHelpful = async (reviewId: string) => {
     try {
       await markHelpfulApi(reviewId);
       setReviews((prev) =>
@@ -139,7 +140,7 @@ const DetailPage: React.FC = () => {
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
-    queryFn: () => getFilm({ id: Number(id) }),
+    queryFn: () => getFilm({ id: id! }),
     enabled: !!id,
   });
 
@@ -572,7 +573,7 @@ const DetailPage: React.FC = () => {
       {/* 写影评弹窗 */}
       <ReviewForm
         visible={reviewFormVisible}
-        filmId={Number(id)}
+        filmId={id!}
         onClose={() => setReviewFormVisible(false)}
         onSuccess={() => fetchReviews(1)}
       />

@@ -13,7 +13,7 @@ import styles from './index.module.less';
 
 interface FilmCardProps {
   film: {
-    id: number;
+    id: string | number;
     name: string;
     posterUrl: string;
     rating?: number;
@@ -26,7 +26,7 @@ interface FilmCardProps {
   variant?: 'list' | 'hero' | 'vertical';
   /** 竖排卡片模式: 'hot'=热映(购票) | 'upcoming'=即将上映(想看) */
   mode?: 'hot' | 'upcoming';
-  onSelect?: (id: number) => void;
+  onSelect?: (id: string) => void;
 }
 
 /**

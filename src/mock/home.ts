@@ -639,7 +639,7 @@ export const MOCK_BRANDS = [
 
 // 根据 filmId 生成稳定的 Mock 补充字段
 export interface EnrichedFilm {
-  id: number;
+  id: string;
   name: string;
   posterUrl: string;
   rating: number;
@@ -655,7 +655,7 @@ export interface EnrichedFilm {
   isWanted: boolean;
 }
 
-const MOCK_ENGLISH_TITLES: Record<number, string> = {
+const MOCK_ENGLISH_TITLES: Record<string, string> = {
   1: 'Spider-Man: Brand New Day',
   2: 'The Wandering Earth III',
   3: 'Ne Zha: The First Battle',
@@ -676,12 +676,13 @@ const MOCK_FORMAT_POOL = [
 ];
 
 export function enrichFilm(film: {
-  id: number; name: string; posterUrl: string; rating?: number;
+  id: string | number; name: string; posterUrl: string; rating?: number;
   duration?: number; type?: string; releaseDate?: string;
 }): EnrichedFilm {
   const id = film.id;
+  const num = Number(id) || 0; // 仅用于 Mock 补充字段（取模/排名/票房），不影响 ID 本身
   return {
-    id,
+    id: String(id),
     name: film.name,
     posterUrl: film.posterUrl,
     rating: film.rating ?? 0,
@@ -689,11 +690,11 @@ export function enrichFilm(film: {
     type: film.type ?? '剧情',
     releaseDate: film.releaseDate ?? '',
     // Mock 补充
-    englishTitle: MOCK_ENGLISH_TITLES[id] || `${film.name} (English)`,
-    formatTags: MOCK_FORMAT_POOL[id % MOCK_FORMAT_POOL.length],
-    ranking: id <= 3 ? `一周票房榜 第${id}名` : '',
-    wantCount: `${(10 + id * 7.3).toFixed(1)}万想看`,
-    watchedCount: `${(20 + id * 15.2).toFixed(1)}万看过`,
+    englishTitle: MOCK_ENGLISH_TITLES[String(id)] || `${film.name} (English)`,
+    formatTags: MOCK_FORMAT_POOL[num % MOCK_FORMAT_POOL.length],
+    ranking: num >= 1 && num <= 3 ? `一周票房榜 第${num}名` : '',
+    wantCount: `${(10 + num * 7.3).toFixed(1)}万想看`,
+    watchedCount: `${(20 + num * 15.2).toFixed(1)}万看过`,
     isWanted: false,
   };
 }
