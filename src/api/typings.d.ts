@@ -401,6 +401,7 @@ declare namespace API {
     isDelete?: boolean;
     createTime?: string;
     updateTime?: string;
+    formatTags?: string[];
   };
 
   type FilmQueryRequest = {

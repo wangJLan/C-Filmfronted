@@ -209,9 +209,8 @@ const TicketPage: React.FC = () => {
       {/* ===== 影院信息卡 ===== */}
       <div className={styles.card}>
         <div className={styles.cinemaRow}>
-          <div className={styles.cinemaName} onClick={() => navigate(`/cinema-detail/${order.scheduleId || 1}`)}>
+          <div className={styles.cinemaName}>
             <div>{order.cinemaName || '影院'}</div>
-            <svg className={styles.arrowSvg} viewBox="0 0 96 96" fill="#959AA5"><path d="M55.1 48 32.3 26.9c-1.6-1.5-1.7-4-.2-5.7 1.5-1.6 4-1.7 5.7-.2l26 24c1.7 1.6 1.7 4.3 0 5.9l-26 24c-1.6 1.5-4.2 1.4-5.7-.2-1.5-1.6-1.4-4.2.2-5.7l22.8-21z"/></svg>
           </div>
           <div className={styles.cinemaIcons}>
             <svg className={styles.cIcon} viewBox="0 0 96 96"><path d="M68.3 56.5c9.1 3.3 13.8 13.2 10.8 22.3l-.3.8C75.6 88.5 64.8 93 56.4 90l-4-1.5h-.1c-12.8-5.9-24.4-16.6-30-27.8-6.7-13.2-8.4-30.3-3.5-43.9C22.4 7.1 32.2 2.7 41.7 6.2c9.3 3.4 14 13.6 10.6 22.9-2.4 6.5-8.2 10.5-14.9 11 .8 3.8 2.1 7.6 3.9 11.2C43.4 55.4 46 59 49 62c4.7-5.7 12.1-8.1 19.3-5.5z"/></svg>
@@ -239,7 +238,7 @@ const TicketPage: React.FC = () => {
           </div>
           <div className={`${styles.qrBody} ${(order.status === 'refunded' || order.status === 'expired') ? styles.qrDisabled : ''}`}>
             <div className={styles.qrCodeBox}>
-              <FakeQR code={order.tickets?.[0]?.ticketCode || order.orderNo?.slice(-8) || '000000'} />
+              <FakeQR code={order.tickets?.[0]?.ticketCode || '00000000'} />
               {(order.status === 'refunded' || order.status === 'expired') && (
                 <div className={styles.qrStamp}>
                   <svg viewBox="0 0 120 120" width="88" height="88">
@@ -260,7 +259,7 @@ const TicketPage: React.FC = () => {
           </div>
 
           {/* 每张票的取票码和核销状态 */}
-          {(order.tickets && order.tickets.length > 0) ? (
+          {order.tickets && order.tickets.length > 0 && (
             <div className={styles.ticketList}>
               {order.tickets.map((t, idx) => {
                 const statusLabel = t.status === 1 ? '已核销' : t.status === 2 ? '已退票' : t.status === 3 ? '已过期' : '未使用';
@@ -277,11 +276,6 @@ const TicketPage: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
-          ) : (
-            <div className={`${styles.codeSection} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
-              <div className={styles.codeLabel}>取票码</div>
-              <div className={styles.codeNum}>{order.orderNo?.slice(-8) || '000000'}</div>
             </div>
           )}
           <div className={`${styles.codeHint} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
@@ -342,7 +336,7 @@ const TicketPage: React.FC = () => {
         <div className={styles.detailItem}><span className={styles.dLabel}>实付金额：</span><span className={styles.dVal}>¥{order.totalPrice || 0}</span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>订单编号：</span><span className={styles.dValRow}>{order.orderNo || '—'} <button className={styles.copyBtn} onClick={handleCopyOrderNo}>复制</button></span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>购买时间：</span><span className={styles.dVal}>{order.createTime || '—'}</span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>手机号码：</span><span className={styles.dVal}>{user?.userName || user?.userAccount || '—'}</span></div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>用户账号：</span><span className={styles.dVal}>{user?.userAccount || '—'}</span></div>
         <div className={styles.detailItem}><span className={styles.dVal}>电影票由鼎新提供</span></div>
       </div>
 

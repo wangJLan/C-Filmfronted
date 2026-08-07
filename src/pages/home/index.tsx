@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'umi';
-import { Button, Toast, SearchBar, SpinLoading } from 'antd-mobile';
+import { SearchBar, SpinLoading } from 'antd-mobile';
 import { EnvironmentOutline } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocationStore } from '@/stores/useLocationStore';
 import { useUserStore } from '@/stores/useUserStore';
 import { listFilm } from '@/api/filmController';
-import { MOCK_BENEFITS, type BenefitItem } from '@/mock/home';
 import FilmCard from '@/components/FilmCard/index';
 import styles from './index.module.less';
 
@@ -29,6 +28,43 @@ const HomePage: React.FC = () => {
   const hotFilms = hotData?.records || [];
   const upcomingFilms = upcomingData?.records || [];
 
+  // 高分热映影片（评分 >= 8.0）
+  const topFilms = useMemo(
+    () => hotFilms.filter(f => (f.rating ?? 0) >= 8.0),
+    [hotFilms],
+  );
+
+  // 海报横向自动滚动
+  const posterStripRef = useRef<HTMLDivElement>(null);
+  const userInteracting = useRef(false);
+
+  const startAutoScroll = useCallback(() => {
+    const interval = 3000; // 每3秒翻一张
+    let timer: ReturnType<typeof setInterval>;
+    timer = setInterval(() => {
+      const el = posterStripRef.current;
+      if (!el || userInteracting.current) return;
+      const itemWidth = el.clientWidth; // 每个海报宽度 ≈ 容器宽度
+      const next = el.scrollLeft + itemWidth;
+      // 超过一半内容时回到开头（因为复制了一份）
+      if (next >= el.scrollWidth / 2) {
+        el.scrollTo({ left: 0, behavior: 'instant' });
+      } else {
+        el.scrollTo({ left: next, behavior: 'smooth' });
+      }
+    }, interval);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (topFilms.length === 0) return;
+    const cleanup = startAutoScroll();
+    return cleanup;
+  }, [topFilms, startAutoScroll]);
+
+  const handlePointerDown = () => { userInteracting.current = true; };
+  const handlePointerUp = () => { userInteracting.current = false; };
+
   return (
     <div className={styles.page}>
       {/* 搜索栏 + 城市定位 */}
@@ -39,57 +75,46 @@ const HomePage: React.FC = () => {
           <span className={styles.cityArrow}>▾</span>
         </div>
         <div className={styles.searchWrap}>
-          <SearchBar placeholder="搜电影、搜影院" onSearch={() => Toast.show({ content: '搜索功能开发中' })}
+          <SearchBar placeholder="搜电影、搜影院" onSearch={(val) => navigate(`/search?keyword=${encodeURIComponent(val.trim())}`)}
             className={styles.searchBar} />
         </div>
       </div>
 
-      {/* 顶部礼包区域 */}
-      <div className={styles.header}>
-        <div className={styles.headerTop}>
-          <span className={styles.brand}>妙语购票</span>
-          <span className={styles.divider}>|</span>
-          <span className={styles.subBrand}>妙语购票</span>
-          <div className={styles.headerIcons}>
-            <span className={styles.iconBtn} onClick={() => navigate('/discover')}>📢</span>
-            <span className={styles.iconBtn} onClick={() => navigate('/user')}>{isLoggedIn ? '👤' : '👤'}</span>
-          </div>
-        </div>
-        <div className={styles.giftSection}>
-          <h2 className={styles.giftTitle}>专属电影礼包</h2>
-          <div className={styles.giftIllustration}>
-            <div className={styles.giftBox}>
-              <div className={styles.giftRibbonLeft} />
-              <div className={styles.giftRibbonRight} />
-              <div className={styles.giftDollar}>¥</div>
-              <div className={styles.giftCoin} />
-              <div className={styles.giftCoin2} />
+      {/* 顶部品牌区 + 海报滚动（共用橙色背景） */}
+      <div className={styles.heroWrap}>
+        <div className={styles.header}>
+          <div className={styles.headerTop}>
+            <span className={styles.brand}>妙语购票</span>
+            <span className={styles.divider}>|</span>
+            <span className={styles.subBrand}>妙语购票</span>
+            <div className={styles.headerIcons}>
+              <span className={styles.iconBtn} onClick={() => navigate('/user')}>{isLoggedIn ? '👤' : '👤'}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 功能入口卡片 */}
-      <div className={styles.benefits}>
-        {MOCK_BENEFITS.map((item: BenefitItem) => (
-          <div key={item.id} className={styles.benefitCard} onClick={() => Toast.show({ content: `${item.title} — 功能开发中` })}>
-            <div className={styles.benefitIcon}>
-              {item.icon === 'party' ? <span className={styles.iconParty}>🎉</span> : <span className={styles.iconCoupon}>🎟️</span>}
-            </div>
-            <div className={styles.benefitInfo}>
-              <div className={styles.benefitTitle}>{item.title}</div>
-              <div className={styles.benefitSubtitle}>{item.subtitle}</div>
-            </div>
-            <div className={styles.benefitButton}>{item.buttonText} ›</div>
+        {/* 高分热映海报滚动 */}
+        {topFilms.length > 0 && (
+          <div
+            ref={posterStripRef}
+            className={styles.posterStrip}
+            onMouseDown={handlePointerDown}
+            onMouseUp={handlePointerUp}
+            onMouseLeave={handlePointerUp}
+            onTouchStart={handlePointerDown}
+            onTouchEnd={handlePointerUp}
+          >
+            {[...topFilms, ...topFilms].map((film, idx) => (
+              <div
+                key={`${film.id}-${idx}`}
+                className={styles.posterStripItem}
+                onClick={() => navigate(`/detail/${film.id}`)}
+              >
+                <img src={film.posterUrl} alt={film.name} />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* 立即使用红包下单 */}
-      <div className={styles.actionSection}>
-        <Button block className={styles.actionButton} onClick={() => navigate('/detail/3')}>
-          🧧 立即使用红包下单 🧧
-        </Button>
+        )}
       </div>
 
       {/* 热映影片 */}

@@ -23,6 +23,7 @@ interface FilmCardProps {
     releaseDate?: string;
     director?: string;
     actors?: string;
+    formatTags?: string[];
   };
   variant?: 'list' | 'hero' | 'vertical';
   onSelect?: (id: string) => void;

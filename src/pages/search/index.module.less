@@ -1,0 +1,156 @@
+.page {
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  padding-bottom: 40px;
+}
+
+.searchRow {
+  padding: 8px 16px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.results {
+  padding: 0;
+}
+
+.hint,
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* ========== 结果分区 ========== */
+.section {
+  margin-top: 12px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+}
+
+/* ========== 影院卡片 ========== */
+.cinemaCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 0 12px 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.cinemaHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.cinemaTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  line-height: 1.4;
+}
+
+.cinemaPrice {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--primary-color);
+}
+
+.priceSymbol {
+  font-size: 12px;
+}
+
+.priceValue {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.priceSuffix {
+  font-size: 12px;
+}
+
+.cinemaAddrRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.cinemaAddr {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.cinemaDistance {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.cinemaInfoRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.serviceTag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.tagRed {
+  color: #e4393c;
+  border-color: #e4393c;
+}
+
+.tagOrange {
+  color: #fa8c16;
+  border-color: #fa8c16;
+}
+
+.tagGreen {
+  color: #52c41a;
+  border-color: #52c41a;
+}
+
+.tagBlue {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.tagGray {
+  color: #999;
+  border-color: #d9d9d9;
+}

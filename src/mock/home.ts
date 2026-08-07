@@ -677,7 +677,7 @@ const MOCK_FORMAT_POOL = [
 
 export function enrichFilm(film: {
   id: string | number; name: string; posterUrl: string; rating?: number;
-  duration?: number; type?: string; releaseDate?: string;
+  duration?: number; type?: string; releaseDate?: string; formatTags?: string[];
 }): EnrichedFilm {
   const id = film.id;
   const num = Number(id) || 0; // 仅用于 Mock 补充字段（取模/排名/票房），不影响 ID 本身
@@ -691,7 +691,9 @@ export function enrichFilm(film: {
     releaseDate: film.releaseDate ?? '',
     // Mock 补充
     englishTitle: MOCK_ENGLISH_TITLES[String(id)] || `${film.name} (English)`,
-    formatTags: MOCK_FORMAT_POOL[num % MOCK_FORMAT_POOL.length],
+    formatTags: (film.formatTags && film.formatTags.length > 0)
+      ? film.formatTags
+      : MOCK_FORMAT_POOL[num % MOCK_FORMAT_POOL.length],
     ranking: num >= 1 && num <= 3 ? `一周票房榜 第${num}名` : '',
     wantCount: `${(10 + num * 7.3).toFixed(1)}万想看`,
     watchedCount: `${(20 + num * 15.2).toFixed(1)}万看过`,

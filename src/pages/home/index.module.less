@@ -44,12 +44,13 @@
   --border-radius: 20px;
 }
 
-/* ========== 顶部礼包区域 ========== */
-.header {
+/* ========== 顶部品牌区 + 海报滚动容器 ========== */
+.heroWrap {
   background: var(--primary-gradient);
-  padding: 20px 20px 60px;
-  position: relative;
-  overflow: hidden;
+}
+
+.header {
+  padding: 20px 20px 12px;
 }
 
 .headerTop {
@@ -57,7 +58,6 @@
   align-items: center;
   font-size: 14px;
   color: #fff;
-  margin-bottom: 16px;
 }
 
 .brand {
@@ -267,6 +267,40 @@
   font-weight: 600 !important;
   color: #fff !important;
   box-shadow: 0 4px 16px rgba(255, 90, 0, 0.4);
+}
+
+/* ========== 高分海报横向滚动 ========== */
+.posterStrip {
+  display: flex;
+  overflow-x: auto;
+  gap: 0;
+  padding: 0 0 16px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  user-select: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.posterStripItem {
+  flex-shrink: 0;
+  width: calc(100vw - 64px);
+  height: 33vh;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 16px;
+  background: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  scroll-snap-align: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
 }
 
 /* ========== 影片区块 ========== */

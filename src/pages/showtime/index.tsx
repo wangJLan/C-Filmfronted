@@ -72,13 +72,6 @@ function buildDates(): string[] {
   return r;
 }
 
-// Mock 小食数据
-const MOCK_SNACKS = [
-  { id: 1, emoji: '🍿', name: '64oz爆米花1桶+东方树叶1瓶/可口可乐1杯(2选1)', desc: '', price: 26, tag: '单人餐' },
-  { id: 2, emoji: '🍟', name: '85oz爆米花桶+茶派2瓶/可口可乐2杯(2选1)', desc: '', price: 35, tag: '双人餐' },
-  { id: 3, emoji: '🌭', name: '85oz抱抱爆米花+22oz可口可乐3瓶/500ml茶派3瓶(3选1)', desc: '', price: 39, tag: '多人餐' },
-];
-
 function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -292,7 +285,6 @@ const ShowtimePage: React.FC = () => {
 
   const dates = useMemo(() => buildDates(), []);
   const [activeDateIdx, setActiveDateIdx] = useState(0);
-  const [tabActive, setTabActive] = useState<'showtime' | 'snack'>('showtime');
 
   // 横向影片列表
   const stripRef = useRef<HTMLDivElement>(null);
@@ -345,14 +337,17 @@ const ShowtimePage: React.FC = () => {
     return new Date(dt).getTime() < Date.now();
   };
 
-  // 合并真实场次 + 数据库字段的影院列表
+  // 合并真实场次 + 数据库字段的影院列表（按选中日期过滤）
   const enrichedCinemas = useMemo(() => {
     if (!cityFilteredCinemas || !scheduleData) return [];
-    return cityFilteredCinemas.map(c => {
-      const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id));
-      return enrichCinema(c, cShowtimes, userLat, userLng);
-    });
-  }, [cityFilteredCinemas, scheduleData, userLat, userLng]);
+    const selectedDate = dates[activeDateIdx];
+    return cityFilteredCinemas
+      .map(c => {
+        const cShowtimes = scheduleData.filter(s => String(s.cinemaId) === String(c.id) && s.showDate === selectedDate);
+        return enrichCinema(c, cShowtimes, userLat, userLng);
+      })
+      .filter(c => c.showtimeCount > 0);
+  }, [cityFilteredCinemas, scheduleData, userLat, userLng, dates, activeDateIdx]);
 
   // 筛选后的影院列表
   const filteredCinemas = useMemo(() => {
@@ -664,37 +659,26 @@ const ShowtimePage: React.FC = () => {
         back={<LeftOutline />}
         right={<span className={styles.aiBtn} onClick={handleAiHelp}>🤖</span>}
       >
-        <span onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)} style={{ cursor: 'pointer' }}>{cinema?.name || '选影院'}</span>
+        <span>{cinema?.name || '选影院'}</span>
       </NavBar>
 
       {/* 影院详情头部 */}
       <div className={styles.cinemaDetailHeader}>
-        <div className={styles.cinemaHeaderTitle} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)} style={{ cursor: 'pointer' }}>{cinema?.name || '影院详情'}</div>
+        <div className={styles.cinemaHeaderTitle}>{cinema?.name || '影院详情'}</div>
         <div className={styles.cinemaHeaderAddr}>
           <span className={styles.addrText}>{cinema?.address || '暂无地址'}</span>
           <span className={styles.addrDistance}>{cinema?.distance || '--km'}</span>
         </div>
         <div className={styles.cinemaHeaderTags}>
           {(cinema?.tags || []).map((tag: string, idx: number) => (
-            <span key={idx} className={`${styles.cHeaderTag} ${getTagColor(tag) === 'tagRed' ? styles.cHeaderTagRed : styles.cHeaderTagGray}`} onClick={() => selectedCinemaId && navigate(`/cinema-detail/${selectedCinemaId}`)}>{tag}</span>
+            <span key={idx} className={`${styles.cHeaderTag} ${getTagColor(tag) === 'tagRed' ? styles.cHeaderTagRed : styles.cHeaderTagGray}`}>{tag}</span>
           ))}
         </div>
       </div>
 
-      {/* Tab 切换 */}
+      {/* 选场次 */}
       <div className={styles.tabSwitch}>
-        <div
-          className={`${styles.tabItem} ${tabActive === 'showtime' ? styles.tabItemActive : ''}`}
-          onClick={() => setTabActive('showtime')}
-        >
-          选场次
-        </div>
-        <div
-          className={`${styles.tabItem} ${tabActive === 'snack' ? styles.tabItemActive : ''}`}
-          onClick={() => setTabActive('snack')}
-        >
-          买小食
-        </div>
+        <div className={`${styles.tabItem} ${styles.tabItemActive}`}>选场次</div>
       </div>
 
       {/* 影片横向滚动列表（展示影院所有热映影片） */}
@@ -755,115 +739,93 @@ const ShowtimePage: React.FC = () => {
         </div>
       )}
 
-      {tabActive === 'showtime' ? (
-        <>
-          {/* 日期选择条 */}
-          <div className={styles.dateBar}>
-            <div className={styles.dateScroll}>
-              {dates.map((date, idx) => {
-                const count = dateCounts[idx];
-                return (
-                  <div
-                    key={date}
-                    className={`${styles.dateItem} ${activeDateIdx === idx ? styles.dateItemActive : ''} ${count === 0 ? styles.dateItemEmpty : ''}`}
-                    onClick={() => setActiveDateIdx(idx)}
-                  >
-                    <span className={styles.dateLabel}>{getDayLabel(date, idx)}</span>
-                    <span className={styles.dateNum}>{dayjs(date).format('MM/DD')}</span>
-                    {count > 0 && <span className={styles.dateCount}>{count}场</span>}
-                    {count === 0 && <span className={styles.dateNoData}>无排片</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 场次列表 - 新版 */}
-          <div className={styles.showtimeNewList}>
-            {!scheduleData ? (
-              <div style={{ textAlign: 'center', padding: 60 }}><SpinLoading color="primary" /></div>
-            ) : showtimes.length === 0 ? (
-              <div className={styles.empty}>
-                <div className={styles.emptyIcon}>📅</div>
-                <div className={styles.emptyText}>该日期暂无排片</div>
+      {/* 日期选择条 */}
+      <div className={styles.dateBar}>
+        <div className={styles.dateScroll}>
+          {dates.map((date, idx) => {
+            const count = dateCounts[idx];
+            return (
+              <div
+                key={date}
+                className={`${styles.dateItem} ${activeDateIdx === idx ? styles.dateItemActive : ''} ${count === 0 ? styles.dateItemEmpty : ''}`}
+                onClick={() => setActiveDateIdx(idx)}
+              >
+                <span className={styles.dateLabel}>{getDayLabel(date, idx)}</span>
+                <span className={styles.dateNum}>{dayjs(date).format('MM/DD')}</span>
+                {count > 0 && <span className={styles.dateCount}>{count}场</span>}
+                {count === 0 && <span className={styles.dateNoData}>无排片</span>}
               </div>
-            ) : (
-              showtimes.map(item => {
-                const isSoldOut = item.status === 'soldOut';
-                const realPrice = Number(item.price);
-                const endTime = String(item.endTime || '').substring(0, 5);
-                const hallType = item.hallType || '2D';
-                return (
-                  <div
-                    key={item.id}
-                    className={`${styles.showtimeNewCard} ${isSoldOut ? styles.showtimeSoldOut : ''}`}
-                    onClick={() => { if (!isSoldOut) guard(() => {
-                      const params = new URLSearchParams({
-                        filmName: film?.name || '',
-                        filmDuration: String(film?.duration || ''),
-                        filmType: film?.type || '',
-                        startTime: String(item.startTime || ''),
-                        endTime: String(item.endTime || ''),
-                        hallType: item.hallType || '',
-                        hallName: item.hallName || '',
-                        date: dates[activeDateIdx],
-                        filmId: String(selectedFilmId || ''),
-                      });
-                      // 把当前影院+日期的场次列表写入 sessionStorage，供选座页底部卡片展示
-                      sessionStorage.setItem('seat_schedules', JSON.stringify(showtimes));
-                      // 把影院 tags 带上，供退改签判断
-                      if (cinema?.tags) sessionStorage.setItem('seat_cinemaTags', JSON.stringify(cinema.tags));
-                      navigate(`/seat/${item.id}?${params.toString()}`);
-                    }); }}
-                  >
-                    <div className={styles.showtimeNewLeft}>
-                      <div className={styles.showtimeNewTime}>
-                        {String(item.startTime).substring(0, 5)}
-                        {isSoldOut && <span className={styles.soldTag}>售罄</span>}
-                      </div>
-                      <div className={styles.showtimeNewHallRow}>
-                        <span className={styles.hallTypeTag}>{hallType}</span>
-                        <span className={styles.hallTypeText}>{item.hallName || ''}</span>
-                      </div>
-                      <div className={styles.showtimeNewEnd}>散场 {endTime}</div>
-                    </div>
-                    <div className={styles.showtimeNewRight}>
-                      {!isSoldOut ? (
-                        <>
-                          <div className={styles.newPriceRow}>
-                            <span className={styles.newPriceValue}>¥{realPrice}</span>
-                          </div>
-                          <div className={styles.buyNewBtn}>购票</div>
-                        </>
-                      ) : (
-                        <div className={styles.showtimeSeats}>已售罄</div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 场次列表 - 新版 */}
+      <div className={styles.showtimeNewList}>
+        {!scheduleData ? (
+          <div style={{ textAlign: 'center', padding: 60 }}><SpinLoading color="primary" /></div>
+        ) : showtimes.length === 0 ? (
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}>📅</div>
+            <div className={styles.emptyText}>该日期暂无排片</div>
           </div>
-        </>
-      ) : (
-        /* 小食区 */
-        <div className={styles.snackSection}>
-          <div className={styles.snackTitle}>美味小食等你哦</div>
-          {MOCK_SNACKS.map(snack => (
-            <div key={snack.id} className={styles.snackItem}>
-              <div className={styles.snackItemPoster}>{snack.emoji}</div>
-              <div className={styles.snackItemInfo}>
-                <div className={styles.snackItemName}>{snack.tag}</div>
-                <div className={styles.snackItemDesc}>{snack.name}</div>
-                <div className={styles.snackItemBottom}>
-                  <span className={styles.snackItemPrice}>¥{snack.price}</span>
-                  <span className={styles.snackItemBuy}>购买</span>
+        ) : (
+          showtimes.map(item => {
+            const isSoldOut = item.status === 'soldOut';
+            const realPrice = Number(item.price);
+            const endTime = String(item.endTime || '').substring(0, 5);
+            const hallType = item.hallType || '2D';
+            return (
+              <div
+                key={item.id}
+                className={`${styles.showtimeNewCard} ${isSoldOut ? styles.showtimeSoldOut : ''}`}
+                onClick={() => { if (!isSoldOut) guard(() => {
+                  const params = new URLSearchParams({
+                    filmName: film?.name || '',
+                    filmDuration: String(film?.duration || ''),
+                    filmType: film?.type || '',
+                    startTime: String(item.startTime || ''),
+                    endTime: String(item.endTime || ''),
+                    hallType: item.hallType || '',
+                    hallName: item.hallName || '',
+                    date: dates[activeDateIdx],
+                    filmId: String(selectedFilmId || ''),
+                  });
+                  // 把当前影院+日期的场次列表写入 sessionStorage，供选座页底部卡片展示
+                  sessionStorage.setItem('seat_schedules', JSON.stringify(showtimes));
+                  // 把影院 tags 带上，供退改签判断
+                  if (cinema?.tags) sessionStorage.setItem('seat_cinemaTags', JSON.stringify(cinema.tags));
+                  navigate(`/seat/${item.id}?${params.toString()}`);
+                }); }}
+              >
+                <div className={styles.showtimeNewLeft}>
+                  <div className={styles.showtimeNewTime}>
+                    {String(item.startTime).substring(0, 5)}
+                    {isSoldOut && <span className={styles.soldTag}>售罄</span>}
+                  </div>
+                  <div className={styles.showtimeNewHallRow}>
+                    <span className={styles.hallTypeTag}>{hallType}</span>
+                    <span className={styles.hallTypeText}>{item.hallName || ''}</span>
+                  </div>
+                  <div className={styles.showtimeNewEnd}>散场 {endTime}</div>
+                </div>
+                <div className={styles.showtimeNewRight}>
+                  {!isSoldOut ? (
+                    <>
+                      <div className={styles.newPriceRow}>
+                        <span className={styles.newPriceValue}>¥{realPrice}</span>
+                      </div>
+                      <div className={styles.buyNewBtn}>购票</div>
+                    </>
+                  ) : (
+                    <div className={styles.showtimeSeats}>已售罄</div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            );
+          })
+        )}
+      </div>
 
       <SafeArea position="bottom" />
     </div>

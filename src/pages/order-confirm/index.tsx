@@ -219,20 +219,6 @@ const OrderConfirmPage: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.refundRow}>
-          <div className={styles.refundItem}>
-            <svg className={styles.checkIcon} viewBox="0 0 96 96"><path d="M48 8c22.1 0 40 17.9 40 40S70.1 88 48 88 8 70.1 8 48 25.9 8 48 8zm20.5 26.3c-1.9-1.8-5-1.7-6.9.1l-20 20-7.2-7.2c-1.9-1.9-5-1.9-6.9-.1s-2 4.8-.1 6.7l10.7 10.7c1.9 1.9 5.1 1.9 7 0L68.6 41c1.9-1.9 1.8-4.9-.1-6.7z" fill="#00b578"/></svg>
-            <span>限时退票</span>
-          </div>
-          <div className={styles.refundItem}>
-            <svg className={styles.checkIcon} viewBox="0 0 96 96"><path d="M48 8c22.1 0 40 17.9 40 40S70.1 88 48 88 8 70.1 8 48 25.9 8 48 8zm20.5 26.3c-1.9-1.8-5-1.7-6.9.1l-20 20-7.2-7.2c-1.9-1.9-5-1.9-6.9-.1s-2 4.8-.1 6.7l10.7 10.7c1.9 1.9 5.1 1.9 7 0L68.6 41c1.9-1.9 1.8-4.9-.1-6.7z" fill="#00b578"/></svg>
-            <span>限时改签</span>
-          </div>
-          <div className={styles.refundNotice}>
-            <span>退改签须知</span>
-            <svg className={styles.arrowIcon} viewBox="0 0 96 96" fill="#959AA5"><path d="M55.1 48 32.3 26.9c-1.6-1.5-1.7-4-.2-5.7 1.5-1.6 4-1.7 5.7-.2l26 24c1.7 1.6 1.7 4.3 0 5.9l-26 24c-1.6 1.5-4.2 1.4-5.7-.2-1.5-1.6-1.4-4.2.2-5.7l22.8-21z"/></svg>
-          </div>
-        </div>
       </div>
 
       {/* ===== 优惠券区 ===== */}
@@ -241,46 +227,6 @@ const OrderConfirmPage: React.FC = () => {
         <div className={styles.couponRow}>
           <span className={styles.couponLabel}>优惠券&活动</span>
           <span className={styles.couponNone}>暂无可用</span>
-        </div>
-      </div>
-
-      {/* ===== 小食区 ===== */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <span className={styles.cardTitle}>观影伴侣·美味小食</span>
-          <span className={styles.cardMore}>全部小食 ›</span>
-        </div>
-        <div className={styles.snackItem}>
-          <div className={styles.snackTag}>热销</div>
-          <div className={styles.snackInner}>
-            <div className={styles.snackPoster} />
-            <div className={styles.snackInfo}>
-              <div className={styles.snackName}>双人餐·46oz爆米花1桶+16oz可口可乐2杯</div>
-              <div className={styles.snackPriceRow}>
-                <span className={styles.snackPrice}><span className={styles.yen}>¥</span>29<span className={styles.yenSmall}>.5</span></span>
-                <span className={styles.snackOrig}>原价：¥41</span>
-              </div>
-            </div>
-            <div className={styles.addBtn}>+</div>
-          </div>
-        </div>
-        <div className={styles.snackItem}>
-          <div className={styles.snackTag} />
-          <div className={styles.snackInner}>
-            <div className={styles.snackPoster} />
-            <div className={styles.snackInfo}>
-              <div className={styles.snackName}>单人餐·3D眼镜（框架式）1副</div>
-              <div className={styles.snackPriceRow}>
-                <span className={styles.snackPrice}><span className={styles.yen}>¥</span>2</span>
-                <span className={styles.snackOrig}>原价：¥10</span>
-              </div>
-            </div>
-            <div className={styles.addBtn}>+</div>
-          </div>
-        </div>
-        <div className={styles.snackTotal}>
-          <span>小食总计：</span>
-          <span className={styles.snackTotalPrice}><span className={styles.yen}>¥</span>0</span>
         </div>
       </div>
 
