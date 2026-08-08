@@ -14,7 +14,6 @@ import styles from './index.module.less';
 const orderGrid = [
   { icon: <BillOutline fontSize={24} />, label: '待付款', tab: 'pending' },
   { icon: <CheckCircleOutline fontSize={24} />, label: '已完成', tab: 'completed' },
-  { icon: <StarOutline fontSize={24} />, label: '待评价', tab: 'completed' },
   { icon: <ExclamationCircleOutline fontSize={24} />, label: '退改', tab: 'cancelled' },
 ];
 

@@ -86,6 +86,20 @@ const TicketPage: React.FC = () => {
     try { return sessionStorage.getItem(`order_${oid}_filmType`) || ''; } catch { return ''; }
   }, [oid]);
 
+  // 二维码印章状态：refunded > checked > expired > null
+  const stampState = useMemo(() => {
+    if (order?.status === 'refunded') return 'refunded';
+    // 所有票都已核销 → 已核销
+    if (order?.tickets && order.tickets.length > 0 && order.tickets.every(t => t.status === 1)) return 'checked';
+    // 订单过期 或 电影已开场 或 票状态为已过期(3)
+    if (order?.status === 'expired') return 'expired';
+    if (order?.scheduleTime && Date.now() >= new Date(order.scheduleTime).getTime()) return 'expired';
+    if (order?.tickets?.some(t => t.status === 3)) return 'expired';
+    return null;
+  }, [order?.status, order?.scheduleTime, order?.tickets]);
+
+  const isExpired = stampState === 'expired';
+
   useEffect(() => {
     if (!oid) return;
     getOrderDetail({ id: oid }).then((o: any) => {
@@ -246,30 +260,35 @@ const TicketPage: React.FC = () => {
       </div>
 
       {/* ===== 取票码（已支付 / 已退款置灰） ===== */}
-      {(order.status === 'paid' || order.status === 'refunded' || order.status === 'expired') && (
+      {(order.status === 'paid' || order.status === 'refunded' || stampState) && (
         <div className={styles.card}>
           <div className={styles.qrTabs}>
             <span className={styles.qrHelp} onClick={() => setShowHelp(true)}>如何取票 ›</span>
           </div>
-          <div className={`${styles.qrBody} ${(order.status === 'refunded' || order.status === 'expired') ? styles.qrDisabled : ''}`}>
+          <div className={`${styles.qrBody} ${stampState ? styles.qrDisabled : ''}`}>
             <div className={styles.qrCodeBox}>
               <FakeQR code={order.tickets?.[0]?.ticketCode || order.orderNo?.slice(-8) || '000000'} />
-              {(order.status === 'refunded' || order.status === 'expired') && (
+              {stampState && (() => {
+                const stampColor = stampState === 'checked' ? '#00b578' : '#ff4d4f';
+                const cnText = stampState === 'refunded' ? '已退款' : stampState === 'checked' ? '已核销' : '已过期';
+                const enText = stampState === 'refunded' ? 'REFUNDED' : stampState === 'checked' ? 'VERIFIED' : 'EXPIRED';
+                return (
                 <div className={styles.qrStamp}>
                   <svg viewBox="0 0 120 120" width="88" height="88">
-                    <circle cx="60" cy="60" r="55" fill="#ff4d4f" opacity="0.95"/>
+                    <circle cx="60" cy="60" r="55" fill={stampColor} opacity="0.95"/>
                     <circle cx="60" cy="60" r="48" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.6"/>
                     <polygon points="60,18 62,28 72,28 64,34 67,44 60,38 53,44 56,34 48,28 58,28" fill="#fff" opacity="0.7"/>
                     <polygon points="60,98 62,108 72,108 64,114 67,124 60,118 53,124 56,114 48,108 58,108" fill="#fff" opacity="0.5"/>
                     <text x="60" y="56" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="bold" fontFamily="SimHei, sans-serif">
-                      {order.status === 'expired' ? '已过期' : '已退款'}
+                      {cnText}
                     </text>
                     <text x="60" y="80" textAnchor="middle" fill="#fff" fontSize="11" opacity="0.85" fontFamily="sans-serif">
-                      {order.status === 'expired' ? 'EXPIRED' : 'REFUNDED'}
+                      {enText}
                     </text>
                   </svg>
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
 
@@ -293,13 +312,13 @@ const TicketPage: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className={`${styles.codeSection} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
+            <div className={`${styles.codeSection} ${stampState ? styles.codeDisabled : ''}`}>
               <div className={styles.codeLabel}>取票码</div>
               <div className={styles.codeNum}>{order.orderNo?.slice(-8) || '000000'}</div>
             </div>
           )}
-          <div className={`${styles.codeHint} ${(order.status === 'refunded' || order.status === 'expired') ? styles.codeDisabled : ''}`}>
-            {order.status === 'refunded' ? '该订单已退款，取票码已失效' : order.status === 'expired' ? '电影已放映结束，取票码已失效' : '请在影院取票机上扫码或输入取票码取票'}
+          <div className={`${styles.codeHint} ${stampState ? styles.codeDisabled : ''}`}>
+            {stampState === 'refunded' ? '该订单已退款，取票码已失效' : stampState === 'checked' ? '该票已核销使用' : stampState === 'expired' ? '电影已放映结束，取票码已失效' : '请在影院取票机上扫码或输入取票码取票'}
           </div>
         </div>
       )}
@@ -356,7 +375,7 @@ const TicketPage: React.FC = () => {
         <div className={styles.detailItem}><span className={styles.dLabel}>实付金额：</span><span className={styles.dVal}>¥{order.totalPrice || 0}</span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>订单编号：</span><span className={styles.dValRow}>{order.orderNo || '—'} <button className={styles.copyBtn} onClick={handleCopyOrderNo}>复制</button></span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>购买时间：</span><span className={styles.dVal}>{order.createTime || '—'}</span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>手机号码：</span><span className={styles.dVal}>{user?.userName || user?.userAccount || '—'}</span></div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>用户账号：</span><span className={styles.dVal}>{user?.userAccount || '—'}</span></div>
         <div className={styles.detailItem}><span className={styles.dVal}>电影票由鼎新提供</span></div>
       </div>
 
@@ -374,7 +393,7 @@ const TicketPage: React.FC = () => {
       </div>
 
       {/* ===== 删除订单（已退款/已过期） ===== */}
-      {(order.status === 'refunded' || order.status === 'expired') && (
+      {(order.status === 'refunded' || isExpired) && (
         <div className={styles.deleteSection}>
           <button
             className={styles.deleteBtn}

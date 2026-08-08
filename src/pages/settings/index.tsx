@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'umi';
-import { NavBar, Toast } from 'antd-mobile';
+import { NavBar } from 'antd-mobile';
 import { LeftOutline, RightOutline } from 'antd-mobile-icons';
 import styles from './index.module.less';
 
@@ -22,11 +22,11 @@ const SettingsPage: React.FC = () => {
 
       <div className={styles.group}>
         <div className={styles.title}>关于</div>
-        <div className={styles.itemLink} onClick={() => Toast.show({ content: '《妙语购票用户协议》' })}>
+        <div className={styles.itemLink} onClick={() => navigate('/agreement')}>
           <span>用户协议</span>
           <RightOutline fontSize={14} color="#ccc" />
         </div>
-        <div className={styles.itemLink} onClick={() => Toast.show({ content: '《妙语购票隐私政策》' })}>
+        <div className={styles.itemLink} onClick={() => navigate('/privacy')}>
           <span>隐私政策</span>
           <RightOutline fontSize={14} color="#ccc" />
         </div>
