@@ -1418,7 +1418,7 @@ const AiChat: React.FC = () => {
                   content: fullText,
                   activeTools: activeToolList, // ★ 保留工具状态指示器
                   loading: false,
-                  streaming: false,
+                  streaming: true, // ★ 闪烁光标跟随在状态文字后面
                 });
                 continue;
               }
