@@ -8,6 +8,7 @@ import { LeftOutline } from 'antd-mobile-icons';
 import { getOrderDetail, cancelOrder } from '@/api/orderController';
 import { useUserStore } from '@/stores/useUserStore';
 import http from '@/services/request';
+import dayjs from 'dayjs';
 import styles from './index.module.less';
 
 // ==================== 模拟二维码 ====================
@@ -335,7 +336,7 @@ const TicketPage: React.FC = () => {
         <div className={styles.detailHeader}><span>订单详情</span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>实付金额：</span><span className={styles.dVal}>¥{order.totalPrice || 0}</span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>订单编号：</span><span className={styles.dValRow}>{order.orderNo || '—'} <button className={styles.copyBtn} onClick={handleCopyOrderNo}>复制</button></span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>购买时间：</span><span className={styles.dVal}>{order.createTime || '—'}</span></div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>购买时间：</span><span className={styles.dVal}>{order.createTime ? dayjs(order.createTime).format('YYYY-MM-DD HH:mm:ss') : '—'}</span></div>
         <div className={styles.detailItem}><span className={styles.dLabel}>用户账号：</span><span className={styles.dVal}>{user?.userAccount || '—'}</span></div>
         <div className={styles.detailItem}><span className={styles.dVal}>电影票由鼎新提供</span></div>
       </div>

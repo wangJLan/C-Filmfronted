@@ -764,7 +764,7 @@ const OrderConfirmCard: React.FC<{
             type="button"
             className={styles.orderAction}
             onClick={() => onOpenOrder?.(data)}
-            disabled={expired}
+            disabled={false}
           >
             <ReceiptOutline />
             <span>查看订单</span>
@@ -1411,6 +1411,18 @@ const AiChat: React.FC = () => {
                 continue;
               }
 
+              // —— 状态文字（不清空 activeTools，与 tool_start 同时展示） ——
+              if (payload.type === 'status') {
+                fullText += payload.d || '';
+                updateAssistant({
+                  content: fullText,
+                  activeTools: activeToolList, // ★ 保留工具状态指示器
+                  loading: false,
+                  streaming: false,
+                });
+                continue;
+              }
+
               // —— 卡片 ——
               if (payload.type === 'card') {
                 activeToolList = [];
@@ -1434,7 +1446,7 @@ const AiChat: React.FC = () => {
               }
 
               // —— 文本块 ——
-              if (activeToolList.length > 0) activeToolList = [];
+              if (activeToolList.length > 0) { activeToolList = []; fullText = ''; }
               fullText += payload.d || '';
               const parsedCard = extractCardFromText(fullText);
               if (parsedCard) {
