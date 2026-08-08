@@ -110,7 +110,7 @@ const DetailPage: React.FC = () => {
 
   const fetchReviews = useCallback(async (pageNum = 1, sortBy?: string, filterBy?: string) => {
     try {
-      const res: any = await listReviews(Number(id), { pageNum, pageSize: 10, sortBy, filterBy });
+      const res: any = await listReviews(id, { pageNum, pageSize: 10, sortBy, filterBy });
       const records = (res?.records || []).map((r: any) => ({
         ...r,
         tags: parseTags(r.tags),
@@ -253,13 +253,13 @@ const DetailPage: React.FC = () => {
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['filmDetail', id],
-    queryFn: () => getFilm({ id: Number(id) }),
+    queryFn: () => getFilm({ id: id }),
     enabled: !!id,
   });
 
   const { data: recommendedFilms = [] } = useQuery({
     queryKey: ['recommendedFilms', id],
-    queryFn: () => recommended({ limit: 20, minRating: 8.0, excludeFilmId: Number(id) }),
+    queryFn: () => recommended({ limit: 20, minRating: 8.0, excludeFilmId: id }),
     staleTime: 300000,
   });
 
@@ -273,7 +273,7 @@ const DetailPage: React.FC = () => {
   useEffect(() => {
     fetchWantToSee();
     fetchWatched();
-    getReviewCount(Number(id)).then(setReviewCount).catch(() => {});
+    getReviewCount(id as any).then(setReviewCount).catch(() => {});
     setReviewCount(0);
     setReviews([]);
   }, [id]);
@@ -674,7 +674,7 @@ const DetailPage: React.FC = () => {
       {/* 写影评弹窗 */}
       <ReviewForm
         visible={reviewFormVisible}
-        filmId={Number(id)}
+        filmId={id}
         onClose={() => setReviewFormVisible(false)}
         onSuccess={() => fetchReviews(1, reviewSort, reviewFilter)}
       />
