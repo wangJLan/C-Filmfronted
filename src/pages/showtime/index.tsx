@@ -264,7 +264,7 @@ const ShowtimePage: React.FC = () => {
   });
 
   // 影院当前热映影片（后端新接口 GET /api/schedule/cinema-films）
-  const { data: cinemaFilms } = useQuery({
+  const { data: cinemaFilms, isFetched: cinemaFilmsReady } = useQuery({
     queryKey: ['cinemaFilms', selectedCinemaId],
     queryFn: async () => {
       const resp: any = await http.get(`/schedule/cinema-films?cinemaId=${selectedCinemaId}`);
@@ -331,6 +331,8 @@ const ShowtimePage: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [submittedKeyword, setSubmittedKeyword] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [nearbyCinemas, setNearbyCinemas] = useState<{ id: string; name: string; address: string; distance: string }[]>([]);
+  const [otherFilmCinemas, setOtherFilmCinemas] = useState<{ cinemaId: string; cinemaName: string; address: string; films: { id: string; name: string; posterUrl: string }[] }[]>([]);
 
   const isPast = (showDate: string, startTime: string) => {
     const dt = `${showDate}T${startTime}`;
@@ -417,6 +419,78 @@ const ShowtimePage: React.FC = () => {
     triggerAi(`我在看${parts.join(' ')}，帮我推荐合适场次`);
     Toast.show({ content: '已转交 AI 助手' });
   };
+
+  // ===== 无排片时推荐其他影片或附近影院 =====
+  useEffect(() => {
+    if (!cinemasReady || enrichedCinemas.length > 0) {
+      setNearbyCinemas([]);
+      setOtherFilmCinemas([]);
+      return;
+    }
+    const date = dates[activeDateIdx];
+    // 有选中影片时，优先推荐同日期其他有场次的影片
+    if (selectedFilmId) {
+      http.get('/schedule/other-films', { params: { showDate: date, excludeFilmId: selectedFilmId } }).then((res: any) => {
+        const list = Array.isArray(res) ? res : (res?.data ?? []);
+        if (list.length > 0) {
+          setOtherFilmCinemas(list);
+          setNearbyCinemas([]);
+        } else {
+          setOtherFilmCinemas([]);
+          // 无其他影片 → 推荐附近影院
+          if (userLat && userLng) {
+            http.get('/cinema/nearby', { params: { userLat, userLng, limit: 3 } }).then((r: any) => {
+              const arr = Array.isArray(r) ? r : (r?.data ?? []);
+              setNearbyCinemas(arr.map((c: any) => ({
+                id: String(c.id), name: c.name || '', address: c.address || '', distance: c.distance || '',
+              })));
+            }).catch(() => {});
+          }
+        }
+      }).catch(() => {
+        setOtherFilmCinemas([]);
+        if (userLat && userLng) {
+          http.get('/cinema/nearby', { params: { userLat, userLng, limit: 3 } }).then((r: any) => {
+            const arr = Array.isArray(r) ? r : (r?.data ?? []);
+            setNearbyCinemas(arr.map((c: any) => ({
+              id: String(c.id), name: c.name || '', address: c.address || '', distance: c.distance || '',
+            })));
+          }).catch(() => {});
+        }
+      });
+    } else if (userLat && userLng) {
+      // 无选中影片（影院模式），直接推荐附近影院
+      http.get('/cinema/nearby', { params: { userLat, userLng, limit: 3 } }).then((res: any) => {
+        const arr = Array.isArray(res) ? res : (res?.data ?? []);
+        setNearbyCinemas(arr.map((c: any) => ({
+          id: String(c.id), name: c.name || '', address: c.address || '', distance: c.distance || '',
+        })));
+      }).catch(() => {});
+    }
+  }, [cinemasReady, enrichedCinemas.length, userLat, userLng, dates, activeDateIdx, selectedFilmId]);
+
+  // ===== 影院无排片时推荐附近影院 =====
+  useEffect(() => {
+    if (!isCinemaOnly || !cinemaFilmsReady || !cinemaFilms || cinemaFilms.length > 0 || !userLat || !userLng) {
+      return;
+    }
+    http.get('/cinema/nearby', { params: { userLat, userLng, excludeId: selectedCinemaId, limit: 3 } }).then((res: any) => {
+      const list = Array.isArray(res) ? res : (res?.data ?? []);
+      const result = list.map((c: any) => ({
+        id: String(c.id), name: c.name || '', address: c.address || '', distance: c.distance || '',
+      }));
+      setNearbyCinemas(result);
+    }).catch(() => {});
+  }, [isCinemaOnly, cinemaFilmsReady, cinemaFilms, userLat, userLng, selectedCinemaId]);
+
+  // ===== 同步 URL 参数变化（同路由跳转时组件不卸载，需手动同步） =====
+  useEffect(() => {
+    if (isCinemaOnly && params.cinemaId && params.cinemaId !== selectedCinemaId) {
+      setSelectedCinemaId(params.cinemaId);
+      setSelectedFilmId(null);
+      setNearbyCinemas([]);
+    }
+  }, [isCinemaOnly, params.cinemaId]);
 
   // ===== cinemaOnly：自动选中第一部影片，跳过选片页 =====
   useEffect(() => {
@@ -592,7 +666,71 @@ const ShowtimePage: React.FC = () => {
           ) : filteredCinemas.length === 0 ? (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>🎬</div>
-              <div className={styles.emptyText}>暂无符合条件的影院</div>
+              {otherFilmCinemas.length > 0 ? (
+                <>
+                  <div className={styles.emptyText}>该影片在所选日期暂无排片</div>
+                  <div className={styles.recommendSection}>
+                    <div className={styles.recommendHint}>不过同日期这些影院有其他好片在映哦 👇</div>
+                    <div className={styles.recommendList}>
+                      {otherFilmCinemas.map((cinema) => (
+                        <div
+                          key={cinema.cinemaId}
+                          className={styles.otherFilmCard}
+                          onClick={() => navigate(`/showtime/cinema/${cinema.cinemaId}`)}
+                        >
+                          <div className={styles.otherFilmCardHead}>
+                            <span className={styles.otherFilmCinemaName}>{cinema.cinemaName}</span>
+                            <span className={styles.recommendArrow}>&rsaquo;</span>
+                          </div>
+                          <div className={styles.otherFilmCardAddr}>{cinema.address}</div>
+                          <div className={styles.otherFilmStrip}>
+                            {cinema.films.map((f) => (
+                              <div key={f.id} className={styles.otherFilmItem}>
+                                {f.posterUrl ? (
+                                  <img src={f.posterUrl} alt={f.name} className={styles.otherFilmPoster} />
+                                ) : (
+                                  <div className={styles.otherFilmPosterPlaceholder}>🎬</div>
+                                )}
+                                <span className={styles.otherFilmName}>{f.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : nearbyCinemas.length > 0 ? (
+                <>
+                  <div className={styles.emptyText}>这个日期附近还没有排片呢～</div>
+                  <div className={styles.recommendSection}>
+                    <div className={styles.recommendHint}>要不要看看这些离你最近的影院？说不定有合适的场次哦 👇</div>
+                    <div className={styles.recommendList}>
+                      {nearbyCinemas.map((c, idx) => (
+                        <div
+                          key={c.id}
+                          className={styles.recommendCard}
+                          onClick={() => navigate(`/showtime/cinema/${c.id}`)}
+                        >
+                          <div className={styles.recommendCardLeft}>
+                            <div className={styles.recommendCardTitle}>
+                              <span className={styles.recommendRank}>{['🥇', '🥈', '🥉'][idx]}</span>
+                              <span>{c.name}</span>
+                            </div>
+                            <div className={styles.recommendCardAddr}>{c.address}</div>
+                          </div>
+                          <div className={styles.recommendCardRight}>
+                            <span className={styles.recommendDist}>{c.distance}</span>
+                            <span className={styles.recommendArrow}>&rsaquo;</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.emptyText}>暂无符合条件的影院</div>
+              )}
             </div>
           ) : (
             <>
@@ -639,8 +777,45 @@ const ShowtimePage: React.FC = () => {
     );
   }
 
-  // cinemaOnly 模式下没影片或还在加载 → 显示 loading
+  // cinemaOnly 模式下没影片或还在加载
   if (isCinemaOnly && !selectedFilmId) {
+    // 影院没有热映影片 → 维护中，推荐附近影院
+    if (cinemaFilmsReady && (!cinemaFilms || cinemaFilms.length === 0)) {
+      return (
+        <div className={styles.page}>
+          <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}>🏗️</div>
+            <div className={styles.emptyText}>该影院维护中，暂不开放</div>
+            <div className={styles.emptyDesc}>我们正在努力准备更好的观影体验，敬请期待～</div>
+            {nearbyCinemas.length > 0 && (
+              <div className={styles.recommendSection}>
+                <div className={styles.recommendHint}>要不先看看附近这几家？同样精彩 👇</div>
+                <div className={styles.recommendList}>
+                  {nearbyCinemas.map((c, idx) => (
+                    <div key={c.id} className={styles.recommendCard} onClick={() => navigate(`/showtime/cinema/${c.id}`)}>
+                      <div className={styles.recommendCardLeft}>
+                        <div className={styles.recommendCardTitle}>
+                          <span className={styles.recommendRank}>{['🥇', '🥈', '🥉'][idx]}</span>
+                          <span>{c.name}</span>
+                        </div>
+                        <div className={styles.recommendCardAddr}>{c.address}</div>
+                      </div>
+                      <div className={styles.recommendCardRight}>
+                        <span className={styles.recommendDist}>{c.distance}</span>
+                        <span className={styles.recommendArrow}>&rsaquo;</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <SafeArea position="bottom" />
+        </div>
+      );
+    }
+    // 还在加载...
     return (
       <div className={styles.page}>
         <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>

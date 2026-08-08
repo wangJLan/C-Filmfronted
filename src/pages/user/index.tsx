@@ -254,17 +254,6 @@ const UserPage: React.FC = () => {
           <span className={styles.editHint}>点击编辑资料 ›</span>
         </div>
 
-        <div className={styles.vipCard} onClick={() => navigate('/wallet')}>
-          <div className={styles.vipLeft}>
-            <span className={styles.vipCrown}>👑</span>
-            <div>
-              <div className={styles.vipTitle}>妙语会员</div>
-              <div className={styles.vipSubtitle}>开通享观影特惠 · 每月省更多</div>
-            </div>
-          </div>
-          <div className={styles.vipBtn}>立即开通 ›</div>
-        </div>
-
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardTitle}>我的订单</span>

@@ -40,11 +40,12 @@ const RefundApplyPage: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [order, setOrder] = useState<API.OrderVO | null>(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     getOrderDetail({ id: oid }).then((o: any) => {
       const vo = o?.data ?? o;
       setOrder(vo);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [oid]);
 
   const count = order?.count || 1;
@@ -75,6 +76,11 @@ const RefundApplyPage: React.FC = () => {
       Toast.show({ icon: 'fail', content: e.message || '退票失败' });
     } finally { setSubmitting(false); }
   };
+
+  if (loading) {
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>退票</NavBar>
+      <div className={styles.empty}>加载中…</div></div>;
+  }
 
   if (!order) {
     return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>退票</NavBar>

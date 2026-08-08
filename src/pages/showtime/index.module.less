@@ -677,6 +677,12 @@
   color: var(--text-muted);
 }
 
+.emptyDesc {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 4px;
+}
+
 /* ========== 新版影院详情头部 ========== */
 .cinemaDetailHeader {
   background: linear-gradient(180deg, #3a1520 0%, #5c1e28 50%, #fff 100%);
@@ -1149,3 +1155,168 @@
   white-space: nowrap;
   max-width: 40%;
 }
+
+/* ========== 附近影院推荐 ========== */
+.recommendSection {
+  margin-top: 28px;
+  text-align: left;
+}
+
+.recommendHint {
+  font-size: 15px;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 16px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.recommendList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.recommendCardLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.recommendCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recommendRank {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.recommendCardAddr {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recommendCardRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.recommendDist {
+  font-size: 13px;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.recommendArrow {
+  font-size: 18px;
+  color: #ccc;
+}
+
+/* ========== 同日期其他影片推荐 ========== */
+.otherFilmCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.otherFilmCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.otherFilmCinemaName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.otherFilmCardAddr {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.otherFilmStrip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.otherFilmItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 64px;
+}
+
+.otherFilmPoster {
+  width: 60px;
+  height: 84px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f5f5f5;
+}
+
+.otherFilmPosterPlaceholder {
+  width: 60px;
+  height: 84px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.otherFilmName {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 64px;
+}
+

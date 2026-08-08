@@ -16,8 +16,13 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: '待支付', color: '#FF5A00' },
   paid: { label: '已支付', color: '#00b578' },
   completed: { label: '已完成', color: '#00b578' },
-  cancelled: { label: '已取消', color: '#ccc' },
-  refunded: { label: '已退款', color: '#ccc' },
+  cancelled: { label: '已取消', color: '#999' },
+  refunded: { label: '已退款', color: '#1677FF' },
+};
+
+const CANCEL_REASON_MAP: Record<string, string> = {
+  timeout: '超时自动取消',
+  user_cancelled: '用户取消',
 };
 
 const OrdersPage: React.FC = () => {
@@ -97,6 +102,12 @@ const OrdersPage: React.FC = () => {
               </div>}
               {order.status === 'paid' && <div className={styles.cardFoot}>
                 <Button size="mini" fill="none" className={styles.changeBtn} onClick={(e) => { e.stopPropagation(); navigate(`/ticket/${order.id}`); }}>查看</Button>
+              </div>}
+              {order.status === 'cancelled' && <div className={styles.cardFoot}>
+                <span className={styles.reasonText}>{CANCEL_REASON_MAP[order.cancelReason || ''] || '已取消'}</span>
+              </div>}
+              {order.status === 'refunded' && <div className={styles.cardFoot}>
+                <span className={styles.reasonText}>已退款 ¥{(order.refundAmount ?? order.totalPrice ?? 0).toFixed(2)}</span>
               </div>}
             </div>
           );
