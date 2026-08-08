@@ -1125,9 +1125,21 @@ const AiChat: React.FC = () => {
   const userCity = useLocationStore((s) => s.city);
 
   // ==================== 滚动 ====================
-  const scrollBottom = useCallback(() => {
+  /**
+   * 智能滚动：force=true 强制滚到底（用户发消息时）；
+   * 否则只在用户已接近底部（<150px）时才自动跟滚，避免卡片撑高时抢走用户的阅读位置。
+   */
+  const scrollBottom = useCallback((force = false) => {
     setTimeout(() => {
-      if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+      if (!listRef.current) return;
+      if (force) {
+        listRef.current.scrollTop = listRef.current.scrollHeight;
+        return;
+      }
+      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+      if (scrollHeight - scrollTop - clientHeight < 150) {
+        listRef.current.scrollTop = scrollHeight;
+      }
     }, 80);
   }, []);
 
@@ -1326,7 +1338,7 @@ const AiChat: React.FC = () => {
     const aiMsg: Message = { id: ++msgId.current, role: 'assistant', content: '', loading: true, activeTools: [], streaming: false };
     setMessages((prev) => [...prev, userMsg, aiMsg]);
     setSending(true);
-    scrollBottom();
+    scrollBottom(true); // ★ 用户发消息 → 强制滚到底
 
     const params = new URLSearchParams({ message: text, conversationId: String(sessionId), userId: String(userId) });
     // 传递城市名（始终可用）
@@ -1342,6 +1354,8 @@ const AiChat: React.FC = () => {
     let activeToolList: { key: string; label: string }[] = [];
     // 聚合订单卡：收集本回合收到的订单卡，≥2 张时合成一张「全部订单」卡
     const orderCards: SSECardData[] = [];
+    // ★ 缓冲卡片：工具结果到了但 LLM 文本还没到 → 先存着，等文本到了再一起展示
+    let pendingCard: SSECardData | null = null;
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -1386,12 +1400,14 @@ const AiChat: React.FC = () => {
                 const copy = [...prev];
                 for (let i = copy.length - 1; i >= 0; i--) {
                   if (copy[i].role === 'assistant') {
-                    copy[i] = { ...copy[i], streaming: false };
+                    // ★ done 时把缓冲的卡片一起刷出来（LLM 无文本但有卡片时）
+                    copy[i] = { ...copy[i], streaming: false, cardData: pendingCard || copy[i].cardData };
                     break;
                   }
                 }
                 return copy;
               });
+              pendingCard = null;
               refreshSessions();
               return;
             }
@@ -1430,17 +1446,24 @@ const AiChat: React.FC = () => {
                 // 订单卡聚合：连下多单时合成为一张「全部订单」卡；单张订单卡保持原样
                 if (isOrderCard(card)) {
                   orderCards.push(card);
-                  updateAssistant({
-                    cardData: mergeOrderCards(orderCards),
-                    loading: false, streaming: false, activeTools: [],
-                  });
+                  // ★ 缓冲：等 LLM 文本到了再一起展示，避免卡片飞出来但对话还没出来
+                  pendingCard = mergeOrderCards(orderCards);
+                  // 如果已经有文本了 → 立刻展示；否则等文本到/done 时再展示
+                  if (fullText) {
+                    updateAssistant({ cardData: pendingCard, loading: false, streaming: true, activeTools: [] });
+                    pendingCard = null;
+                  } else {
+                    updateAssistant({ loading: false, streaming: false, activeTools: [] });
+                  }
                 } else {
-                  // 非订单卡直接展示；不重置 orderCards —— 两单之间会穿插 seats_confirmed 等卡，
-                  // 重置会导致第一张订单卡被盖掉、只剩最后一单
-                  updateAssistant({
-                    cardData: card,
-                    loading: false, streaming: false, activeTools: [],
-                  });
+                  // 非订单卡也缓冲，等文本到了再展示
+                  pendingCard = card;
+                  if (fullText) {
+                    updateAssistant({ cardData: card, loading: false, streaming: true, activeTools: [] });
+                    pendingCard = null;
+                  } else {
+                    updateAssistant({ loading: false, streaming: false, activeTools: [] });
+                  }
                 }
                 continue;
               }
@@ -1449,23 +1472,20 @@ const AiChat: React.FC = () => {
               if (activeToolList.length > 0) { activeToolList = []; fullText = ''; }
               fullText += payload.d || '';
               const parsedCard = extractCardFromText(fullText);
+              // ★ 如果有缓冲的卡片且文本已到达 → 一起展示
+              const flushedCard = pendingCard;
+              if (flushedCard) pendingCard = null;
+              // 构建 patch：只在有卡片时才带 cardData，避免 undefined 覆盖已设的卡片
+              const patch: Partial<Message> = { activeTools: [], loading: false, streaming: true };
               if (parsedCard) {
                 fullText = parsedCard.text;
-                updateAssistant({
-                  content: parsedCard.text,
-                  cardData: parsedCard.card,
-                  activeTools: [],
-                  loading: false,
-                  streaming: true,
-                });
+                patch.content = parsedCard.text;
+                if (flushedCard || parsedCard.card) patch.cardData = flushedCard || parsedCard.card;
               } else {
-                updateAssistant({
-                  content: isPendingCardText(fullText) ? '' : fullText,
-                  activeTools: [],
-                  loading: false,
-                  streaming: true,
-                });
+                patch.content = isPendingCardText(fullText) ? '' : fullText;
+                if (flushedCard) patch.cardData = flushedCard;
               }
+              updateAssistant(patch);
             } catch { /* JSON parse error */ }
           }
         }
@@ -1475,17 +1495,23 @@ const AiChat: React.FC = () => {
 
       // 自然结束（无 done 事件时）
       setSending(false);
-      updateAssistant({ streaming: false });
+      updateAssistant({ streaming: false, ...(pendingCard ? { cardData: pendingCard } : {}) });
+      pendingCard = null;
       refreshSessions();
     } catch (err: any) {
       if (err.name === 'AbortError') return; // 正常中断
       console.error('[AiChat] SSE fetch 失败:', err);
       setSending(false);
+      const errorPatch: Partial<Message> = {
+        loading: false, activeTools: [], streaming: false,
+        ...(pendingCard ? { cardData: pendingCard } : {}),
+      };
       if (!fullText) {
-        updateAssistant({ content: '抱歉，出了一点小问题，请稍后再试～', loading: false, activeTools: [], streaming: false });
+        updateAssistant({ ...errorPatch, content: '抱歉，出了一点小问题，请稍后再试～' });
       } else {
-        updateAssistant({ streaming: false });
+        updateAssistant(errorPatch);
       }
+      pendingCard = null;
       Toast.show({ icon: 'fail', content: '连接中断' });
     }
 
