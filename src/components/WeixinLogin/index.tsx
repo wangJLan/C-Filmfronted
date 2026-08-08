@@ -22,6 +22,8 @@ const WeixinLogin: React.FC<WeixinLoginProps> = ({ onDone }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [ticket, setTicket] = useState<string>('');
   const timerRef = useRef<number | null>(null);
+  const pollCountRef = useRef(0);
+  const MAX_POLL_COUNT = 150; // 5分钟 / 2秒 = 150次
   const mountedRef = useRef(true);
   // 用 ref 保存最新的回调，避免闭包捕获旧引用
   const onDoneRef = useRef(onDone);
@@ -43,6 +45,7 @@ const WeixinLogin: React.FC<WeixinLoginProps> = ({ onDone }) => {
 
   const fetchQrCode = useCallback(async () => {
     stopPolling();
+    pollCountRef.current = 0;
     setStatus('loading');
     try {
       const data: any = await createQrCode();
@@ -74,6 +77,16 @@ const WeixinLogin: React.FC<WeixinLoginProps> = ({ onDone }) => {
     const currentTicket = ticket; // 捕获当前 ticket
 
     const poll = async () => {
+      // ★ 超时检查：超过 5 分钟自动停止并提示过期
+      pollCountRef.current++;
+      if (pollCountRef.current > MAX_POLL_COUNT) {
+        stopPolling();
+        if (mountedRef.current) {
+          setStatus('error');
+          Toast.show({ icon: 'fail', content: '二维码已过期，请刷新' });
+        }
+        return;
+      }
       try {
         const data: any = await checkLogin({ ticket: ticketRef.current || currentTicket });
         console.log('[WeixinLogin] 轮询结果:', data);

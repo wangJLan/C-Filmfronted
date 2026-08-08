@@ -22,6 +22,8 @@ const WechatLogin: React.FC<WechatLoginProps> = ({ onSuccess }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loginCalledRef = useRef(false);
+  const pollCountRef = useRef(0);
+  const MAX_POLL_COUNT = 150; // 5分钟 / 2秒 = 150次
 
   const stopPolling = useCallback(() => {
     if (timerRef.current) {
@@ -65,8 +67,18 @@ const WechatLogin: React.FC<WechatLoginProps> = ({ onSuccess }) => {
   const startPolling = useCallback(
     (t: string) => {
       stopPolling();
+      pollCountRef.current = 0;
       timerRef.current = setInterval(async () => {
         if (loginCalledRef.current) return;
+
+        // ★ 超时检查：超过 5 分钟自动停止
+        pollCountRef.current++;
+        if (pollCountRef.current > MAX_POLL_COUNT) {
+          stopPolling();
+          setStatus('expired');
+          setErrorMsg('二维码已过期，请刷新');
+          return;
+        }
         try {
           const data = await checkLogin({ ticket: t });
           // 响应已解包：{ scanned, openid }
