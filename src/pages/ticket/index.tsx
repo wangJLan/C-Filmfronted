@@ -34,8 +34,6 @@ const FakeQR: React.FC<{ code: string }> = ({ code }) => {
   );
 };
 
-const LOCK_DURATION = 15 * 60;
-
 function formatShowCountdown(scheduleTime?: string): string {
   if (!scheduleTime) return '';
   const now = Date.now();
@@ -80,7 +78,7 @@ const TicketPage: React.FC = () => {
   const user = useUserStore((s) => s.user);
   const [order, setOrder] = useState<API.OrderVO | null>(() => loadFromCache(oid));
   const [loading, setLoading] = useState(true);
-  const [remainSec, setRemainSec] = useState(LOCK_DURATION);
+  const [remainSec, setRemainSec] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -97,15 +95,26 @@ const TicketPage: React.FC = () => {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [oid]);
 
+  // 倒计时：基于服务端 expireAt 的绝对时间，与 order-confirm 页保持一致
   useEffect(() => {
-    if (!order || order.status !== 'pending') return;
-    const created = order.createTime ? new Date(order.createTime).getTime() : Date.now();
-    const remaining = Math.max(0, LOCK_DURATION - Math.floor((Date.now() - created) / 1000));
-    setRemainSec(remaining);
-    if (remaining <= 0) return;
-    const timer = setInterval(() => setRemainSec(prev => { if (prev <= 1) { clearInterval(timer); return 0; } return prev - 1; }), 1000);
+    if (!order || order.status !== 'pending' || !order.expireAt) return;
+    const expireMs = new Date(order.expireAt).getTime();
+    if (Number.isNaN(expireMs)) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((expireMs - Date.now()) / 1000));
+      setRemainSec(remaining);
+      if (remaining <= 0) return;
+      return true;
+    };
+
+    if (!tick()) return;
+
+    const timer = setInterval(() => {
+      if (!tick()) clearInterval(timer);
+    }, 1000);
     return () => clearInterval(timer);
-  }, [order?.status, order?.createTime]);
+  }, [order?.status, order?.expireAt]);
 
   useEffect(() => {
     if (!order || order.status !== 'pending') return;
