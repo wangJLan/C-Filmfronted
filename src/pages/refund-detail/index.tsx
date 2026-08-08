@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'umi';
 import { NavBar, Toast, SafeArea } from 'antd-mobile';
 import { LeftOutline } from 'antd-mobile-icons';
 import styles from './index.module.less';
+import { copyToClipboard } from '@/utils/copy';
 
 const RefundDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -19,8 +20,12 @@ const RefundDetailPage: React.FC = () => {
     } catch { return null; }
   }, [oid]);
 
-  const handleCopy = (text?: string) => {
-    if (text) navigator.clipboard.writeText(text).then(() => Toast.show({ content: '已复制' })).catch(() => {});
+  const handleCopy = async (text?: string) => {
+    if (!text) return;
+    try {
+      await copyToClipboard(text);
+      Toast.show({ content: '已复制' });
+    } catch { /* ignore */ }
   };
 
   if (!order) {

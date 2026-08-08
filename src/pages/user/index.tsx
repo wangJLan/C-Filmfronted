@@ -14,7 +14,6 @@ import styles from './index.module.less';
 const orderGrid = [
   { icon: <BillOutline fontSize={24} />, label: '待付款', tab: 'pending' },
   { icon: <CheckCircleOutline fontSize={24} />, label: '已完成', tab: 'completed' },
-  { icon: <StarOutline fontSize={24} />, label: '待评价', tab: 'completed' },
   { icon: <ExclamationCircleOutline fontSize={24} />, label: '退改', tab: 'cancelled' },
 ];
 
@@ -252,17 +251,6 @@ const UserPage: React.FC = () => {
           <h2 className={styles.nickname}>{user.userName || user.userAccount}</h2>
           <p className={styles.desc}>{user.userProfile || '欢迎来到妙语购票'}</p>
           <span className={styles.editHint}>点击编辑资料 ›</span>
-        </div>
-
-        <div className={styles.vipCard} onClick={() => navigate('/wallet')}>
-          <div className={styles.vipLeft}>
-            <span className={styles.vipCrown}>👑</span>
-            <div>
-              <div className={styles.vipTitle}>妙语会员</div>
-              <div className={styles.vipSubtitle}>开通享观影特惠 · 每月省更多</div>
-            </div>
-          </div>
-          <div className={styles.vipBtn}>立即开通 ›</div>
         </div>
 
         <div className={styles.card}>
