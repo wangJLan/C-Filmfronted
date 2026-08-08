@@ -48,6 +48,8 @@ export default defineConfig({
   // ================= 构建配置 =================
   jsMinifier: 'terser',
   cssMinifier: 'cssnano',
+  publicPath: '/m/',
+  base: '/m',
 
   // ================= 代理 =================
   proxy: {

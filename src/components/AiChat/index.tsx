@@ -1348,7 +1348,7 @@ const AiChat: React.FC = () => {
       params.set('lat', String(userLat));
       params.set('lng', String(userLng));
     }
-    const url = `http://localhost:8123/api/movie-agent/smart-stream?${params.toString()}`;
+    const url = `/api/movie-agent/smart-stream?${params.toString()}`;
 
     let fullText = '';
     let activeToolList: { key: string; label: string }[] = [];
