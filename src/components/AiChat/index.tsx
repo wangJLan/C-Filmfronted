@@ -1211,6 +1211,9 @@ const AiChat: React.FC = () => {
           activeTools: [],
           streaming: false,
         }]);
+        // ★ 同步实时消息计数器到历史最大 id：否则组件重挂载后 msgId=useRef(1) 重置、
+        //   而历史消息用 idCounter 也从 1 重新编号，新发消息 id 会与历史 id 撞车（React key 重复警告）
+        msgId.current = idCounter;
       } else {
         setMessages([{
           id: 0,
@@ -1219,9 +1222,11 @@ const AiChat: React.FC = () => {
           activeTools: [],
           streaming: false,
         }]);
+        msgId.current = 0;
       }
     } catch {
       setMessages([{ id: 0, role: 'assistant', content: '你好！我是小影 🎬\n有什么可以帮你的？', activeTools: [], streaming: false }]);
+      msgId.current = 0;
     } finally {
       setLoadingHistory(false);
     }
