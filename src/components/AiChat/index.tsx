@@ -1592,7 +1592,7 @@ const AiChat: React.FC = () => {
       const copy = [...prev];
       for (let i = copy.length - 1; i >= 0; i--) {
         if (copy[i].role === 'assistant') {
-          copy[i] = { ...copy[i], streaming: false, loading: false };
+          copy[i] = { ...copy[i], streaming: false, loading: false, activeTools: [] };
           break;
         }
       }
