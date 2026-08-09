@@ -10,6 +10,7 @@ import { useUserStore } from '@/stores/useUserStore';
 import http from '@/services/request';
 import { copyToClipboard } from '@/utils/copy';
 import styles from './index.module.less';
+import dayjs  from 'dayjs';
 
 // ==================== 模拟二维码 ====================
 const FakeQR: React.FC<{ code: string }> = ({ code }) => {
@@ -372,10 +373,16 @@ const TicketPage: React.FC = () => {
       {/* ===== 订单详情卡 ===== */}
       <div className={styles.card}>
         <div className={styles.detailHeader}><span>订单详情</span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>实付金额：</span><span className={styles.dVal}>¥{order.totalPrice || 0}</span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>订单编号：</span><span className={styles.dValRow}>{order.orderNo || '—'} <button className={styles.copyBtn} onClick={handleCopyOrderNo}>复制</button></span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>购买时间：</span><span className={styles.dVal}>{order.createTime || '—'}</span></div>
-        <div className={styles.detailItem}><span className={styles.dLabel}>用户账号：</span><span className={styles.dVal}>{user?.userAccount || '—'}</span></div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>实付金额：</span><span
+          className={styles.dVal}>¥{order.totalPrice || 0}</span></div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>订单编号：</span><span
+          className={styles.dValRow}>{order.orderNo || '—'}
+          <button className={styles.copyBtn} onClick={handleCopyOrderNo}>复制</button></span></div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>购买时间：</span><span
+          className={styles.dVal}>{order.createTime ? dayjs(order.createTime).format('YYYY-MM-DD HH:mm:ss') : '—'}</span>
+        </div>
+        <div className={styles.detailItem}><span className={styles.dLabel}>用户账号：</span><span
+          className={styles.dVal}>{user?.userAccount || '—'}</span></div>
         <div className={styles.detailItem}><span className={styles.dVal}>电影票由鼎新提供</span></div>
       </div>
 
