@@ -102,7 +102,7 @@ const MyReviewsPage: React.FC = () => {
   if (!isLoggedIn) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>我的影评</NavBar>
+        <NavBar onBack={() => navigate('/user')}>我的影评</NavBar>
         <Empty description="登录后可查看我的影评" style={{ paddingTop: 80 }} />
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <Button color="primary" size="small" onClick={() => guard(() => {})}>去登录</Button>
@@ -113,7 +113,7 @@ const MyReviewsPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate('/user')} back={<LeftOutline />}>我的影评</NavBar>
+      <NavBar onBack={() => navigate('/user')}>我的影评</NavBar>
 
       <div className={styles.list}>
         {loading ? (

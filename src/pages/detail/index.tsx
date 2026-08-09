@@ -287,7 +287,7 @@ const DetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+        <NavBar onBack={() => navigate(-1)}>影片详情</NavBar>
         <div className={styles.skeleton}>
           <Skeleton.Title animated />
           <Skeleton.Paragraph lineCount={8} animated />
@@ -299,7 +299,7 @@ const DetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+        <NavBar onBack={() => navigate(-1)}>影片详情</NavBar>
         <div className={styles.empty}>影片不存在</div>
       </div>
     );
@@ -330,7 +330,7 @@ const DetailPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+      <NavBar onBack={() => navigate(-1)}>影片详情</NavBar>
 
       {/* Hero 卡片：左海报 + 右信息 */}
       <div className={styles.heroCard}>

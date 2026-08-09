@@ -29,7 +29,7 @@ const CinemaDetailPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
+      <NavBar onBack={() => navigate(-1)}>
         影院详情
       </NavBar>
 

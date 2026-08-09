@@ -31,7 +31,7 @@ const CityPickerPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
+      <NavBar onBack={() => navigate(-1)}>
         选择城市
       </NavBar>
 

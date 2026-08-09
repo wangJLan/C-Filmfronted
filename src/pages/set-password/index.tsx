@@ -18,7 +18,7 @@ const SetPasswordPage: React.FC = () => {
   if (!user) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
+        <NavBar onBack={() => navigate(-1)}>
           设置密码
         </NavBar>
         <div className={styles.empty}>请先登录</div>
@@ -46,7 +46,7 @@ const SetPasswordPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
+      <NavBar onBack={() => navigate(-1)}>
         设置密码
       </NavBar>
 

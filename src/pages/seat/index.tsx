@@ -242,17 +242,17 @@ const SeatPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>选座</NavBar>
       <div style={{ textAlign: 'center', padding: 80 }}><SpinLoading color="primary" /></div></div>;
   }
   if (!seatMap) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>选座</NavBar>
       <div className={styles.empty}>场次不存在或已失效</div></div>;
   }
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>选座</NavBar>
+      <NavBar onBack={() => navigate(-1)}>选座</NavBar>
 
       {/* 银幕 */}
       <div className={styles.screenArea}>

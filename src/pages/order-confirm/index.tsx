@@ -152,7 +152,7 @@ const OrderConfirmPage: React.FC = () => {
   if (loading) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单详情</NavBar>
+        <NavBar onBack={() => navigate(-1)}>订单详情</NavBar>
         <div className={styles.empty}>加载中...</div>
       </div>
     );
@@ -161,7 +161,7 @@ const OrderConfirmPage: React.FC = () => {
   if (!order) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
+        <NavBar onBack={() => navigate(-1)}>订单确认</NavBar>
         <div className={styles.empty}>订单数据丢失</div>
       </div>
     );
@@ -174,7 +174,7 @@ const OrderConfirmPage: React.FC = () => {
   if (isExpired) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate('/')} back={<LeftOutline />}>订单确认</NavBar>
+        <NavBar onBack={() => navigate('/')}>订单确认</NavBar>
         <div className={styles.expiredContainer}>
           <div className={styles.expiredIcon}>⏰</div>
           <div className={styles.expiredTitle}>订单已超时</div>
@@ -193,7 +193,7 @@ const OrderConfirmPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate('/', { replace: true })} back={<LeftOutline />} className={styles.nav}>订单确认</NavBar>
+      <NavBar onBack={() => navigate('/', { replace: true })} className={styles.nav}>订单确认</NavBar>
 
       {/* ===== 票务信息头部 ===== */}
       <div className={styles.header}>

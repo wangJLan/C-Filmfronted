@@ -26,7 +26,7 @@ const CinemaFeedbackPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>给影院提建议</NavBar>
+      <NavBar onBack={() => navigate(-1)}>给影院提建议</NavBar>
 
       <div className={styles.card}>
         <div className={styles.label}>问题类型</div>

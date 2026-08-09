@@ -502,7 +502,7 @@ const ShowtimePage: React.FC = () => {
   if (isFilmOnly && !selectedCinemaId) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{film?.name || '选择影院'}</NavBar>
+        <NavBar onBack={() => navigate(-1)}>{film?.name || '选择影院'}</NavBar>
 
         {/* 日期选择条 */}
         <div className={styles.dateBar}>
@@ -754,7 +754,7 @@ const ShowtimePage: React.FC = () => {
     if (cinemaFilmsReady && (!cinemaFilms || cinemaFilms.length === 0)) {
       return (
         <div className={styles.page}>
-          <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+          <NavBar onBack={() => navigate(-1)}>{cinema?.name || '影院'}</NavBar>
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🏗️</div>
             <div className={styles.emptyText}>该影院维护中，暂不开放</div>
@@ -789,7 +789,7 @@ const ShowtimePage: React.FC = () => {
     // 还在加载...
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+        <NavBar onBack={() => navigate(-1)}>{cinema?.name || '影院'}</NavBar>
         <div style={{ textAlign: 'center', padding: 80 }}><SpinLoading color="primary" /></div>
         <SafeArea position="bottom" />
       </div>
@@ -802,7 +802,7 @@ const ShowtimePage: React.FC = () => {
       {/* NavBar：影院名 */}
       <NavBar
         onBack={() => navigate(-1)}
-        back={<LeftOutline />}
+       
         right={<span className={styles.aiBtn} onClick={handleAiHelp}>🤖</span>}
       >
         <span>{cinema?.name || '选影院'}</span>

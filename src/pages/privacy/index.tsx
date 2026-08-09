@@ -9,7 +9,7 @@ const PrivacyPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>隐私政策</NavBar>
+      <NavBar onBack={() => navigate(-1)}>隐私政策</NavBar>
       <div className={styles.content}>
         <p className={styles.update}>更新日期：2026年1月1日</p>
         <p className={styles.update}>生效日期：2026年1月8日</p>

@@ -24,7 +24,7 @@ const ProfileEditPage: React.FC = () => {
   if (!user) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>编辑资料</NavBar>
+        <NavBar onBack={() => navigate(-1)}>编辑资料</NavBar>
         <div className={styles.empty}>请先登录</div>
       </div>
     );
@@ -94,7 +94,7 @@ const ProfileEditPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>
+      <NavBar onBack={() => navigate(-1)}>
         编辑资料
       </NavBar>
 

@@ -27,7 +27,7 @@ const NewsPage: React.FC = () => {
     <div className={styles.page}>
       <NavBar
         onBack={() => navigate(-1)}
-        back={<LeftOutline />}
+       
         className={styles.navBar}
       >
         影片动态

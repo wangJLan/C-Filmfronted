@@ -174,7 +174,7 @@ const TicketPage: React.FC = () => {
 
   return (
     <div className={styles.page} style={{ '--status-bg': statusCfg.bg } as any}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav} />
+      <NavBar onBack={() => navigate(-1)} className={styles.nav} />
 
       {/* ===== 状态区 ===== */}
       <div className={styles.statusSection}>

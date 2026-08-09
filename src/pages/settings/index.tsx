@@ -9,7 +9,7 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>设置</NavBar>
+      <NavBar onBack={() => navigate(-1)}>设置</NavBar>
 
       {/* 账号安全 */}
       <div className={styles.group}>
