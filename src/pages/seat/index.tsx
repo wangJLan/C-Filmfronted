@@ -101,15 +101,16 @@ const SeatPage: React.FC = () => {
     }, 300);
   }, [sid]);
 
-  const { rows, cols, seats, price, aisleRows, aisleCols, rowOverrides } = useMemo(() => {
+  const { rows, cols, seats, price, vipPrice, aisleRows, aisleCols, rowOverrides } = useMemo(() => {
     if (!seatMap) {
-      return { rows: 0, cols: 0, seats: [] as API.Seat[], price: 0, aisleRows: [] as number[], aisleCols: [] as number[], rowOverrides: {} as Record<number, number> };
+      return { rows: 0, cols: 0, seats: [] as API.Seat[], price: 0, vipPrice: 0, aisleRows: [] as number[], aisleCols: [] as number[], rowOverrides: {} as Record<number, number> };
     }
     return {
       rows: seatMap.rowCount || 0,
       cols: seatMap.colCount || 0,
       seats: seatMap.seats || [],
       price: seatMap.price || 0,
+      vipPrice: seatMap.vipPrice || 0,
       aisleRows: seatMap.aisleRows || [],
       aisleCols: seatMap.aisleCols || [],
       rowOverrides: seatMap.rowOverrides || {},
@@ -120,6 +121,12 @@ const SeatPage: React.FC = () => {
     const grid = new Map<string, API.Seat>();
     seats.forEach(s => grid.set(`${s.rowNum}-${s.colNum}`, s));
     return grid;
+  }, [seats]);
+
+  const seatById = useMemo(() => {
+    const map = new Map<string, API.Seat>();
+    seats.forEach(s => map.set(s.id!, s));
+    return map;
   }, [seats]);
 
   // 过道/空位布局：按物理格遍历，缺口（blockedCells）自然留白、过道（aisleRows/aisleCols）加宽
@@ -148,7 +155,15 @@ const SeatPage: React.FC = () => {
     });
   };
 
-  const totalPrice = selectedIds.size * price;
+  const totalPrice = useMemo(() => {
+    let total = 0;
+    selectedIds.forEach(id => {
+      const seat = seatById.get(id);
+      if (!seat) return;
+      total += seat.zone === 'vip' ? (vipPrice || price || 0) : (price || 0);
+    });
+    return total;
+  }, [selectedIds, seatById, price, vipPrice]);
 
   // —— 场次面板（默认收起） ——
   const [skdOpen, setSkdOpen] = useState(false);
@@ -218,7 +233,7 @@ const SeatPage: React.FC = () => {
       Toast.show({ icon: 'success', content: '下单成功！' });
       // 立即刷新订单列表缓存，确保用户进入订单页能看到新订单
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      navigate(`/order-confirm/${order.id}`, { replace: true });
+      navigate(`/order-confirm/${order.id}`);
     } catch (e: any) {
       // 锁座或下单失败 → 释放已锁座位，避免孤儿锁
       try { await unlockSeat({ scheduleId: sid as any, seatIds }); } catch {}

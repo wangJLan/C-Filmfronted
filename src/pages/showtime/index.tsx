@@ -332,9 +332,7 @@ const ShowtimePage: React.FC = () => {
   const [submittedKeyword, setSubmittedKeyword] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [nearbyCinemas, setNearbyCinemas] = useState<{ id: string; name: string; address: string; distance: string }[]>([]);
-  const [otherFilmCinemas, setOtherFilmCinemas] = useState<{ cinemaId: string; cinemaName: string; address: string; films: { id: string; name: string; posterUrl: string }[] }[]>([]);
-
-  const isPast = (showDate: string, startTime: string) => {
+  const [otherFilmCinemas, setOtherFilmCinemas] = useState<{ cinemaId: string; cinemaName: string; address: string; films: { id: string; name: string; posterUrl: string }[] }[]>([]);  const isPast = (showDate: string, startTime: string) => {
     const dt = `${showDate}T${startTime}`;
     return new Date(dt).getTime() < Date.now();
   };
@@ -419,6 +417,7 @@ const ShowtimePage: React.FC = () => {
     triggerAi(`我在看${parts.join(' ')}，帮我推荐合适场次`);
     Toast.show({ content: '已转交 AI 助手' });
   };
+
 
   // ===== 无排片时推荐其他影片或附近影院 =====
   useEffect(() => {
@@ -700,36 +699,8 @@ const ShowtimePage: React.FC = () => {
                     </div>
                   </div>
                 </>
-              ) : nearbyCinemas.length > 0 ? (
-                <>
-                  <div className={styles.emptyText}>这个日期附近还没有排片呢～</div>
-                  <div className={styles.recommendSection}>
-                    <div className={styles.recommendHint}>要不要看看这些离你最近的影院？说不定有合适的场次哦 👇</div>
-                    <div className={styles.recommendList}>
-                      {nearbyCinemas.map((c, idx) => (
-                        <div
-                          key={c.id}
-                          className={styles.recommendCard}
-                          onClick={() => navigate(`/showtime/cinema/${c.id}`)}
-                        >
-                          <div className={styles.recommendCardLeft}>
-                            <div className={styles.recommendCardTitle}>
-                              <span className={styles.recommendRank}>{['🥇', '🥈', '🥉'][idx]}</span>
-                              <span>{c.name}</span>
-                            </div>
-                            <div className={styles.recommendCardAddr}>{c.address}</div>
-                          </div>
-                          <div className={styles.recommendCardRight}>
-                            <span className={styles.recommendDist}>{c.distance}</span>
-                            <span className={styles.recommendArrow}>&rsaquo;</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
               ) : (
-                <div className={styles.emptyText}>暂无符合条件的影院</div>
+                <div className={styles.emptyText}>抱歉，该日期妙语的影院都没有排片呢，要不去首页再逛逛</div>
               )}
             </div>
           ) : (
