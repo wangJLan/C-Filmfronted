@@ -219,16 +219,6 @@ const CinemaPage: React.FC = () => {
                 <span className={styles.filterItemName}>全部</span>
                 <span className={styles.filterItemCount}>{totalCount}</span>
               </div>
-              {MOCK_REGIONS.filter(r => districtCounts[r.name] > 0).map(r => (
-                <div
-                  key={r.name}
-                  className={`${styles.filterItem} ${activeDistrict === r.name ? styles.filterItemActive : ''}`}
-                  onClick={() => { setActiveDistrict(r.name); setActivePanel(null); }}
-                >
-                  <span className={styles.filterItemName}>{r.name}</span>
-                  <span className={styles.filterItemCount}>{districtCounts[r.name]}</span>
-                </div>
-              ))}
             </div>
           </div>
         )}

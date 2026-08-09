@@ -118,6 +118,12 @@ const DetailPage: React.FC = () => {
       }));
       if (pageNum === 1) {
         setReviews(records);
+        // 加载后立即获取每条影评的准确评论数
+        records.forEach((r: any) => {
+          getCommentCount(r.id).then(count => {
+            setReviews((prev) => prev.map(p => p.id === r.id ? { ...p, commentCount: count } : p));
+          }).catch(() => {});
+        });
       } else {
         setReviews((prev) => [...prev, ...records]);
       }
