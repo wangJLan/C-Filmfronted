@@ -95,7 +95,7 @@ const EmailLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
           content: '检测到您还未设置密码。\n建议设置密码，方便下次使用邮箱+密码登录。',
           confirmText: '去设置',
           cancelText: '暂跳过',
-          onConfirm: () => navigate('/forgot-password'),
+          onConfirm: () => navigate('/set-password'),
         });
       }
     } catch (e: any) {
@@ -159,8 +159,8 @@ const PasswordLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =
   const navigate = useNavigate();
 
   const handleSubmit = async (values: { account: string; password: string }) => {
-    if (!isValidEmail(values.account)) {
-      Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' });
+    if (!values.account.trim()) {
+      Toast.show({ icon: 'fail', content: '请输入账号' });
       return;
     }
     if (!values.password) {
@@ -200,11 +200,11 @@ const PasswordLoginForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =
       >
         <Form.Item
           name="account"
-          rules={[{ required: true, message: '请输入邮箱' }]}
+          rules={[{ required: true, message: '请输入账号' }]}
         >
           <Input
             className={styles.loginInput}
-            placeholder="请输入邮箱"
+            placeholder="请输入账号"
             clearable
           />
         </Form.Item>
