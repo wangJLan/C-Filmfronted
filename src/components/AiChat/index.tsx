@@ -1367,7 +1367,10 @@ const AiChat: React.FC = () => {
       params.set('lat', String(userLat));
       params.set('lng', String(userLng));
     }
-    const url = `/api/movie-agent/smart-stream?${params.toString()}`;
+    // ★ 开发环境直连后端（绕过 UmiJS 代理，避免代理缓冲 SSE 流式响应）
+    //    生产环境走相对路径，由 Nginx/反向代理转发
+    const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8123';
+    const url = `${baseUrl}/api/movie-agent/smart-stream?${params.toString()}`;
 
     let fullText = '';
     let activeToolList: { key: string; label: string }[] = [];
@@ -1379,9 +1382,16 @@ const AiChat: React.FC = () => {
     abortRef.current = controller;
 
     try {
+      // ★ 构建请求头：携带 JWT Token（解决微信登录不走 Session 导致 SSE 无法认证的问题）
+      const headers: Record<string, string> = {};
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers.Authorization = 'Bearer ' + token;
+      }
       const resp = await fetch(url, {
         credentials: 'include',
         signal: controller.signal,
+        headers,
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 

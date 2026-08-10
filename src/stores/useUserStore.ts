@@ -102,6 +102,10 @@ export const useUserStore = create<UserState>()((set, get) => ({
     set({ loading: true, lastError: null });
     try {
       const user = await mailLoginApi({ email, code });
+      // ★ 所有登录方式统一：将 JWT Token 存入 localStorage
+      if ((user as any)?.token) {
+        localStorage.setItem('token', (user as any).token);
+      }
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '登录失败' });
@@ -133,6 +137,10 @@ export const useUserStore = create<UserState>()((set, get) => ({
     set({ loading: true, lastError: null });
     try {
       const user = await userLoginApi(params);
+      // ★ 所有登录方式统一：将 JWT Token 存入 localStorage
+      if ((user as any)?.token) {
+        localStorage.setItem('token', (user as any).token);
+      }
       set({ user, isLoggedIn: true, loading: false });
     } catch (e: any) {
       set({ loading: false, lastError: e?.message || '登录失败' });
