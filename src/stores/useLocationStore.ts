@@ -4,13 +4,15 @@
  * 流程:
  *   1. GPS → 后端代理高德逆地理 → 城市名
  *   2. GPS 失败 → 后端 IP 定位（自带城市名，无需逆地理）
- *   3. 全失败 → 缓存或默认"北京"
+ *   3. 全失败 → 缓存或默认"洛阳"
+ *   4. 手动选城后刷新 → 保留用户选择，不触发 IP 覆盖
  */
 import { create } from 'zustand';
 import { reverse, ipLocate } from '@/api/geoController';
 
 const STORAGE_CITY = 'app_city';
 const STORAGE_COORDS = 'app_coords';
+const STORAGE_MANUAL = 'app_city_manual';
 
 export interface CityInfo {
   name: string;
@@ -152,6 +154,7 @@ export const useLocationStore = create<LocationState>()((set) => ({
           if (name) {
             set({ city: name, lat: pos.lat, lng: pos.lng, loading: false, located: true });
             saveCache(name, pos.lat, pos.lng);
+            localStorage.removeItem(STORAGE_MANUAL); // GPS 更精准，清除手动标记
             console.log('[定位] init 完成(GPS) —', name);
             return;
           }
@@ -164,17 +167,23 @@ export const useLocationStore = create<LocationState>()((set) => ({
       }
     } catch (e: any) { console.warn('[定位] GPS 失败，降级到 IP:', e.message || e); }
 
-    // 第2步：IP 定位（GPS 失败时始终尝试，不因有缓存就跳过）
+    // 第2步：手动选城时跳过 IP 定位，保留用户选择
+    if (localStorage.getItem(STORAGE_MANUAL)) {
+      set({ loading: false, located: true });
+      console.log('[定位] 手动选城，跳过 IP 定位，使用缓存:', cache?.city);
+      return;
+    }
+
+    // 第3步：IP 定位兜底
     const ip = await tryIpLocate();
     if (ip) {
-      // IP 成功 → 始终更新坐标（IP 可能比旧缓存更准）
-      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: false });
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
       saveCache(ip.city, ip.lat, ip.lng);
       console.log('[定位] init 完成(IP) —', ip.city);
       return;
     }
 
-    // 第3步：全失败 → 缓存或默认
+    // 第4步：全失败 → 缓存或默认
     set({ loading: false });
     if (cache) {
       console.log('[定位] 定位失败，使用缓存:', cache.city);
@@ -187,10 +196,13 @@ export const useLocationStore = create<LocationState>()((set) => ({
   selectCity: (c) => {
     set({ city: c.name, lat: c.lat, lng: c.lng, located: true });
     saveCache(c.name, c.lat, c.lng);
+    localStorage.setItem(STORAGE_MANUAL, '1');
   },
 
   relocate: async () => {
     set({ loading: true });
+    // 用户主动重新定位，清除手动标记
+    localStorage.removeItem(STORAGE_MANUAL);
 
     try {
       if (isSecureForGeolocation) {
@@ -210,7 +222,7 @@ export const useLocationStore = create<LocationState>()((set) => ({
 
     const ip = await tryIpLocate();
     if (ip) {
-      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: false });
+      set({ city: ip.city, lat: ip.lat, lng: ip.lng, loading: false, located: true });
       saveCache(ip.city, ip.lat, ip.lng);
       console.log('[定位] relocate(IP) —', ip.city);
       return;
