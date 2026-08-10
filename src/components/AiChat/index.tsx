@@ -1134,6 +1134,20 @@ const AiChat: React.FC = () => {
   const userLng = useLocationStore((s) => s.lng);
   const userCity = useLocationStore((s) => s.city);
 
+  // —— 切换账号时重置状态 ——
+  const prevUserIdRef = useRef<string | number | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevUserIdRef.current;
+    prevUserIdRef.current = userId;
+    // 跳过首次挂载，仅在 userId 实际变化时清空
+    if (prev !== undefined && prev !== userId) {
+      setMessages([]);
+      setSessionId(null);
+      setSessions([]);
+      setOpen(false);
+    }
+  }, [userId]);
+
   // ==================== 滚动 ====================
   /**
    * 智能滚动：force=true 强制滚到底（用户发消息时）；
@@ -1363,7 +1377,7 @@ const AiChat: React.FC = () => {
       params.set('lat', String(userLat));
       params.set('lng', String(userLng));
     }
-    const url = `http://localhost:8123/api/movie-agent/smart-stream?${params.toString()}`;
+    const url = `/api/movie-agent/smart-stream?${params.toString()}`;
 
     let fullText = '';
     let activeToolList: { key: string; label: string }[] = [];
