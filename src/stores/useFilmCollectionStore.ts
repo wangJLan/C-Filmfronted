@@ -108,10 +108,15 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
   },
 
   toggleWantToSee: async (filmId) => {
-    const res: any = await toggleWantToSee(filmId);
-    const wanted = res?.wanted === true;
-    await get().fetchWantToSee();
-    return wanted;
+    try {
+      const res: any = await toggleWantToSee(filmId);
+      const wanted = res?.wanted === true;
+      await get().fetchWantToSee();
+      return wanted;
+    } catch (e) {
+      console.error('toggleWantToSee failed:', e);
+      throw e;
+    }
   },
 
   isWanted: (filmId) => Array.isArray(get().wantToSee) && get().wantToSee.some((f) => f.id === filmId),
@@ -122,8 +127,13 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
   },
 
   markAsWatched: async (filmId) => {
-    await markWatched(filmId);
-    await get().fetchWatched();
+    try {
+      await markWatched(filmId);
+      await get().fetchWatched();
+    } catch (e) {
+      console.error('markAsWatched failed:', e);
+      throw e;
+    }
   },
 
   isWatched: (filmId) => Array.isArray(get().watched) && get().watched.some((f) => f.id === filmId),
