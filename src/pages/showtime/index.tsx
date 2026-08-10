@@ -17,7 +17,7 @@ import {
 } from 'antd-mobile-icons';
 import { useQuery } from '@tanstack/react-query';
 import { getFilm } from '@/api/filmController';
-import { listSchedule, listAll1 } from '@/api/scheduleController';
+import { listSchedule } from '@/api/scheduleController';
 import http from '@/services/request';
 import { useAiStore } from '@/stores/useAiStore';
 import { useGuard } from '@/hooks/useGuard';
@@ -184,18 +184,12 @@ const ShowtimePage: React.FC = () => {
     enabled: !!selectedFilmId || !!selectedCinemaId,
   });
 
-  // 全部影厅类型（真实数据 + 补充常见类型，缓存 5 分钟）
-  const { data: allHallTypes } = useQuery({
-    queryKey: ['allHallTypes'],
-    queryFn: async () => {
-      const raw: any = await listAll1();
-      const list = raw?.data ?? raw ?? [];
-      const dbTypes = [...new Set(list.map((s: any) => s.hallType || '').filter(Boolean))];
-      const extraTypes = ['巨幕', 'ScreenX', 'VIP厅', '普通', '杜比'];
-      return [...new Set([...dbTypes, ...extraTypes])] as string[];
-    },
-    staleTime: 300000,
-  });
+  // 影厅类型筛选选项：从当前已加载的场次（/schedule/list，开放接口）推导 + 补充常见类型。
+  // ★ 原用 /schedule/listAll（已加管理员权限，普通用户不可访问），改为不依赖它。
+  const hallFilterOptions = useMemo(() => {
+    const dbTypes = [...new Set((scheduleData || []).map((s: any) => s.hallType || '').filter(Boolean))];
+    return [...new Set([...dbTypes, '巨幕', 'ScreenX', 'VIP厅', '普通', '杜比'])];
+  }, [scheduleData]);
 
   const cinemaIds = useMemo(() => [...new Set((scheduleData || []).map(s => s.cinemaId))].filter(Boolean) as string[], [scheduleData]);
 
@@ -580,7 +574,7 @@ const ShowtimePage: React.FC = () => {
                 <div className={styles.filterSection}>
                   <div className={styles.filterSectionTitle}>放映影厅</div>
                   <div className={styles.screenGrid}>
-                    {(allHallTypes || []).map(h => (
+                    {(hallFilterOptions || []).map(h => (
                         <span
                           key={h}
                           className={`${styles.screenItem} ${screenFilter.includes(h) ? styles.screenItemActive : ''}`}

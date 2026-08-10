@@ -626,8 +626,14 @@ const OrderConfirmCard: React.FC<{
   }, [data?.orderId]);
 
   const isPaid = orderStatus === 'paid' || orderStatus === 'completed';
+  const isCancelled = orderStatus === 'cancelled';
+  const isRefunded = orderStatus === 'refunded';
+  const isTerminal = isPaid || isCancelled || isRefunded;
 
+  // 倒计时：已终态的订单（已支付/已取消/已退款）不再计时
   useEffect(() => {
+    if (isTerminal) return;
+
     const tick = () => {
       if (data?.expireAt) {
         const expireMs = new Date(data.expireAt).getTime();
@@ -648,7 +654,7 @@ const OrderConfirmCard: React.FC<{
       if (!tick()) window.clearInterval(timer);
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [data?.orderId, data?.expireAt]);
+  }, [data?.orderId, data?.expireAt, isTerminal]);
 
   if (data?.success === false) {
     const errorMsg = data?.error || data?.message || '订单创建失败，请重新选择座位';
@@ -740,10 +746,14 @@ const OrderConfirmCard: React.FC<{
         )}
       </div>
 
-      <div className={`${styles.orderCountdown} ${expired ? styles.orderCountdownExpired : ''}`}>
+      <div className={`${styles.orderCountdown} ${expired || isCancelled || isRefunded ? styles.orderCountdownExpired : ''}`}>
         <ClockCircleOutline />
         {isPaid ? (
           <span>订单已支付，请查看订单</span>
+        ) : isCancelled ? (
+          <span>订单已取消</span>
+        ) : isRefunded ? (
+          <span>订单已退款</span>
         ) : expired ? (
           <span>订单已超时，座位将自动释放</span>
         ) : (
