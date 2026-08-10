@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'umi';
 import { SearchBar, SpinLoading } from 'antd-mobile';
 import { EnvironmentOutline } from 'antd-mobile-icons';
@@ -28,39 +28,38 @@ const HomePage: React.FC = () => {
   const hotFilms = hotData?.records || [];
   const upcomingFilms = upcomingData?.records || [];
 
-  // 高分热映影片（评分 >= 8.0）
-  const topFilms = useMemo(
-    () => hotFilms.filter(f => (f.rating ?? 0) >= 8.0),
-    [hotFilms],
-  );
+  // 轮播横幅图片（电影主题高清图）
+  const banners = [
+    { id: 1, src: 'https://image.tmdb.org/t/p/w780/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg', alt: '盗梦空间' },
+    { id: 2, src: 'https://image.tmdb.org/t/p/w780/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg', alt: '星际穿越' },
+    { id: 3, src: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=750&h=350&fit=crop', alt: '影院大厅' },
+    { id: 4, src: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=750&h=350&fit=crop', alt: '观影时光' },
+    { id: 5, src: 'https://images.unsplash.com/photo-1535016120720-40c646be5580?w=750&h=350&fit=crop', alt: '电影拍摄' },
+  ];
 
   // 海报横向自动滚动
   const posterStripRef = useRef<HTMLDivElement>(null);
   const userInteracting = useRef(false);
 
   const startAutoScroll = useCallback(() => {
-    const interval = 3000; // 每3秒翻一张
-    let timer: ReturnType<typeof setInterval>;
-    timer = setInterval(() => {
+    const timer = setInterval(() => {
       const el = posterStripRef.current;
       if (!el || userInteracting.current) return;
-      const itemWidth = el.clientWidth; // 每个海报宽度 ≈ 容器宽度
+      const itemWidth = el.clientWidth;
       const next = el.scrollLeft + itemWidth;
-      // 超过一半内容时回到开头（因为复制了一份）
       if (next >= el.scrollWidth / 2) {
         el.scrollTo({ left: 0, behavior: 'instant' });
       } else {
         el.scrollTo({ left: next, behavior: 'smooth' });
       }
-    }, interval);
+    }, 3000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (topFilms.length === 0) return;
     const cleanup = startAutoScroll();
     return cleanup;
-  }, [topFilms, startAutoScroll]);
+  }, [startAutoScroll]);
 
   const handlePointerDown = () => { userInteracting.current = true; };
   const handlePointerUp = () => { userInteracting.current = false; };
@@ -93,28 +92,22 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* 高分热映海报滚动 */}
-        {topFilms.length > 0 && (
-          <div
-            ref={posterStripRef}
-            className={styles.posterStrip}
-            onMouseDown={handlePointerDown}
-            onMouseUp={handlePointerUp}
-            onMouseLeave={handlePointerUp}
-            onTouchStart={handlePointerDown}
-            onTouchEnd={handlePointerUp}
-          >
-            {[...topFilms, ...topFilms].map((film, idx) => (
-              <div
-                key={`${film.id}-${idx}`}
-                className={styles.posterStripItem}
-                onClick={() => navigate(`/detail/${film.id}`)}
-              >
-                <img src={film.posterUrl} alt={film.name} />
-              </div>
-            ))}
-          </div>
-        )}
+        {/* 横幅轮播 */}
+        <div
+          ref={posterStripRef}
+          className={styles.posterStrip}
+          onMouseDown={handlePointerDown}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchEnd={handlePointerUp}
+        >
+          {[...banners, ...banners].map((banner, idx) => (
+            <div key={`${banner.id}-${idx}`} className={styles.posterStripItem}>
+              <img src={banner.src} alt={banner.alt} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 热映影片 */}

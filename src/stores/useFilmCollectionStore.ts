@@ -10,6 +10,7 @@ import {
 } from '@/api/userWantFilmController';
 import {
   markWatched,
+  toggleWatched,
   getMyWatched,
 } from '@/api/userWatchedFilmController';
 
@@ -53,6 +54,7 @@ interface FilmCollectionState {
   isWanted: (filmId: string) => boolean;
   removeWantToSeeApi: (filmId: string) => Promise<void>;
   markAsWatched: (filmId: string) => Promise<void>;
+  toggleAsWatched: (filmId: string) => Promise<boolean>;
   isWatched: (filmId: string) => boolean;
   useCoupon: (id: string) => void;
   addCoupon: (c: CouponItem) => void;
@@ -132,6 +134,18 @@ export const useFilmCollectionStore = create<FilmCollectionState>()((set, get) =
       await get().fetchWatched();
     } catch (e) {
       console.error('markAsWatched failed:', e);
+      throw e;
+    }
+  },
+
+  toggleAsWatched: async (filmId) => {
+    try {
+      const res: any = await toggleWatched(filmId);
+      const watched = res?.watched === true;
+      await get().fetchWatched();
+      return watched;
+    } catch (e) {
+      console.error('toggleAsWatched failed:', e);
       throw e;
     }
   },

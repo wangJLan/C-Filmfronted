@@ -99,7 +99,7 @@ const DetailPage: React.FC = () => {
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('intro');
-  const { toggleWantToSee, isWanted, markAsWatched, isWatched, fetchWantToSee, fetchWatched } = useFilmCollectionStore();
+  const { toggleWantToSee, isWanted, toggleAsWatched, isWatched, fetchWantToSee, fetchWatched } = useFilmCollectionStore();
 
   // 影评相关状态
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -375,10 +375,9 @@ const DetailPage: React.FC = () => {
               <span>想看</span>
             </div>
             <div className={styles.heroBtn} onClick={() => guard(async () => {
-              if (isWatched(detail.id!)) return;
               try {
-                await markAsWatched(detail.id!);
-                Toast.show({ content: '已标记看过' });
+                const watched = await toggleAsWatched(detail.id!);
+                Toast.show({ content: watched ? '已标记看过' : '已取消看过' });
               } catch (e: any) {
                 Toast.show({ icon: 'fail', content: e.message || '操作失败' });
               }
