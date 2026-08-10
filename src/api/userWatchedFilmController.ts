@@ -13,6 +13,17 @@ export async function markWatched(
   });
 }
 
+/** POST /userWatchedFilm/toggle/{filmId} */
+export async function toggleWatched(
+  filmId: string,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseMapStringObject>(`/userWatchedFilm/toggle/${filmId}`, {
+    method: 'POST',
+    ...(options || {}),
+  });
+}
+
 /** GET /userWatchedFilm/isWatched/{filmId} */
 export async function isWatched(
   filmId: string,

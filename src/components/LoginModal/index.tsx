@@ -82,7 +82,7 @@ const PwdTab: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const [password, setPassword] = useState('');
 
   const handleSubmit = async () => {
-    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(account.trim())) { Toast.show({ icon: 'fail', content: '请输入正确的邮箱地址' }); return; }
+    if (!account.trim()) { Toast.show({ icon: 'fail', content: '请输入账号' }); return; }
     if (!password) { Toast.show({ icon: 'fail', content: '请输入密码' }); return; }
     try {
       await login({ userAccount: account, userPassword: password, checkPassword: password });
@@ -92,7 +92,7 @@ const PwdTab: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 
   return (
     <div className={styles.tabBody}>
-      <Input className={styles.inp} placeholder="请输入邮箱" value={account} onChange={(v) => setAccount(v)} clearable />
+      <Input className={styles.inp} placeholder="请输入账号" value={account} onChange={(v) => setAccount(v)} clearable />
       <Input className={styles.inp} placeholder="请输入密码（8位以上）" type="password" value={password} onChange={(v) => setPassword(v)} clearable />
       <Button block color="primary" size="large" loading={loading} className={styles.submitBtn} onClick={handleSubmit}>登录</Button>
       <div className={styles.forgot} onClick={() => { navigate('/forgot-password'); }}>忘记密码？</div>

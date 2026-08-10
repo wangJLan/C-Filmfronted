@@ -34,7 +34,7 @@ const CinemaPriceInfoPage: React.FC = () => {
   const navigate = useNavigate();
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>划线价格说明</NavBar>
+      <NavBar onBack={() => navigate(-1)}>划线价格说明</NavBar>
       <div className={styles.content}>
         {RULES.map((r, i) => (
           <div key={i} className={styles.section}>

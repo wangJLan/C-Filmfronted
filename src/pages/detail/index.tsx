@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { getFilm, recommended } from '@/api/filmController';
 import { listReviews, getReviewCount, getCommentCount, markHelpful as markHelpfulApi, createComment, listComments, deleteComment, markCommentHelpful as markCommentHelpfulApi } from '@/api/filmReviewController';
 import { useFilmCollectionStore } from '@/stores/useFilmCollectionStore';
+import { useUserStore } from '@/stores/useUserStore';
 import { useGuard } from '@/hooks/useGuard';
 import ReviewForm from '@/components/ReviewForm';
 import FilmCard from '../../components/FilmCard/index';
@@ -95,9 +96,10 @@ const DetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const guard = useGuard();
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('intro');
-  const { toggleWantToSee, isWanted, markAsWatched, isWatched, fetchWantToSee, fetchWatched } = useFilmCollectionStore();
+  const { toggleWantToSee, isWanted, toggleAsWatched, isWatched, fetchWantToSee, fetchWatched } = useFilmCollectionStore();
 
   // 影评相关状态
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -118,6 +120,12 @@ const DetailPage: React.FC = () => {
       }));
       if (pageNum === 1) {
         setReviews(records);
+        // 加载后立即获取每条影评的准确评论数
+        records.forEach((r: any) => {
+          getCommentCount(r.id).then(count => {
+            setReviews((prev) => prev.map(p => p.id === r.id ? { ...p, commentCount: count } : p));
+          }).catch(() => {});
+        });
       } else {
         setReviews((prev) => [...prev, ...records]);
       }
@@ -271,17 +279,19 @@ const DetailPage: React.FC = () => {
 
   // onMount / 切换影片时同步状态
   useEffect(() => {
-    fetchWantToSee();
-    fetchWatched();
+    if (isLoggedIn) {
+      fetchWantToSee();
+      fetchWatched();
+    }
     getReviewCount(id as any).then(setReviewCount).catch(() => {});
     setReviewCount(0);
     setReviews([]);
-  }, [id]);
+  }, [id, isLoggedIn]);
 
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+        <NavBar onBack={() => navigate(-1)}>影片详情</NavBar>
         <div className={styles.skeleton}>
           <Skeleton.Title animated />
           <Skeleton.Paragraph lineCount={8} animated />
@@ -293,7 +303,7 @@ const DetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+        <NavBar onBack={() => navigate(-1)}>影片详情</NavBar>
         <div className={styles.empty}>影片不存在</div>
       </div>
     );
@@ -324,7 +334,7 @@ const DetailPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>影片详情</NavBar>
+      <NavBar onBack={() => navigate(-1)}>影片详情</NavBar>
 
       {/* Hero 卡片：左海报 + 右信息 */}
       <div className={styles.heroCard}>
@@ -353,17 +363,24 @@ const DetailPage: React.FC = () => {
             <div
               className={styles.heroBtn}
               onClick={() => guard(async () => {
-                const wanted = await toggleWantToSee(detail.id!);
-                Toast.show({ content: wanted ? '已标记想看' : '已取消想看' });
+                try {
+                  const wanted = await toggleWantToSee(detail.id!);
+                  Toast.show({ content: wanted ? '已标记想看' : '已取消想看' });
+                } catch (e: any) {
+                  Toast.show({ icon: 'fail', content: e.message || '操作失败' });
+                }
               })}
             >
               {isWanted(detail.id!) ? <HeartFill fontSize={16} color="#FF5A00" /> : <HeartOutline fontSize={16} color="#999" />}
               <span>想看</span>
             </div>
             <div className={styles.heroBtn} onClick={() => guard(async () => {
-              if (isWatched(detail.id!)) return;
-              await markAsWatched(detail.id!);
-              Toast.show({ content: '已标记看过' });
+              try {
+                const watched = await toggleAsWatched(detail.id!);
+                Toast.show({ content: watched ? '已标记看过' : '已取消看过' });
+              } catch (e: any) {
+                Toast.show({ icon: 'fail', content: e.message || '操作失败' });
+              }
             })}>
               {isWatched(detail.id!) ? <StarFill fontSize={14} color="#FFB800" /> : <StarOutline fontSize={14} color="#999" />}
               <span style={{ color: isWatched(detail.id!) ? '#FFB800' : '#999' }}>看过</span>

@@ -11,9 +11,14 @@ export function useGuard() {
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const openGuard = useLoginGuardStore((s) => s.guard);
 
-  return (action: () => void) => {
+  return (action: () => void | Promise<void>) => {
     if (isLoggedIn) {
-      action();
+      const result = action();
+      if (result instanceof Promise) {
+        result.catch((err) => {
+          console.error('[Guard] action rejected:', err);
+        });
+      }
     } else {
       openGuard(action);
     }

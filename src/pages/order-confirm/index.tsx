@@ -152,7 +152,7 @@ const OrderConfirmPage: React.FC = () => {
   if (loading) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单详情</NavBar>
+        <NavBar onBack={() => navigate(-1)}>订单详情</NavBar>
         <div className={styles.empty}>加载中...</div>
       </div>
     );
@@ -161,7 +161,7 @@ const OrderConfirmPage: React.FC = () => {
   if (!order) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>订单确认</NavBar>
+        <NavBar onBack={() => navigate(-1)}>订单确认</NavBar>
         <div className={styles.empty}>订单数据丢失</div>
       </div>
     );
@@ -174,7 +174,7 @@ const OrderConfirmPage: React.FC = () => {
   if (isExpired) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate('/')} back={<LeftOutline />}>订单确认</NavBar>
+        <NavBar onBack={() => navigate('/')}>订单确认</NavBar>
         <div className={styles.expiredContainer}>
           <div className={styles.expiredIcon}>⏰</div>
           <div className={styles.expiredTitle}>订单已超时</div>
@@ -193,7 +193,7 @@ const OrderConfirmPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>订单确认</NavBar>
+      <NavBar onBack={() => navigate('/', { replace: true })} className={styles.nav}>订单确认</NavBar>
 
       {/* ===== 票务信息头部 ===== */}
       <div className={styles.header}>
@@ -260,10 +260,6 @@ const OrderConfirmPage: React.FC = () => {
             <div className={styles.totalRow}>
               <span className={styles.totalLabel}>合计：</span>
               <span className={styles.totalPrice}><span className={styles.yen}>¥</span>{formatPrice(totalPrice)}</span>
-            </div>
-            <div className={styles.detailBtn}>
-              <span>查看明细</span>
-              <svg viewBox="0 0 96 96" fill="#f8289c" width="12" height="12"><path d="M50 37.9c-.1-.2-.3-.3-.5-.5-1.1-.8-2.6-.6-3.4.5L32.5 55.2c-.3.4-.5.9-.5 1.4 0 1.3 1.1 2.4 2.5 2.4h27.1c.5 0 1.1-.2 1.5-.5 1.1-.8 1.3-2.3.5-3.3L50 37.9z"/></svg>
             </div>
           </div>
           <div className={styles.payBtn} onClick={handlePay}>

@@ -60,17 +60,17 @@ const PaymentPage: React.FC = () => {
   }, [oid, paying]);
 
   if (loading) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>收银台</NavBar>
       <div className={styles.loading}>加载中…</div></div>;
   }
   if (!order) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>收银台</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>收银台</NavBar>
       <div className={styles.empty}>订单状态异常</div></div>;
   }
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>收银台</NavBar>
+      <NavBar onBack={() => navigate(-1)} className={styles.nav}>收银台</NavBar>
 
       {/* ===== 金额卡片 ===== */}
       <div className={styles.amountCard}>

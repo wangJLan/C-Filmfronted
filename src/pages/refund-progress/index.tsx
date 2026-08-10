@@ -29,7 +29,7 @@ const RefundProgressPage: React.FC = () => {
   };
 
   if (!order) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>退款进度</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>退款进度</NavBar>
       <div className={styles.empty}>订单数据丢失</div></div>;
   }
 
@@ -41,7 +41,7 @@ const RefundProgressPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>退款进度</NavBar>
+      <NavBar onBack={() => navigate(-1)} className={styles.nav}>退款进度</NavBar>
 
       <div className={styles.steps}>
         {/* 步骤1：提交申请 */}

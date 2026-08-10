@@ -9,12 +9,12 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>设置</NavBar>
+      <NavBar onBack={() => navigate(-1)}>设置</NavBar>
 
       {/* 账号安全 */}
       <div className={styles.group}>
         <div className={styles.title}>账号安全</div>
-        <div className={styles.itemLink} onClick={() => navigate('/forgot-password')}>
+        <div className={styles.itemLink} onClick={() => navigate('/set-password')}>
           <span>设置密码</span>
           <RightOutline fontSize={14} color="#ccc" />
         </div>

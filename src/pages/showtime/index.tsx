@@ -326,9 +326,7 @@ const ShowtimePage: React.FC = () => {
   const [submittedKeyword, setSubmittedKeyword] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [nearbyCinemas, setNearbyCinemas] = useState<{ id: string; name: string; address: string; distance: string }[]>([]);
-  const [otherFilmCinemas, setOtherFilmCinemas] = useState<{ cinemaId: string; cinemaName: string; address: string; films: { id: string; name: string; posterUrl: string }[] }[]>([]);
-
-  const isPast = (showDate: string, startTime: string) => {
+  const [otherFilmCinemas, setOtherFilmCinemas] = useState<{ cinemaId: string; cinemaName: string; address: string; films: { id: string; name: string; posterUrl: string }[] }[]>([]);  const isPast = (showDate: string, startTime: string) => {
     const dt = `${showDate}T${startTime}`;
     return new Date(dt).getTime() < Date.now();
   };
@@ -414,6 +412,7 @@ const ShowtimePage: React.FC = () => {
     Toast.show({ content: '已转交 AI 助手' });
   };
 
+
   // ===== 无排片时推荐其他影片或附近影院 =====
   useEffect(() => {
     if (!cinemasReady || enrichedCinemas.length > 0) {
@@ -497,7 +496,7 @@ const ShowtimePage: React.FC = () => {
   if (isFilmOnly && !selectedCinemaId) {
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{film?.name || '选择影院'}</NavBar>
+        <NavBar onBack={() => navigate(-1)}>{film?.name || '选择影院'}</NavBar>
 
         {/* 日期选择条 */}
         <div className={styles.dateBar}>
@@ -694,36 +693,8 @@ const ShowtimePage: React.FC = () => {
                     </div>
                   </div>
                 </>
-              ) : nearbyCinemas.length > 0 ? (
-                <>
-                  <div className={styles.emptyText}>这个日期附近还没有排片呢～</div>
-                  <div className={styles.recommendSection}>
-                    <div className={styles.recommendHint}>要不要看看这些离你最近的影院？说不定有合适的场次哦 👇</div>
-                    <div className={styles.recommendList}>
-                      {nearbyCinemas.map((c, idx) => (
-                        <div
-                          key={c.id}
-                          className={styles.recommendCard}
-                          onClick={() => navigate(`/showtime/cinema/${c.id}`)}
-                        >
-                          <div className={styles.recommendCardLeft}>
-                            <div className={styles.recommendCardTitle}>
-                              <span className={styles.recommendRank}>{['🥇', '🥈', '🥉'][idx]}</span>
-                              <span>{c.name}</span>
-                            </div>
-                            <div className={styles.recommendCardAddr}>{c.address}</div>
-                          </div>
-                          <div className={styles.recommendCardRight}>
-                            <span className={styles.recommendDist}>{c.distance}</span>
-                            <span className={styles.recommendArrow}>&rsaquo;</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
               ) : (
-                <div className={styles.emptyText}>暂无符合条件的影院</div>
+                <div className={styles.emptyText}>抱歉，该日期妙语的影院都没有排片呢，要不去首页再逛逛</div>
               )}
             </div>
           ) : (
@@ -777,7 +748,7 @@ const ShowtimePage: React.FC = () => {
     if (cinemaFilmsReady && (!cinemaFilms || cinemaFilms.length === 0)) {
       return (
         <div className={styles.page}>
-          <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+          <NavBar onBack={() => navigate(-1)}>{cinema?.name || '影院'}</NavBar>
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🏗️</div>
             <div className={styles.emptyText}>该影院维护中，暂不开放</div>
@@ -812,7 +783,7 @@ const ShowtimePage: React.FC = () => {
     // 还在加载...
     return (
       <div className={styles.page}>
-        <NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>{cinema?.name || '影院'}</NavBar>
+        <NavBar onBack={() => navigate(-1)}>{cinema?.name || '影院'}</NavBar>
         <div style={{ textAlign: 'center', padding: 80 }}><SpinLoading color="primary" /></div>
         <SafeArea position="bottom" />
       </div>
@@ -825,7 +796,7 @@ const ShowtimePage: React.FC = () => {
       {/* NavBar：影院名 */}
       <NavBar
         onBack={() => navigate(-1)}
-        back={<LeftOutline />}
+       
         right={<span className={styles.aiBtn} onClick={handleAiHelp}>🤖</span>}
       >
         <span>{cinema?.name || '选影院'}</span>

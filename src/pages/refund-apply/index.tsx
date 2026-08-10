@@ -78,18 +78,18 @@ const RefundApplyPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>退票</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>退票</NavBar>
       <div className={styles.empty}>加载中…</div></div>;
   }
 
   if (!order) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>退票</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>退票</NavBar>
       <div className={styles.empty}>订单数据丢失</div></div>;
   }
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>退票</NavBar>
+      <NavBar onBack={() => navigate(-1)} className={styles.nav}>退票</NavBar>
 
       {cantRefundReason && (
         <div style={{

@@ -29,7 +29,7 @@ const RefundDetailPage: React.FC = () => {
   };
 
   if (!order) {
-    return <div className={styles.page}><NavBar onBack={() => navigate(-1)} back={<LeftOutline />}>退款详情</NavBar>
+    return <div className={styles.page}><NavBar onBack={() => navigate(-1)}>退款详情</NavBar>
       <div className={styles.empty}>订单数据丢失</div></div>;
   }
 
@@ -39,7 +39,7 @@ const RefundDetailPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar onBack={() => navigate(-1)} back={<LeftOutline />} className={styles.nav}>退款详情</NavBar>
+      <NavBar onBack={() => navigate(-1)} className={styles.nav}>退款详情</NavBar>
 
       {/* ===== 退款金额状态 ===== */}
       <div className={styles.statusCard}>
